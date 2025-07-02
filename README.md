@@ -1,4 +1,4 @@
-# Farm GIS Management App
+# Scanne - Farm Management Application
 
 A modern web application for managing large-scale farm operations with advanced GIS capabilities.
 
