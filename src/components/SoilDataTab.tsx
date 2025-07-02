@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { fetchSoilAnalysis, getMockSoilAnalysis, SoilAnalysis, SoilDepth, SOIL_DEPTHS } from '@/services/soilDataService'
-import { fetchSatelliteAnalysis, getMockSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
+import { fetchSatelliteAnalysis, getCoordinateBasedSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
 import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
@@ -89,7 +89,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
     try {
       const center = calculatePolygonCenter(bloc.coordinates)
       const analysis = useMock
-        ? await getMockSatelliteAnalysis(center, 'soil')
+        ? await getCoordinateBasedSatelliteAnalysis(center, 'soil')
         : await fetchSatelliteAnalysis(center, 'soil')
 
       setSatelliteAnalysis(analysis)

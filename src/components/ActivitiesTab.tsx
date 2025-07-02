@@ -32,8 +32,13 @@ import {
   ActivityStatus,
   ActivityTemplate,
   SUGARCANE_PHASES,
-  ACTIVITY_TEMPLATES
+  ACTIVITY_TEMPLATES,
+  calculateActivityCosts
 } from '@/types/activities'
+import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
+import { ActivityService } from '@/services/activityService'
+import CropCycleSelector from './CropCycleSelector'
 
 interface DrawnArea {
   id: string
@@ -204,6 +209,21 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
 }
 
 export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
+  // Crop cycle context hooks
+  const permissions = useCropCyclePermissions()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const validation = useCropCycleValidation()
+
+  // Selected crop cycle context
+  const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
+
+  // Get selected cycle info (this replaces activeCycleInfo)
+  const selectedCycleInfo = getSelectedCycleInfo()
+  const canEdit = canEditSelectedCycle()
+
+  // Get active cycle info for backward compatibility
+  const activeCycleInfo = getActiveCycleInfo()
+
   const [activities, setActivities] = useState<BlocActivity[]>([])
   const [selectedPhase, setSelectedPhase] = useState<ActivityPhase | 'all'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -221,11 +241,24 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     })
   )
 
-  // Load activities from storage or start with empty array
+  // Load activities from localStorage (persistent storage)
   useEffect(() => {
-    // In a real application, this would load from a database or API
-    setActivities([])
-  }, [])
+    const loadActivities = async () => {
+      if (selectedCycleInfo?.id) {
+        try {
+          const cycleActivities = await ActivityService.getActivitiesForCycle(selectedCycleInfo.id)
+          setActivities(cycleActivities)
+        } catch (error) {
+          console.error('Error loading activities:', error)
+          setActivities([])
+        }
+      } else {
+        setActivities([])
+      }
+    }
+
+    loadActivities()
+  }, [selectedCycleInfo?.id])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -240,17 +273,30 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     }
   }
 
-  const handleStatusChange = (id: string, status: ActivityStatus) => {
-    setActivities(prev => prev.map(activity => 
-      activity.id === id 
-        ? { ...activity, status, updatedAt: new Date().toISOString() }
-        : activity
-    ))
+  const handleStatusChange = async (id: string, status: ActivityStatus) => {
+    try {
+      // Update in localStorage and state
+      const updatedActivity = await ActivityService.updateActivity(id, {
+        status,
+        updatedAt: new Date().toISOString()
+      })
+      setActivities(prev => prev.map(activity =>
+        activity.id === id ? updatedActivity : activity
+      ))
+    } catch (error) {
+      console.error('Error updating activity status:', error)
+    }
   }
 
-  const handleDeleteActivity = (id: string) => {
+  const handleDeleteActivity = async (id: string) => {
     if (confirm('Are you sure you want to delete this activity?')) {
-      setActivities(prev => prev.filter(activity => activity.id !== id))
+      try {
+        // Delete from localStorage and state
+        await ActivityService.deleteActivity(id)
+        setActivities(prev => prev.filter(activity => activity.id !== id))
+      } catch (error) {
+        console.error('Error deleting activity:', error)
+      }
     }
   }
 
@@ -265,19 +311,27 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
   const handleActivitySelect = (template: ActivityTemplate) => {
     // Create new activity from template
+    if (!activeCycleInfo) {
+      alert('No active crop cycle found. Please create a crop cycle first.')
+      return
+    }
+
     const newActivity: BlocActivity = {
       id: Date.now().toString(),
       name: template.name,
       description: template.description,
       phase: template.phase,
       status: 'planned',
+      cropCycleId: activeCycleInfo.id,
+      cropCycleType: activeCycleInfo.type,
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + template.estimatedDuration * 60 * 60 * 1000).toISOString().split('T')[0],
       duration: template.estimatedDuration,
       products: [],
       resources: [],
       resourceType: template.resourceType,
-      totalCost: template.estimatedCost,
+      totalEstimatedCost: template.estimatedCost,
+      totalCost: template.estimatedCost, // Legacy field
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: 'user'
@@ -359,34 +413,13 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
   const getTotalEstimatedCost = () => {
     return filteredActivities.reduce((total, activity) => {
-      const productCosts = activity.products?.reduce((sum, product) => {
-        // Use estimated cost from product default cost
-        const estimatedCost = product.rate * bloc.area * (product.cost || 0)
-        return sum + estimatedCost
-      }, 0) || 0
-
-      const resourceCosts = activity.resources?.reduce((sum, resource) => {
-        // Use estimated cost from resource default cost
-        return sum + (resource.cost || 0)
-      }, 0) || 0
-
-      return total + productCosts + resourceCosts
+      return total + (activity.totalEstimatedCost || 0)
     }, 0)
   }
 
   const getTotalActualCost = () => {
     return filteredActivities.reduce((total, activity) => {
-      const productCosts = activity.products?.reduce((sum, product) => {
-        // Use actual cost if available, otherwise estimated
-        return sum + (product.cost || 0)
-      }, 0) || 0
-
-      const resourceCosts = activity.resources?.reduce((sum, resource) => {
-        // Use actual cost if available, otherwise estimated
-        return sum + (resource.cost || 0)
-      }, 0) || 0
-
-      return total + productCosts + resourceCosts
+      return total + (activity.totalActualCost || 0)
     }, 0)
   }
 
@@ -420,41 +453,55 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <span className="text-2xl mr-3">📋</span>
-              Activities
-            </h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <span className="text-2xl mr-3">📋</span>
+                Activities
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowActivitySelector(true)}
+                disabled={!permissions.canAddActivities}
+                className={`px-3 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 text-sm ${
+                  permissions.canAddActivities
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add</span>
+              </button>
+            </div>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
               <div>Est Cost: <span className="font-medium text-green-600">Rs {formatCostWithoutDecimals(getTotalEstimatedCost())}</span></div>
               <div>Actual Cost: <span className="font-medium text-blue-600">Rs {formatCostWithoutDecimals(getTotalActualCost())}</span></div>
             </div>
           </div>
 
-
-        </div>
-
-        {/* Crop Cycle Filter */}
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Crop Cycle</h3>
-          <div className="relative">
-            <select
-              value={selectedCropCycle}
-              onChange={(e) => setSelectedCropCycle(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
-            >
-              {getCropCycles().map((cycle) => (
-                <option key={cycle.id} value={cycle.id}>
-                  {cycle.name} {cycle.isHarvested ? '(Harvested)' : ''}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                <polyline points="6,9 12,15 18,9"></polyline>
-              </svg>
+          {/* Validation Warnings */}
+          {validation.warnings.length > 0 && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <svg className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div className="text-xs">
+                  {validation.warnings.map((warning, index) => (
+                    <p key={index} className="text-yellow-800">{warning}</p>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+
         </div>
+
+        {/* Crop Cycle Selector */}
+        <CropCycleSelector />
 
         {/* Phase Selection Blocks */}
         <div className="p-6 border-b border-gray-200">
@@ -521,17 +568,26 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
           {/* Controls */}
           <div className="flex justify-between items-center mb-4">
             {/* Add Activity Button */}
-            <button
-              type="button"
-              onClick={handleAddActivity}
-              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              title="Add activity"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
+            {selectedCycleInfo && canEdit ? (
+              <button
+                type="button"
+                onClick={handleAddActivity}
+                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Add activity"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+            ) : (
+              <div className="p-2 text-gray-300" title={!selectedCycleInfo ? "Select a crop cycle first" : "Cycle is closed - no editing allowed"}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </div>
+            )}
 
             {/* Enhanced Controls */}
             <div className="flex items-center space-x-4">
@@ -654,14 +710,48 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         <AddActivityModal
           activity={editingActivity}
           blocArea={bloc.area}
-          onSave={(activity) => {
-            if (editingActivity) {
-              setActivities(prev => prev.map(a => a.id === activity.id ? activity : a))
-            } else {
-              setActivities(prev => [...prev, { ...activity, id: Date.now().toString() }])
+          activeCycleInfo={activeCycleInfo}
+          onSave={async (activity) => {
+            try {
+              // Validate crop cycle ID
+              const cropCycleId = selectedCycleInfo?.id || activeCycleInfo?.id
+              if (!cropCycleId) {
+                alert('No active crop cycle found. Please create a crop cycle first.')
+                return
+              }
+
+              let savedActivity: BlocActivity
+
+              // Ensure activity is linked to selected crop cycle
+              const activityWithCycle = {
+                ...activity,
+                cropCycleId: cropCycleId,
+                cropCycleType: activeCycleInfo?.type || 'plantation'
+              }
+
+              // Check if this is truly an existing activity (exists in localStorage)
+              const existingActivity = editingActivity ? await ActivityService.getActivityById(editingActivity.id) : null
+
+              console.log('Save logic - editingActivity:', editingActivity?.id, 'existingActivity:', existingActivity?.id)
+
+              if (existingActivity && editingActivity) {
+                // Update existing activity in localStorage
+                console.log('Updating existing activity:', editingActivity.id)
+                savedActivity = await ActivityService.updateActivity(editingActivity.id, activityWithCycle)
+                setActivities(prev => prev.map(a => a.id === editingActivity.id ? savedActivity : a))
+              } else {
+                // Create new activity in localStorage
+                console.log('Creating new activity')
+                savedActivity = await ActivityService.createActivity(activityWithCycle)
+                setActivities(prev => [...prev, savedActivity])
+              }
+
+              setShowAddModal(false)
+              setEditingActivity(null)
+            } catch (error) {
+              console.error('Error saving activity:', error)
+              alert(`Error saving activity: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
-            setShowAddModal(false)
-            setEditingActivity(null)
           }}
           onCancel={() => {
             setShowAddModal(false)
@@ -686,15 +776,18 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 function AddActivityModal({
   activity,
   blocArea,
+  activeCycleInfo,
   onSave,
   onCancel
 }: {
   activity: BlocActivity | null
   blocArea: number
+  activeCycleInfo: any // Type from useCropCycleInfo hook
   onSave: (activity: BlocActivity) => void
   onCancel: () => void
 }) {
   const [formData, setFormData] = useState<Partial<BlocActivity>>({
+    id: activity?.id, // Preserve the ID for editing
     name: activity?.name || '',
     description: activity?.description || '',
     phase: activity?.phase || 'land-preparation',
@@ -715,6 +808,7 @@ function AddActivityModal({
   const [showProductSelector, setShowProductSelector] = useState(false)
   const [showResourceSelector, setShowResourceSelector] = useState(false)
   const [showProductEditor, setShowProductEditor] = useState(false)
+  const [showResourceEditor, setShowResourceEditor] = useState(false)
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null)
   const [editingResourceIndex, setEditingResourceIndex] = useState<number | null>(null)
 
@@ -734,13 +828,15 @@ function AddActivityModal({
   }
 
   const handleProductSelect = (product: Product, quantity: number, rate: number, actualCost?: number) => {
+    const estimatedCost = product.cost ? quantity * product.cost : 0
     const newProduct = {
       productId: product.id,
       productName: product.name,
       quantity,
       rate,
       unit: product.unit,
-      cost: actualCost || (product.cost ? quantity * product.cost : 0)
+      estimatedCost,
+      actualCost
     }
 
     if (editingProductIndex !== null) {
@@ -757,12 +853,14 @@ function AddActivityModal({
   }
 
   const handleResourceSelect = (resource: Resource, hours: number, actualCost?: number) => {
+    const estimatedCost = resource.costPerUnit ? hours * resource.costPerUnit : 0
     const newResource = {
       resourceId: resource.id,
       resourceName: resource.name,
       hours,
       unit: resource.unit,
-      cost: actualCost || (resource.costPerUnit ? hours * resource.costPerUnit : 0),
+      estimatedCost,
+      actualCost,
       category: resource.category
     }
 
@@ -782,12 +880,22 @@ function AddActivityModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    const newActivity: BlocActivity = {
-      id: activity?.id || Date.now().toString(),
+    console.log('Form submit - activity:', activity?.id, 'formData.id:', formData.id)
+
+    if (!activity && !activeCycleInfo) {
+      alert('No active crop cycle found. Please create a crop cycle first.')
+      return
+    }
+
+    // Calculate costs before saving
+    const tempActivity: BlocActivity = {
+      id: formData.id || activity?.id || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: formData.name!,
       description: formData.description!,
       phase: formData.phase!,
       status: formData.status!,
+      cropCycleId: activity?.cropCycleId || activeCycleInfo!.id,
+      cropCycleType: activity?.cropCycleType || activeCycleInfo!.type,
       startDate: formData.startDate!,
       endDate: formData.endDate!,
       actualDate: activity?.actualDate,
@@ -797,11 +905,21 @@ function AddActivityModal({
       resourceType: formData.resourceType,
       laborHours: formData.laborHours,
       machineHours: formData.machineHours,
-      totalCost: formData.totalCost,
+      totalCost: formData.totalCost, // Legacy field
+      totalEstimatedCost: 0, // Will be calculated
+      totalActualCost: undefined, // Will be calculated
       notes: formData.notes,
       createdAt: activity?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: activity?.createdBy || 'user'
+    }
+
+    // Calculate the costs
+    const costs = calculateActivityCosts(tempActivity)
+    const newActivity: BlocActivity = {
+      ...tempActivity,
+      totalEstimatedCost: costs.totalEstimatedCost,
+      totalActualCost: costs.totalActualCost
     }
 
     onSave(newActivity)
@@ -1001,7 +1119,13 @@ function AddActivityModal({
                           <div className="font-medium text-gray-900">{product.productName}</div>
                           <div className="text-sm text-gray-600">
                             {product.quantity} {product.unit} • Rate: {product.rate} {product.unit}/ha
-                            {product.cost && <span> • Cost: Rs {product.cost.toLocaleString()}</span>}
+                            <br />
+                            <span className="text-blue-600">Est: Rs {(product.estimatedCost || 0).toLocaleString()}</span>
+                            {product.actualCost !== undefined && product.actualCost > 0 ? (
+                              <span className="text-green-600 ml-2">Actual: Rs {product.actualCost.toLocaleString()}</span>
+                            ) : (
+                              <span className="text-red-600 ml-2">Actual: Rs 0</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1047,7 +1171,16 @@ function AddActivityModal({
                           <div className="font-medium text-gray-900">{resource.resourceName}</div>
                           <div className="text-sm text-gray-600">
                             {resource.hours} {resource.unit}
-                            {resource.cost && <span> • Cost: Rs {resource.cost.toLocaleString()}</span>}
+                            <br />
+                            <span className="text-blue-600">Est: Rs {(resource.estimatedCost || 0).toLocaleString()}</span>
+                            {resource.actualCost !== undefined && (
+                              <span className={`ml-2 ${resource.actualCost > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                Actual: Rs {resource.actualCost.toLocaleString()}
+                              </span>
+                            )}
+                            {resource.actualCost === undefined && (
+                              <span className="text-red-600 ml-2">Actual: Rs 0</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1056,7 +1189,7 @@ function AddActivityModal({
                           type="button"
                           onClick={() => {
                             setEditingResourceIndex(index)
-                            setShowResourceSelector(true)
+                            setShowResourceEditor(true)
                           }}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="Edit resource"
@@ -1092,6 +1225,46 @@ function AddActivityModal({
                 </div>
               )}
             </div>
+
+            {/* Cost Summary */}
+            {((formData.products && formData.products.length > 0) || (formData.resources && formData.resources.length > 0)) && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Cost Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Estimated Cost:</span>
+                    <span className="font-medium text-blue-600">
+                      Rs {(() => {
+                        const productCosts = (formData.products || []).reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
+                        const resourceCosts = (formData.resources || []).reduce((sum, r) => sum + (r.estimatedCost || 0), 0)
+                        return (productCosts + resourceCosts).toLocaleString()
+                      })()}
+                    </span>
+                  </div>
+                  {(() => {
+                    // Calculate actual costs and check if any are missing
+                    const allProducts = formData.products || []
+                    const allResources = formData.resources || []
+
+                    const totalActual = allProducts.reduce((sum, p) => sum + (p.actualCost || 0), 0) +
+                                       allResources.reduce((sum, r) => sum + (r.actualCost || 0), 0)
+
+                    const hasMissingActuals = allProducts.some(p => p.actualCost === undefined || p.actualCost === 0) ||
+                                             allResources.some(r => r.actualCost === undefined || r.actualCost === 0)
+
+                    return (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Actual Cost:</span>
+                        <span className={`font-medium ${hasMissingActuals ? 'text-red-600' : 'text-green-600'}`}>
+                          Rs {totalActual.toLocaleString()}
+                          {hasMissingActuals && <span className="text-xs ml-1">(incomplete)</span>}
+                        </span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div>
@@ -1136,7 +1309,8 @@ function AddActivityModal({
             setEditingProductIndex(null)
           }}
           blocArea={blocArea}
-          existingProduct={editingProductIndex !== null ? formData.products?.[editingProductIndex] : undefined}
+          existingProduct={editingProductIndex !== null && formData.products?.[editingProductIndex] ?
+            formData.products[editingProductIndex] : undefined}
         />
       )}
 
@@ -1148,7 +1322,8 @@ function AddActivityModal({
             setShowResourceSelector(false)
             setEditingResourceIndex(null)
           }}
-          existingResource={editingResourceIndex !== null ? formData.resources?.[editingResourceIndex] : undefined}
+          existingResource={editingResourceIndex !== null && formData.resources?.[editingResourceIndex] ?
+            formData.resources[editingResourceIndex] : undefined}
         />
       )}
 
@@ -1170,6 +1345,25 @@ function AddActivityModal({
           }}
         />
       )}
+
+      {/* Resource Editor Modal */}
+      {showResourceEditor && editingResourceIndex !== null && formData.resources?.[editingResourceIndex] && (
+        <ResourceEditor
+          resource={formData.resources[editingResourceIndex]}
+          blocArea={blocArea}
+          onSave={(updatedResource) => {
+            const updatedResources = [...(formData.resources || [])]
+            updatedResources[editingResourceIndex] = updatedResource
+            setFormData({ ...formData, resources: updatedResources })
+            setShowResourceEditor(false)
+            setEditingResourceIndex(null)
+          }}
+          onClose={() => {
+            setShowResourceEditor(false)
+            setEditingResourceIndex(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -1187,7 +1381,8 @@ function ProductEditor({
     quantity: number
     rate: number
     unit: string
-    cost: number
+    estimatedCost: number
+    actualCost?: number
   }
   blocArea: number
   onSave: (product: {
@@ -1196,13 +1391,14 @@ function ProductEditor({
     quantity: number
     rate: number
     unit: string
-    cost: number
+    estimatedCost: number
+    actualCost?: number
   }) => void
   onClose: () => void
 }) {
   const [quantity, setQuantity] = useState(product.quantity)
   const [rate, setRate] = useState(product.rate)
-  const [actualCost, setActualCost] = useState(product.cost)
+  const [actualCost, setActualCost] = useState(product.actualCost || 0)
   const [isUpdatingFromRate, setIsUpdatingFromRate] = useState(false)
 
   const handleRateChange = (newRate: number) => {
@@ -1228,7 +1424,8 @@ function ProductEditor({
       quantity,
       rate,
       unit: product.unit,
-      cost: actualCost
+      estimatedCost: product.estimatedCost, // Keep the original estimated cost
+      actualCost: actualCost > 0 ? actualCost : undefined
     })
   }
 
@@ -1245,6 +1442,7 @@ function ProductEditor({
             type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1290,20 +1488,178 @@ function ProductEditor({
             </p>
           </div>
 
-          {/* Actual Cost Input */}
+          {/* Cost Information */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Cost Information</h4>
+            <div className="space-y-3">
+              {/* Estimated Cost (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estimated Cost (Rs)
+                </label>
+                <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+                  Rs {product.estimatedCost.toLocaleString()}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Auto-calculated based on quantity and unit cost</p>
+              </div>
+
+              {/* Actual Cost Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Actual Cost (Rs)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={actualCost || ''}
+                  onChange={(e) => setActualCost(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter actual cost"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter the actual amount spent</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Resource Editor Component
+function ResourceEditor({
+  resource,
+  blocArea,
+  onSave,
+  onClose
+}: {
+  resource: {
+    resourceId: string
+    resourceName: string
+    hours: number
+    unit: string
+    estimatedCost: number
+    actualCost?: number
+    category: string
+  }
+  blocArea: number
+  onSave: (resource: {
+    resourceId: string
+    resourceName: string
+    hours: number
+    unit: string
+    estimatedCost: number
+    actualCost?: number
+    category: string
+  }) => void
+  onClose: () => void
+}) {
+  const [hours, setHours] = useState(resource.hours)
+  const [actualCost, setActualCost] = useState(resource.actualCost || 0)
+
+  const handleSave = () => {
+    onSave({
+      resourceId: resource.resourceId,
+      resourceName: resource.resourceName,
+      hours,
+      unit: resource.unit,
+      estimatedCost: resource.estimatedCost, // Keep the original estimated cost
+      actualCost: actualCost > 0 ? actualCost : undefined,
+      category: resource.category
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Edit Resource</h2>
+            <p className="text-gray-600 mt-1">{resource.resourceName}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="p-6 space-y-6">
+          {/* Hours Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Actual Cost (Rs)
+              Hours ({resource.unit}) *
             </label>
             <input
               type="number"
               min="0"
-              step="0.01"
-              value={actualCost}
-              onChange={(e) => setActualCost(parseFloat(e.target.value) || 0)}
+              step="0.1"
+              value={hours}
+              onChange={(e) => setHours(parseFloat(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter actual cost"
+              placeholder="Enter hours needed"
             />
+          </div>
+
+          {/* Cost Information */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Cost Information</h4>
+            <div className="space-y-3">
+              {/* Estimated Cost (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estimated Cost (Rs)
+                </label>
+                <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+                  Rs {resource.estimatedCost.toLocaleString()}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Auto-calculated based on hours and hourly rate</p>
+              </div>
+
+              {/* Actual Cost Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Actual Cost (Rs)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={actualCost || ''}
+                  onChange={(e) => setActualCost(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter actual cost"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter the actual amount spent</p>
+              </div>
+            </div>
           </div>
         </div>
 

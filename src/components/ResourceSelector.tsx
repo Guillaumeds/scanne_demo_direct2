@@ -11,7 +11,8 @@ interface ResourceSelectorProps {
     resourceName: string
     hours: number
     unit: string
-    cost: number
+    estimatedCost: number
+    actualCost?: number
     category: string
   }
 }
@@ -38,7 +39,7 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
       if (resource) {
         setSelectedResource(resource)
         setHours(existingResource.hours)
-        setActualCost(existingResource.cost)
+        setActualCost(existingResource.actualCost || existingResource.estimatedCost)
       }
     }
   }, [existingResource])
@@ -246,8 +247,8 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
                         type="number"
                         min="0"
                         step="0.01"
-                        value={actualCost}
-                        onChange={(e) => setActualCost(parseFloat(e.target.value) || 0)}
+                        value={actualCost || ''}
+                        onChange={(e) => setActualCost(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Enter actual cost"
                       />

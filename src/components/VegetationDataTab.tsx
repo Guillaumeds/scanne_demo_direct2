@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { fetchSatelliteAnalysis, getMockSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
+import { fetchSatelliteAnalysis, getCoordinateBasedSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
 import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
@@ -29,8 +29,8 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
     
     try {
       const center = calculatePolygonCenter(bloc.coordinates)
-      const analysis = useMock 
-        ? await getMockSatelliteAnalysis(center, 'vegetation')
+      const analysis = useMock
+        ? await getCoordinateBasedSatelliteAnalysis(center, 'vegetation')
         : await fetchSatelliteAnalysis(center, 'vegetation')
       
       setSatelliteAnalysis(analysis)

@@ -29,6 +29,10 @@ import {
 } from '@/types/observations'
 import ObservationForm from './ObservationForms'
 import CategorySelector from './CategorySelector'
+import { useCropCyclePermissions, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
+import { ObservationService } from '@/services/observationService'
+import CropCycleSelector from './CropCycleSelector'
 
 interface DrawnArea {
   id: string
@@ -208,6 +212,15 @@ function SortableObservationItem({ observation, onEdit, onDelete, onStatusChange
 }
 
 export default function ObservationsTab({ bloc }: ObservationsTabProps) {
+  // Crop cycle permissions
+  const permissions = useCropCyclePermissions()
+  const validation = useCropCycleValidation()
+
+  // Selected crop cycle context
+  const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
+  const selectedCycleInfo = getSelectedCycleInfo()
+  const canEdit = canEditSelectedCycle()
+
   const [observations, setObservations] = useState<BlocObservation[]>([])
   const [selectedCategory, setSelectedCategory] = useState<ObservationCategory | 'all'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -225,11 +238,24 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     })
   )
 
-  // Load observations from storage or start with empty array
+  // Load observations from localStorage (persistent storage)
   useEffect(() => {
-    // In a real application, this would load from a database or API
-    setObservations([])
-  }, [])
+    const loadObservations = async () => {
+      if (selectedCycleInfo?.id) {
+        try {
+          const cycleObservations = await ObservationService.getObservationsForCycle(selectedCycleInfo.id)
+          setObservations(cycleObservations)
+        } catch (error) {
+          console.error('Error loading observations:', error)
+          setObservations([])
+        }
+      } else {
+        setObservations([])
+      }
+    }
+
+    loadObservations()
+  }, [selectedCycleInfo?.id])
 
   // Helper function to format cost without decimals
   const formatCostWithoutDecimals = (cost: number) => {
@@ -249,17 +275,30 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     }
   }
 
-  const handleStatusChange = (id: string, status: ObservationStatus) => {
-    setObservations(prev => prev.map(observation => 
-      observation.id === id 
-        ? { ...observation, status, updatedAt: new Date().toISOString() }
-        : observation
-    ))
+  const handleStatusChange = async (id: string, status: ObservationStatus) => {
+    try {
+      // Update in localStorage and state
+      const updatedObservation = await ObservationService.updateObservation(id, {
+        status,
+        updatedAt: new Date().toISOString()
+      })
+      setObservations(prev => prev.map(observation =>
+        observation.id === id ? updatedObservation : observation
+      ))
+    } catch (error) {
+      console.error('Error updating observation status:', error)
+    }
   }
 
-  const handleDeleteObservation = (id: string) => {
+  const handleDeleteObservation = async (id: string) => {
     if (confirm('Are you sure you want to delete this observation?')) {
-      setObservations(prev => prev.filter(observation => observation.id !== id))
+      try {
+        // Delete from localStorage and state
+        await ObservationService.deleteObservation(id)
+        setObservations(prev => prev.filter(observation => observation.id !== id))
+      } catch (error) {
+        console.error('Error deleting observation:', error)
+      }
     }
   }
 
@@ -273,8 +312,9 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   }
 
   const handleCategorySelect = (category: ObservationCategory | import('@/types/attachments').AttachmentCategory) => {
-    // Only handle observation categories
-    if (!['soil', 'water', 'plant-morphological', 'growth-stage', 'yield-quality', 'pest-disease', 'weed', 'intercrop-yield'].includes(category)) {
+    // Only handle observation categories - use the actual category IDs
+    const validCategories = OBSERVATION_CATEGORIES.map(c => c.id)
+    if (!validCategories.includes(category as ObservationCategory)) {
       return
     }
     setShowCategorySelector(false)
@@ -339,19 +379,8 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
           </div>
         </div>
 
-        {/* Crop Cycle Filter */}
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Crop Cycle</h3>
-          <div className="relative">
-            <select
-              value={selectedCropCycle}
-              onChange={(e) => setSelectedCropCycle(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
-            >
-              <option value="planted">Planted Cycle</option>
-            </select>
-          </div>
-        </div>
+        {/* Crop Cycle Selector */}
+        <CropCycleSelector />
 
         {/* Category Selection */}
         <div className="p-6 border-b border-gray-200 flex-1 overflow-y-auto">
@@ -428,8 +457,13 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
             <button
               type="button"
               onClick={handleAddObservation}
-              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              title="Add observation"
+              disabled={!permissions.canAddObservations}
+              className={`p-2 rounded-lg transition-colors ${
+                permissions.canAddObservations
+                  ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                  : 'text-gray-300 cursor-not-allowed'
+              }`}
+              title={permissions.canAddObservations ? "Add observation" : "Cannot add observations - cycle is closed"}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19"/>
@@ -543,7 +577,12 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 <button
                   type="button"
                   onClick={handleAddObservation}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  disabled={!permissions.canAddObservations}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    permissions.canAddObservations
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   Add Observation
                 </button>
@@ -568,14 +607,26 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
           observation={editingObservation}
           category={selectedCategory !== 'all' ? selectedCategory : undefined}
           blocArea={bloc.area}
-          onSave={(observation) => {
-            if (editingObservation) {
-              setObservations(prev => prev.map(o => o.id === observation.id ? observation : o))
-            } else {
-              setObservations(prev => [...prev, { ...observation, id: Date.now().toString() }])
+          onSave={async (observation) => {
+            try {
+              let savedObservation: BlocObservation
+
+              if (editingObservation) {
+                // Update existing observation in localStorage
+                savedObservation = await ObservationService.updateObservation(editingObservation.id, observation)
+                setObservations(prev => prev.map(o => o.id === editingObservation.id ? savedObservation : o))
+              } else {
+                // Create new observation in localStorage
+                savedObservation = await ObservationService.createObservation(observation)
+                setObservations(prev => [...prev, savedObservation])
+              }
+
+              setShowAddModal(false)
+              setEditingObservation(null)
+            } catch (error) {
+              console.error('Error saving observation:', error)
+              alert(`Error saving observation: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
-            setShowAddModal(false)
-            setEditingObservation(null)
           }}
           onCancel={() => {
             setShowAddModal(false)

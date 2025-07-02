@@ -9,12 +9,13 @@ import {
   WaterObservationData,
   PlantMorphologicalData,
   GrowthStageData,
-  YieldQualityData,
   PestDiseaseData,
   WeedObservationData,
-  IntercropYieldData,
+  SugarcaneYieldQualityData,
+  IntercropYieldQualityData,
   OBSERVATION_CATEGORIES
 } from '@/types/observations'
+import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 
 // Measurement guidelines for each observation category
 const MEASUREMENT_GUIDELINES = {
@@ -104,6 +105,46 @@ const MEASUREMENT_GUIDELINES = {
       "Intercrop Performance: Compare intercrop yield with monoculture benchmarks. Calculate Land Equivalent Ratio (LER) = (Intercrop yield/Monoculture yield) + (Main crop yield with intercrop/Main crop monoculture yield). LER >1.0 indicates intercropping advantage.",
       "Economic Analysis: Record all costs (seeds, labor, inputs) and revenues. Calculate gross margin per hectare. Compare profitability with alternative cropping systems. Include opportunity costs and risk factors in analysis."
     ]
+  },
+  'sugarcane-yield': {
+    title: "Sugarcane Yield Observation Guidelines (MANDATORY)",
+    guidelines: [
+      "Total Yield Measurement: Harvest complete rows from 3 representative 10m sections per field. Weigh all millable canes using calibrated truck scale or platform scale. Remove all trash, dead leaves, and non-millable portions. Record gross weight and calculate tons per hectare.",
+      "Quality Grading: Separate canes by quality: Grade A (straight, mature, >2m length), Grade B (slightly bent, adequate maturity), Grade C (short, immature, damaged). Record percentage and weight of each grade. Only include millable canes in yield calculations.",
+      "Moisture Content: Determine moisture percentage using oven-dry method on representative samples. Fresh weight vs dry weight at 105°C for 24 hours. Typical moisture content: 70-75%. Adjust yield calculations to standard moisture content for accurate comparisons.",
+      "Harvest Date Documentation: Record exact harvest date, time, and weather conditions. Note days from planting to harvest (cycle length). Document any delays due to weather, equipment, or market conditions. This data is critical for cycle closure validation.",
+      "Field Mapping: Use GPS to record harvest areas and create yield maps. Document any areas with significantly different yields. Note factors affecting yield: soil type, irrigation, pest damage, lodging. Calculate yield per bloc and per hectare accurately."
+    ]
+  },
+  'sugar-yield': {
+    title: "Sugar Yield Observation Guidelines (MANDATORY)",
+    guidelines: [
+      "Sugar Content Analysis: Collect juice samples from 50 representative canes across the field. Use hydraulic press or mill for juice extraction. Measure Brix using digital refractometer (±0.1% accuracy). Conduct Pol analysis using polarimeter for sucrose content.",
+      "Commercial Cane Sugar (CCS): Calculate CCS using formula: CCS = [Pol% - 0.4 × (Brix% - Pol%)] × 0.73. This represents recoverable sugar percentage. Record CCS for payment calculations and cycle profitability analysis. Minimum acceptable: 10%, Premium: >12%.",
+      "Sugar Recovery Rate: Calculate actual sugar extracted vs theoretical maximum. Record mill extraction efficiency, juice purity, and processing losses. Document sugar yield in tons per hectare: (Cane yield × CCS%) / 100.",
+      "Quality Parameters: Measure juice purity (Pol/Brix × 100), fiber content, and reducing sugars. Record color and clarity of juice. Document any quality issues affecting sugar recovery. Optimal purity: >85% for good sugar recovery.",
+      "Revenue Documentation: Record sugar price per ton, payment terms, and quality premiums/penalties. Calculate total sugar revenue: Sugar yield (t/ha) × Price per ton. Include any bonuses for high CCS or penalties for low quality. This data is mandatory for cycle closure."
+    ]
+  },
+  'electricity-yield': {
+    title: "Electricity Yield Observation Guidelines (OPTIONAL)",
+    guidelines: [
+      "Bagasse Yield Measurement: Weigh bagasse immediately after juice extraction. Record moisture content (typically 45-55%). Calculate dry bagasse yield: Wet weight × (100 - moisture%)/100. Typical bagasse yield: 25-35% of fresh cane weight.",
+      "Trash and Leaf Yield: Collect and weigh all field trash, tops, and leaves during harvest. Separate green leaves from dry trash. Measure moisture content of each fraction. Calculate total biomass available for energy generation.",
+      "Calorific Value Testing: Determine heating value of biomass using bomb calorimeter. Typical values: Bagasse 7,500-8,500 kJ/kg (dry basis), Trash 12,000-15,000 kJ/kg. Record ash content and moisture for energy calculations.",
+      "Power Generation Potential: Calculate theoretical electricity generation: kWh = (Biomass weight × Calorific value × Conversion efficiency) / 3.6. Typical conversion efficiency: 20-25% for small plants, 30-35% for large efficient plants.",
+      "Revenue Calculation: Record biomass selling price or electricity tariff rates. Calculate revenue from biomass sales or power generation. Include transportation costs and processing fees. Revenue can be zero if biomass is not utilized commercially."
+    ]
+  },
+  'revenue-tracking': {
+    title: "Revenue Tracking Observation Guidelines (MANDATORY)",
+    guidelines: [
+      "Sugarcane Revenue: Record total payment received for sugarcane delivery. Include base price, CCS bonuses, quality premiums, and any deductions. Document payment date, buyer details, and invoice numbers. Calculate revenue per ton and per hectare.",
+      "Sugar Revenue: If processing own sugar, record sugar sales revenue. Include wholesale/retail prices, packaging costs, and marketing expenses. Document sugar grades sold and respective prices. Calculate net sugar revenue after all processing costs.",
+      "Intercrop Revenue: Record all income from intercrop sales. Include market prices, transportation costs, and post-harvest losses. Document buyer information and payment terms. Calculate intercrop contribution to total farm revenue. Revenue can be zero if no intercrop planted.",
+      "Electricity/Biomass Revenue: Record income from bagasse or biomass sales to power plants or other buyers. Include transportation and handling costs. Document contracts and payment terms. Revenue can be zero if biomass not sold or used for own energy needs.",
+      "Total Revenue Calculation: Sum all revenue streams: Sugarcane + Sugar + Intercrop + Electricity/Biomass + Other income. Calculate revenue per hectare for profitability analysis. This total revenue is mandatory for cycle closure validation and financial reporting."
+    ]
   }
 }
 
@@ -122,6 +163,14 @@ export default function ObservationForm({
   onSave,
   onCancel
 }: ObservationFormProps) {
+  // Crop cycle context hooks
+  const permissions = useCropCyclePermissions()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const validation = useCropCycleValidation()
+
+  // Get active cycle info
+  const activeCycleInfo = getActiveCycleInfo()
+
   const selectedCategory = category || observation?.category || 'soil'
   const categoryInfo = OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)
   const [showInfoModal, setShowInfoModal] = useState(false)
@@ -142,12 +191,19 @@ export default function ObservationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!observation && !activeCycleInfo) {
+      alert('No active crop cycle found. Please create a crop cycle first.')
+      return
+    }
+
     const newObservation: BlocObservation = {
       id: observation?.id || Date.now().toString(),
       name: formData.name,
       description: formData.description,
       category: formData.category,
       status: formData.status,
+      cropCycleId: observation?.cropCycleId || activeCycleInfo!.id,
+      cropCycleType: observation?.cropCycleType || activeCycleInfo!.type,
       observationDate: formData.observationDate,
       actualDate: formData.actualDate || undefined,
       numberOfSamples: formData.numberOfSamples,
@@ -182,14 +238,14 @@ export default function ObservationForm({
         return <PlantMorphologicalFields data={formData.data as PlantMorphologicalData} updateField={updateDataField} />
       case 'growth-stage':
         return <GrowthStageFields data={formData.data as GrowthStageData} updateField={updateDataField} />
-      case 'yield-quality':
-        return <YieldQualityFields data={formData.data as YieldQualityData} updateField={updateDataField} />
+      case 'sugarcane-yield-quality':
+        return <SugarcaneYieldQualityFields data={formData.data as SugarcaneYieldQualityData} updateField={updateDataField} />
       case 'pest-disease':
         return <PestDiseaseFields data={formData.data as PestDiseaseData} updateField={updateDataField} />
       case 'weed':
         return <WeedObservationFields data={formData.data as WeedObservationData} updateField={updateDataField} />
-      case 'intercrop-yield':
-        return <IntercropYieldFields data={formData.data as IntercropYieldData} updateField={updateDataField} />
+      case 'intercrop-yield-quality':
+        return <IntercropYieldQualityFields data={formData.data as IntercropYieldQualityData} updateField={updateDataField} />
       default:
         return null
     }
@@ -401,7 +457,7 @@ export default function ObservationForm({
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {MEASUREMENT_GUIDELINES[selectedCategory]?.title || 'Measurement Guidelines'}
+                {(MEASUREMENT_GUIDELINES as any)[selectedCategory]?.title || 'Measurement Guidelines'}
               </h3>
               <button
                 type="button"
@@ -413,7 +469,7 @@ export default function ObservationForm({
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {MEASUREMENT_GUIDELINES[selectedCategory]?.guidelines.map((guideline: string, index: number) => (
+                {((MEASUREMENT_GUIDELINES as any)[selectedCategory]?.guidelines || []).map((guideline: string, index: number) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-medium">
                       {index + 1}
@@ -902,7 +958,7 @@ function GrowthStageFields({ data, updateField }: { data: GrowthStageData, updat
 }
 
 // Yield Quality Fields
-function YieldQualityFields({ data, updateField }: { data: YieldQualityData, updateField: (field: string, value: any) => void }) {
+function YieldQualityFields({ data, updateField }: { data: any, updateField: (field: string, value: any) => void }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
@@ -1140,7 +1196,7 @@ function WeedObservationFields({ data, updateField }: { data: WeedObservationDat
 }
 
 // Intercrop Yield Fields
-function IntercropYieldFields({ data, updateField }: { data: IntercropYieldData, updateField: (field: string, value: any) => void }) {
+function IntercropYieldFields({ data, updateField }: { data: any, updateField: (field: string, value: any) => void }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -1209,6 +1265,335 @@ function IntercropYieldFields({ data, updateField }: { data: IntercropYieldData,
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           placeholder="75.0"
         />
+      </div>
+    </div>
+  )
+}
+
+// Sugarcane Yield Quality Fields (MANDATORY)
+function SugarcaneYieldQualityFields({ data, updateField }: { data: SugarcaneYieldQualityData, updateField: (field: string, value: any) => void }) {
+  return (
+    <div className="space-y-6">
+      {/* Required for Cycle Closure */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-800 mb-3">Required for Cycle Closure</h4>
+        <p className="text-xs text-blue-700 mb-3">These fields must be completed before the crop cycle can be closed.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Yield (tons)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.totalYieldTons || ''}
+              onChange={(e) => updateField('totalYieldTons', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="120.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Yield per Hectare (t/ha)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.yieldPerHectare || ''}
+              onChange={(e) => updateField('yieldPerHectare', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="85.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Harvest Date</label>
+            <input
+              type="date"
+              value={data.harvestDate || ''}
+              onChange={(e) => updateField('harvestDate', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Brix (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="30"
+              value={data.brix || ''}
+              onChange={(e) => updateField('brix', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="18.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sugar Content (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="20"
+              value={data.sugarContent || ''}
+              onChange={(e) => updateField('sugarContent', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="12.8"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Section */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-green-800 mb-3">Revenue Information</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sugarcane Revenue (MUR)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={data.sugarcaneRevenue || ''}
+              onChange={(e) => updateField('sugarcaneRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="450000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sugar Revenue (MUR)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={data.sugarRevenue || ''}
+              onChange={(e) => updateField('sugarRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="180000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Energy Revenue (MUR)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={data.energyRevenue || ''}
+              onChange={(e) => updateField('energyRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="25000"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Quality Metrics */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-800 mb-3">Additional Quality Metrics</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pol (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.pol || ''}
+              onChange={(e) => updateField('pol', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="15.2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Purity (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={data.purity || ''}
+              onChange={(e) => updateField('purity', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="85.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">CCS (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.ccs || ''}
+              onChange={(e) => updateField('ccs', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="11.8"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fiber Content (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.fiberContent || ''}
+              onChange={(e) => updateField('fiberContent', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="12.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quality Grade</label>
+            <select
+              value={data.qualityGrade || ''}
+              onChange={(e) => updateField('qualityGrade', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Select grade</option>
+              <option value="A">Grade A (Premium)</option>
+              <option value="B">Grade B (Good)</option>
+              <option value="C">Grade C (Average)</option>
+              <option value="D">Grade D (Below Average)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Intercrop Yield Quality Fields (MANDATORY if intercrop planted)
+function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYieldQualityData, updateField: (field: string, value: any) => void }) {
+  return (
+    <div className="space-y-6">
+      {/* Required for Cycle Closure */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-800 mb-3">Required for Cycle Closure</h4>
+        <p className="text-xs text-blue-700 mb-3">These fields must be completed before the crop cycle can be closed.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Intercrop Type</label>
+            <select
+              value={data.intercropType || ''}
+              onChange={(e) => updateField('intercropType', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              title="Select intercrop type"
+            >
+              <option value="">Select intercrop type</option>
+              <option value="beans">Beans</option>
+              <option value="maize">Maize</option>
+              <option value="potato">Potato</option>
+              <option value="onion">Onion</option>
+              <option value="tomato">Tomato</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Harvest Date</label>
+            <input
+              type="date"
+              value={data.harvestDate || ''}
+              onChange={(e) => updateField('harvestDate', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              title="Harvest date"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Yield (tons) *</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.totalYieldTons || ''}
+              onChange={(e) => updateField('totalYieldTons', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="15.5"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Yield per Hectare (t/ha) *</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={data.yieldPerHectare || ''}
+              onChange={(e) => updateField('yieldPerHectare', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="12.5"
+              required
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Section */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-green-800 mb-3">Revenue Information</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Intercrop Revenue (MUR)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={data.intercropRevenue || ''}
+              onChange={(e) => updateField('intercropRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="75000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price per Ton (MUR)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={data.intercropPrice || ''}
+              onChange={(e) => updateField('intercropPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="6000"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Quality Metrics */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-800 mb-3">Quality Metrics</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Moisture Content (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={data.moistureContent || ''}
+              onChange={(e) => updateField('moistureContent', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="14.5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quality Grade</label>
+            <input
+              type="text"
+              value={data.qualityGrade || ''}
+              onChange={(e) => updateField('qualityGrade', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Grade A, Premium, etc."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Harvest Method</label>
+            <select
+              value={data.harvestMethod || ''}
+              onChange={(e) => updateField('harvestMethod', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Select method</option>
+              <option value="manual">Manual</option>
+              <option value="mechanical">Mechanical</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   )

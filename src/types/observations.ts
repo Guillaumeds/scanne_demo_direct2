@@ -1,16 +1,30 @@
 /**
  * Types for bloc observations management
+ *
+ * Advanced TypeScript Features:
+ * - Branded types for type safety
+ * - Template literal types for dynamic keys
+ * - Discriminated unions for observation data
+ * - Utility types for common patterns
  */
 
-export type ObservationCategory = 
+// Branded types for better type safety
+export type ObservationId = string & { readonly __brand: unique symbol }
+export type CropCycleId = string & { readonly __brand: unique symbol }
+
+// Utility function to create branded IDs
+export const createObservationId = (id: string): ObservationId => id as ObservationId
+export const createCropCycleId = (id: string): CropCycleId => id as CropCycleId
+
+export type ObservationCategory =
   | 'soil'
   | 'water'
   | 'plant-morphological'
   | 'growth-stage'
-  | 'yield-quality'
+  | 'sugarcane-yield-quality'
   | 'pest-disease'
   | 'weed'
-  | 'intercrop-yield'
+  | 'intercrop-yield-quality'
 
 export type ObservationStatus = 'planned' | 'in-progress' | 'completed' | 'cancelled'
 
@@ -21,21 +35,25 @@ export interface BlocObservation {
   description: string
   category: ObservationCategory
   status: ObservationStatus
-  
+
+  // Crop cycle linking - MANDATORY
+  cropCycleId: string
+  cropCycleType: 'plantation' | 'ratoon'
+
   // Scheduling
   observationDate: string
   actualDate?: string
-  
+
   // Sample information
   numberOfSamples?: number
   numberOfPlants?: number
-  
+
   // Notes
   notes?: string
-  
+
   // Category-specific data
   data: ObservationData
-  
+
   // Metadata
   createdAt: string
   updatedAt: string
@@ -43,14 +61,16 @@ export interface BlocObservation {
 }
 
 // Union type for all observation data types
-export type ObservationData = 
+export type ObservationData =
   | SoilObservationData
   | WaterObservationData
   | PlantMorphologicalData
   | GrowthStageData
-  | YieldQualityData
+  | SugarcaneYieldQualityData
   | PestDiseaseData
   | WeedObservationData
+  | IntercropYieldQualityData
+  | YieldQualityData
   | IntercropYieldData
 
 // Soil Observations
@@ -121,15 +141,40 @@ export interface GrowthStageData {
   spad?: number // SPAD units
 }
 
-// Yield and Quality Observations
-export interface YieldQualityData {
-  caneYield?: number // t/ha
-  juiceBrix?: number // %
-  commercialCaneSugar?: number // %
+// Sugarcane Yield and Quality Observations (MANDATORY for cycle closure)
+export interface SugarcaneYieldQualityData {
+  // Yield data (MANDATORY)
+  totalYieldTons: number // Total sugarcane yield in tons
+  yieldPerHectare: number // Tons per hectare (MANDATORY)
+  harvestDate: string // Harvest date (MANDATORY)
+
+  // Sugar quality data (MANDATORY)
+  brix: number // Brix percentage (MANDATORY)
+  sugarContent: number // Sugar content percentage (MANDATORY)
+
+  // Additional quality metrics
+  pol?: number // Pol percentage
+  purity?: number // Purity percentage
+  ccs?: number // Commercial Cane Sugar percentage
   fiberContent?: number // %
-  polPercent?: number // %
-  purity?: number // %
+  moistureContent?: number // %
   trashPercentage?: number // %
+  qualityGrade?: 'A' | 'B' | 'C' | 'D'
+
+  // Revenue data (MANDATORY)
+  sugarcaneRevenue: number // Total revenue from sugarcane sales (MUR)
+  sugarcanePrice: number // Price per ton (MUR)
+  sugarRevenue: number // Total revenue from sugar sales (MUR)
+  sugarPrice: number // Price per ton of sugar (MUR)
+
+  // Energy/Electricity revenue (OPTIONAL - only if bagasse/biomass sold)
+  energyRevenue?: number // Revenue from bagasse/biomass sales (MUR)
+  energyPrice?: number // Price per ton of biomass (MUR)
+  bagasseYieldTons?: number // Tons of bagasse produced
+
+  // Additional data
+  harvestMethod?: 'manual' | 'mechanical' | 'mixed'
+  notes?: string
 }
 
 // Pest and Disease Observations
@@ -151,14 +196,36 @@ export interface WeedObservationData {
   weedBiomass?: number // g/m²
 }
 
-// Intercrop Yield Observations
-export interface IntercropYieldData {
-  intercropType?: string
-  intercropYield?: number // t/ha or kg/ha
-  intercropQuality?: string
-  intercropBrix?: number // %
-  intercropMoisture?: number // %
+// Intercrop Yield and Quality Observations (MANDATORY if intercrop planted)
+export interface IntercropYieldQualityData {
+  // Basic info
+  intercropType: string // Type of intercrop (MANDATORY)
+  harvestDate: string // Harvest date (MANDATORY)
+
+  // Yield data (MANDATORY)
+  totalYieldTons: number // Total intercrop yield in tons
+  yieldPerHectare: number // Tons per hectare (MANDATORY)
+
+  // Quality metrics (specific to intercrop type)
+  moistureContent?: number // %
+  qualityGrade?: string // Grade specific to crop type
+
+  // Revenue data (MANDATORY)
+  intercropRevenue: number // Total revenue from intercrop sales (MUR)
+  intercropPrice: number // Price per ton (MUR)
+
+  // Additional data
+  harvestMethod?: 'manual' | 'mechanical' | 'mixed'
+  notes?: string
 }
+
+
+
+
+
+
+
+
 
 export const OBSERVATION_CATEGORIES: {
   id: ObservationCategory
@@ -196,11 +263,11 @@ export const OBSERVATION_CATEGORIES: {
     icon: '🌾'
   },
   {
-    id: 'yield-quality',
-    name: 'Yield & Quality',
-    description: 'Harvest yield and sugar quality metrics',
-    color: 'bg-purple-100 text-purple-800 border-purple-200',
-    icon: '⚖️'
+    id: 'sugarcane-yield-quality',
+    name: 'Sugarcane Yield & Quality',
+    description: 'MANDATORY: Sugarcane harvest yield, sugar quality, and revenue data',
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: '🎯'
   },
   {
     id: 'pest-disease',
@@ -217,10 +284,170 @@ export const OBSERVATION_CATEGORIES: {
     icon: '🌿'
   },
   {
-    id: 'intercrop-yield',
-    name: 'Intercrop Yield',
-    description: 'Intercrop harvest and quality data',
+    id: 'intercrop-yield-quality',
+    name: 'Intercrop Yield & Quality',
+    description: 'MANDATORY if intercrop planted: Intercrop harvest yield, quality, and revenue data',
     color: 'bg-indigo-100 text-indigo-800 border-indigo-200',
     icon: '🌽'
   }
 ]
+
+// Helper functions for observation validation
+export const getMandatoryObservationsForCycle = (
+  cycleType: 'plantation' | 'ratoon',
+  hasIntercrop: boolean
+): ObservationCategory[] => {
+  const mandatory: ObservationCategory[] = ['sugarcane-yield-quality']
+
+  if (hasIntercrop) {
+    mandatory.push('intercrop-yield-quality')
+  }
+
+  return mandatory
+}
+
+export const validateObservationForCycleClosure = (
+  observation: BlocObservation,
+  hasIntercrop: boolean
+): { valid: boolean; errors: string[] } => {
+  const errors: string[] = []
+
+  switch (observation.category) {
+    case 'sugarcane-yield-quality':
+      const sugarcaneData = observation.data as SugarcaneYieldQualityData
+      // Mandatory yield fields
+      if (!sugarcaneData.totalYieldTons || sugarcaneData.totalYieldTons <= 0) {
+        errors.push('Total sugarcane yield is required and must be greater than 0')
+      }
+      if (!sugarcaneData.yieldPerHectare || sugarcaneData.yieldPerHectare <= 0) {
+        errors.push('Yield per hectare is required and must be greater than 0')
+      }
+      if (!sugarcaneData.harvestDate) {
+        errors.push('Harvest date is required')
+      }
+
+      // Mandatory quality fields
+      if (!sugarcaneData.brix || sugarcaneData.brix <= 0) {
+        errors.push('Brix percentage is required and must be greater than 0')
+      }
+      if (!sugarcaneData.sugarContent || sugarcaneData.sugarContent <= 0) {
+        errors.push('Sugar content percentage is required and must be greater than 0')
+      }
+
+      // Mandatory revenue fields
+      if (!sugarcaneData.sugarcaneRevenue || sugarcaneData.sugarcaneRevenue <= 0) {
+        errors.push('Sugarcane revenue is required and must be greater than 0')
+      }
+      if (!sugarcaneData.sugarRevenue || sugarcaneData.sugarRevenue <= 0) {
+        errors.push('Sugar revenue is required and must be greater than 0')
+      }
+      break
+
+    case 'intercrop-yield-quality':
+      const intercropData = observation.data as IntercropYieldQualityData
+      if (!intercropData.intercropType) {
+        errors.push('Intercrop type is required')
+      }
+      if (!intercropData.totalYieldTons || intercropData.totalYieldTons <= 0) {
+        errors.push('Total intercrop yield is required and must be greater than 0')
+      }
+      if (!intercropData.yieldPerHectare || intercropData.yieldPerHectare <= 0) {
+        errors.push('Intercrop yield per hectare is required and must be greater than 0')
+      }
+      if (!intercropData.harvestDate) {
+        errors.push('Intercrop harvest date is required')
+      }
+      if (!intercropData.intercropRevenue || intercropData.intercropRevenue < 0) {
+        errors.push('Intercrop revenue is required (can be 0)')
+      }
+      break
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  }
+}
+
+// Additional observation data types for legacy compatibility
+export interface YieldQualityData {
+  yieldPerHectare: number // tons/ha
+  qualityGrade: 'A' | 'B' | 'C' | 'D'
+  harvestDate: string
+  moistureContent?: number // %
+  trashPercentage?: number // %
+  notes?: string
+}
+
+export interface IntercropYieldData {
+  intercropType: string
+  intercropYield: number // tons/ha
+  harvestDate: string
+  qualityGrade?: 'A' | 'B' | 'C' | 'D'
+  marketPrice?: number // Rs per unit
+  totalRevenue?: number // Rs
+  notes?: string
+}
+
+// Advanced TypeScript Features
+
+// Template literal types for dynamic observation keys
+export type ObservationDataKey<T extends ObservationCategory> =
+  T extends 'soil' ? keyof SoilObservationData :
+  T extends 'water' ? keyof WaterObservationData :
+  T extends 'plant-morphological' ? keyof PlantMorphologicalData :
+  T extends 'growth-stage' ? keyof GrowthStageData :
+  T extends 'sugarcane-yield-quality' ? keyof SugarcaneYieldQualityData :
+  T extends 'pest-disease' ? keyof PestDiseaseData :
+  T extends 'weed' ? keyof WeedObservationData :
+  T extends 'intercrop-yield-quality' ? keyof IntercropYieldQualityData :
+  never
+
+// Discriminated union for type-safe observation data access
+export type TypedObservationData<T extends ObservationCategory> =
+  T extends 'soil' ? SoilObservationData :
+  T extends 'water' ? WaterObservationData :
+  T extends 'plant-morphological' ? PlantMorphologicalData :
+  T extends 'growth-stage' ? GrowthStageData :
+  T extends 'sugarcane-yield-quality' ? SugarcaneYieldQualityData :
+  T extends 'pest-disease' ? PestDiseaseData :
+  T extends 'weed' ? WeedObservationData :
+  T extends 'intercrop-yield-quality' ? IntercropYieldQualityData :
+  never
+
+// Utility types for common patterns
+export type ObservationWithData<T extends ObservationCategory> = Omit<BlocObservation, 'data' | 'category'> & {
+  category: T
+  data: TypedObservationData<T>
+}
+
+// Result types for better error handling
+export type ObservationResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; code?: string }
+
+// Partial update types
+export type ObservationUpdate = Partial<Omit<BlocObservation, 'id' | 'createdAt' | 'createdBy'>>
+
+// Query types for filtering
+export interface ObservationQuery {
+  category?: ObservationCategory | ObservationCategory[]
+  status?: ObservationStatus | ObservationStatus[]
+  cropCycleId?: string
+  dateRange?: {
+    start: string
+    end: string
+  }
+  limit?: number
+  offset?: number
+}
+
+// Type guards for runtime type checking
+export const isObservationCategory = (value: string): value is ObservationCategory => {
+  return ['soil', 'water', 'plant-morphological', 'growth-stage', 'sugarcane-yield-quality',
+          'pest-disease', 'weed', 'intercrop-yield-quality'].includes(value)
+}
+
+export const isObservationStatus = (value: string): value is ObservationStatus => {
+  return ['planned', 'in-progress', 'completed', 'cancelled'].includes(value)
+}

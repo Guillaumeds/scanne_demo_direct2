@@ -24,15 +24,19 @@ export interface BlocAttachment {
   uploadDate: string
   description?: string
   tags: string[]
-  
+
+  // Crop cycle linking - MANDATORY
+  cropCycleId: string
+  cropCycleType: 'plantation' | 'ratoon'
+
   // File metadata
   mimeType: string
   extension: string
-  
+
   // Storage info (would be actual URLs in production)
   url: string
   thumbnailUrl?: string
-  
+
   // Metadata
   uploadedBy: string
   lastModified: string

@@ -8,6 +8,9 @@ import ActivitiesTab from './ActivitiesTab'
 import ObservationsTab from './ObservationsTab'
 import AttachmentsTab from './AttachmentsTab'
 import VarietySelector from './VarietySelector'
+import CropCycleGeneralInfo from './CropCycleGeneralInfo'
+import { CropCycleProvider, useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
+import { SelectedCropCycleProvider } from '@/contexts/SelectedCropCycleContext'
 import { CropVariety, ALL_VARIETIES } from '@/types/varieties'
 
 
@@ -63,7 +66,19 @@ interface BlocData {
   profitMargin: number
 }
 
-export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScreenProps) {
+// Inner component that uses the crop cycle context
+function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
+  // Crop cycle context hooks
+  const permissions = useCropCyclePermissions()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const validation = useCropCycleValidation()
+
+  // Get the crop cycle context for creating cycles
+  const cropCycleContext = useCropCycle()
+
+  // Get active cycle info
+  const activeCycleInfo = getActiveCycleInfo()
+
   const [activeTab, setActiveTab] = useState('general')
   const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
   const [showIntercropSelector, setShowIntercropSelector] = useState(false)
@@ -100,21 +115,39 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
     profitMargin: 0
   })
 
+  // Helper function to get tab status
+  const getTabStatus = (tabId: string) => {
+    // Check if tab has validation issues or missing required data
+    const tabWarnings = validation.warnings.filter(warning =>
+      warning.toLowerCase().includes(tabId) ||
+      (tabId === 'general' && warning.includes('cycle')) ||
+      (tabId === 'activities' && warning.includes('activity')) ||
+      (tabId === 'observations' && warning.includes('observation'))
+    )
+
+    if (tabWarnings.length > 0) return 'warning'
+
+    // Check if tab has required data completed
+    if (tabId === 'general' && activeCycleInfo) return 'complete'
+    if (tabId === 'activities' && activeCycleInfo) return 'complete'
+    if (tabId === 'observations' && activeCycleInfo) return 'complete'
+
+    return 'default'
+  }
+
   const tabs = [
-    { id: 'general', name: 'General Info', icon: '📋' },
-    { id: 'activities', name: 'Activities', icon: '📋' },
-    { id: 'observations', name: 'Observations', icon: '🔬' },
-    { id: 'weather', name: 'Weather', icon: '🌤️' },
-    { id: 'satellite-soil', name: 'Satellite Soil', icon: '🛰️' },
-    { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿' },
-    { id: 'attachments', name: 'Attachments', icon: '📎' }
+    { id: 'general', name: 'General Info', icon: '📋', status: getTabStatus('general') },
+    { id: 'activities', name: 'Activities', icon: '📋', status: getTabStatus('activities') },
+    { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') },
+    { id: 'weather', name: 'Weather', icon: '🌤️', status: getTabStatus('weather') },
+    { id: 'satellite-soil', name: 'Satellite Soil', icon: '🛰️', status: getTabStatus('satellite-soil') },
+    { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') },
+    { id: 'attachments', name: 'Attachments', icon: '📎', status: getTabStatus('attachments') }
   ]
 
   const handleInputChange = (field: keyof BlocData, value: string | number | boolean) => {
-    setBlocData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    const updatedData = { [field]: value }
+    autoSave(updatedData)
   }
 
   const addRatoonHarvestDate = () => {
@@ -174,17 +207,30 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
     return ALL_VARIETIES.find(v => v.name === blocData.intercropVariety && v.category === 'intercrop')
   }
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving bloc data:', blocData)
-    alert('Data saved successfully!')
+  // Auto-save function that saves data immediately
+  const autoSave = (data: Partial<BlocData>) => {
+    try {
+      const updatedData = { ...blocData, ...data }
+      setBlocData(updatedData)
+      // In a real implementation, this would save to a database
+      localStorage.setItem(`bloc_${bloc.id}_data`, JSON.stringify(updatedData))
+    } catch (error) {
+      console.error('Error auto-saving bloc data:', error)
+    }
   }
 
   const handleArchiveBloc = () => {
     if (window.confirm('Are you sure you want to archive this bloc? It will be moved to archived blocs but can be restored later.')) {
-      // TODO: Implement archive functionality
-      console.log('Archiving bloc:', bloc.id)
-      onBack() // Return to main view after archiving
+      // Archive bloc by updating its status
+      try {
+        const archivedBlocs = JSON.parse(localStorage.getItem('archived_blocs') || '[]')
+        archivedBlocs.push({ ...bloc, archivedAt: new Date().toISOString() })
+        localStorage.setItem('archived_blocs', JSON.stringify(archivedBlocs))
+        onBack() // Return to main view after archiving
+      } catch (error) {
+        console.error('Error archiving bloc:', error)
+        alert('Error archiving bloc. Please try again.')
+      }
     }
   }
 
@@ -221,19 +267,39 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
             <p className="text-sm text-gray-600">
               Area: {bloc.area.toFixed(2)} ha • Fields: {bloc.fieldIds.length} parcelles
             </p>
+
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
-          >
-            Save Changes
-          </button>
+          {/* Auto-save indicator */}
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Auto-saved</span>
+          </div>
         </div>
       </div>
+
+      {/* Validation Warnings */}
+      {validation.warnings.length > 0 && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-4">
+          <div className="flex items-start space-x-2">
+            <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="text-sm">
+              <h4 className="font-medium text-yellow-800 mb-1">Validation Issues</h4>
+              <ul className="space-y-1">
+                {validation.warnings.map((warning, index) => (
+                  <li key={index} className="text-yellow-700">{warning}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {/* Tab Navigation */}
       <div className="bg-white border-b border-gray-200 px-6">
@@ -243,7 +309,7 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 relative ${
                 activeTab === tab.id
                   ? 'border-green-500 text-green-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -252,6 +318,13 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
               <span className="flex items-center space-x-2">
                 <span>{tab.icon}</span>
                 <span>{tab.name}</span>
+                {/* Status indicator */}
+                {tab.status === 'warning' && (
+                  <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                )}
+                {tab.status === 'complete' && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                )}
               </span>
             </button>
           ))}
@@ -262,245 +335,18 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
           {activeTab === 'general' && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">General Information</h2>
-
-                    {/* Block ID Display */}
-                    <div className="mb-4">
-                      <span className="text-xs text-gray-500 uppercase tracking-wide">Block ID</span>
-                      <div className="text-sm font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded mt-1">
-                        {bloc.id.slice(-8)}
-                      </div>
-                    </div>
-
-                    {/* Planting Date */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date</label>
-                      <input
-                        type="date"
-                        value={blocData.plantingDate}
-                        onChange={(e) => handleInputChange('plantingDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* Sugar Cane Variety Selection */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Sugar Cane Variety</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowSugarcaneSelector(true)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <span className="text-lg">🌾</span>
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {blocData.sugarcaneVariety || 'Select sugar cane variety...'}
-                            </div>
-                            {getSelectedSugarcaneVarietyDetails() && (
-                              <div className="text-xs text-gray-500">
-                                Harvest: {(getSelectedSugarcaneVarietyDetails() as any)?.harvestStart} - {(getSelectedSugarcaneVarietyDetails() as any)?.harvestEnd}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                          <polyline points="9,18 15,12 9,6"></polyline>
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Intercrop Variety Selection */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Intercrop Variety</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowIntercropSelector(true)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <span className="text-lg">🌿</span>
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {blocData.intercropVariety || 'Select intercrop variety...'}
-                            </div>
-                            {getSelectedIntercropVarietyDetails() && (
-                              <div className="text-xs text-gray-500">
-                                Harvest: {(getSelectedIntercropVarietyDetails() as any)?.harvestTime}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                          <polyline points="9,18 15,12 9,6"></polyline>
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Bloc Description */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Bloc Description</label>
-                      <textarea
-                        value={blocData.blocDescription}
-                        onChange={(e) => handleInputChange('blocDescription', e.target.value)}
-                        rows={3}
-                        placeholder="Enter bloc description..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* Delete and Archive Actions */}
-                    <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => handleArchiveBloc()}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="21,8 21,21 3,21 3,8"></polyline>
-                          <rect x="1" y="3" width="22" height="5"></rect>
-                          <line x1="10" y1="12" x2="14" y2="12"></line>
-                        </svg>
-                        <span>Archive Bloc</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBloc()}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3,6 5,6 21,6"></polyline>
-                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                        <span>Delete Bloc</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column - Harvest Dates */}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Harvest Schedule</h3>
-
-                    {/* Expected Harvest Date for Planted Cane */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Expected Harvest Date (Planted Cane)</label>
-                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Expected Harvest Date Planted Cane
-                          </label>
-                          <input
-                            type="date"
-                            value={blocData.expectedHarvestDatePlanted}
-                            onChange={(e) => handleInputChange('expectedHarvestDatePlanted', e.target.value)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleInputChange('isHarvested', !blocData.isHarvested)}
-                          className={`flex items-center space-x-1 px-2 py-1 rounded border transition-all duration-200 ${
-                            blocData.isHarvested
-                              ? 'bg-green-50 border-green-500 text-green-700'
-                              : 'bg-gray-50 border-gray-300 text-gray-600 hover:border-green-400'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                            blocData.isHarvested
-                              ? 'bg-green-500 border-green-500 text-white'
-                              : 'border-gray-300 hover:border-green-400'
-                          }`}>
-                            {blocData.isHarvested && (
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                <polyline points="20,6 9,17 4,12"></polyline>
-                              </svg>
-                            )}
-                          </div>
-                          <span className="text-xs font-medium">Harvested</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Ratoon Harvest Dates */}
-                    <div className="space-y-3">
-                      {blocData.ratoonHarvestDates.map((ratoon, index) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <label className="block text-xs text-gray-500 mb-1">
-                              Expected Harvest Date Ratoon {ratoon.ratoonNumber}
-                            </label>
-                            <input
-                              type="date"
-                              value={ratoon.expectedDate}
-                              onChange={(e) => updateRatoonHarvestDate(index, 'expectedDate', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => updateRatoonHarvestDate(index, 'isHarvested', !ratoon.isHarvested)}
-                            className={`flex items-center space-x-1 px-2 py-1 rounded border transition-all duration-200 ${
-                              ratoon.isHarvested
-                                ? 'bg-green-50 border-green-500 text-green-700'
-                                : 'bg-gray-50 border-gray-300 text-gray-600 hover:border-green-400'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                              ratoon.isHarvested
-                                ? 'bg-green-500 border-green-500 text-white'
-                                : 'border-gray-300 hover:border-green-400'
-                            }`}>
-                              {ratoon.isHarvested && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                  <polyline points="20,6 9,17 4,12"></polyline>
-                                </svg>
-                              )}
-                            </div>
-                            <span className="text-xs font-medium">Harvested</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeRatoonHarvestDate(index)}
-                            className="text-red-500 hover:text-red-700 p-1"
-                            title="Remove ratoon"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <line x1="18" y1="6" x2="6" y2="18"></line>
-                              <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-
-                      {/* Add Ratoon Button */}
-                      {blocData.ratoonHarvestDates.length < 10 && (
-                        <button
-                          type="button"
-                          onClick={addRatoonHarvestDate}
-                          className="flex items-center space-x-2 px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg border border-dashed border-green-300 hover:border-green-400 transition-colors w-full justify-center"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                          </svg>
-                          <span>Add Ratoon Harvest Date</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CropCycleGeneralInfo
+              bloc={bloc}
+              onSave={async (data) => {
+                try {
+                  console.log('Crop cycle data saved:', data)
+                  // The cycle creation and activation is handled in the CropCycleGeneralInfo component
+                  // and the CropCycleContext automatically sets it as active
+                } catch (error) {
+                  console.error('Error handling crop cycle save:', error)
+                }
+              }}
+            />
           )}
 
           {activeTab === 'cultivation' && (
@@ -800,5 +646,16 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
         />
       )}
     </div>
+  )
+}
+
+// Main component wrapper with CropCycleProvider
+export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScreenProps) {
+  return (
+    <CropCycleProvider blocId={bloc.id} userRole="user">
+      <SelectedCropCycleProvider>
+        <BlocDataScreenInner bloc={bloc} onBack={onBack} onDelete={onDelete} />
+      </SelectedCropCycleProvider>
+    </CropCycleProvider>
   )
 }

@@ -12,7 +12,11 @@ import {
   formatFileSize,
   validateFileUpload
 } from '@/types/attachments'
+import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
+import { AttachmentService } from '@/services/attachmentService'
 import CategorySelector from './CategorySelector'
+import CropCycleSelector from './CropCycleSelector'
 
 interface DrawnArea {
   id: string
@@ -27,6 +31,19 @@ interface AttachmentsTabProps {
 }
 
 export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
+  // Crop cycle context hooks
+  const permissions = useCropCyclePermissions()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const validation = useCropCycleValidation()
+
+  // Selected crop cycle context
+  const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
+  const selectedCycleInfo = getSelectedCycleInfo()
+  const canEdit = canEditSelectedCycle()
+
+  // Get active cycle info (for backward compatibility)
+  const activeCycleInfo = getActiveCycleInfo()
+
   const [attachments, setAttachments] = useState<BlocAttachment[]>([])
   const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory | 'all'>('all')
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -36,11 +53,24 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'category' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc') // Default to earliest to oldest
 
-  // Load attachments from storage or start with empty array
+  // Load attachments from localStorage (persistent storage)
   useEffect(() => {
-    // In a real application, this would load from a database or API
-    setAttachments([])
-  }, [])
+    const loadAttachments = async () => {
+      if (selectedCycleInfo?.id) {
+        try {
+          const cycleAttachments = await AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id)
+          setAttachments(cycleAttachments)
+        } catch (error) {
+          console.error('Error loading attachments:', error)
+          setAttachments([])
+        }
+      } else {
+        setAttachments([])
+      }
+    }
+
+    loadAttachments()
+  }, [selectedCycleInfo?.id])
 
   // Filter and sort attachments
   const filteredAttachments = attachments
@@ -70,9 +100,15 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
-  const handleDeleteAttachment = (id: string) => {
+  const handleDeleteAttachment = async (id: string) => {
     if (confirm('Are you sure you want to delete this attachment?')) {
-      setAttachments(prev => prev.filter(attachment => attachment.id !== id))
+      try {
+        // Delete from localStorage and state
+        await AttachmentService.deleteAttachment(id)
+        setAttachments(prev => prev.filter(attachment => attachment.id !== id))
+      } catch (error) {
+        console.error('Error deleting attachment:', error)
+      }
     }
   }
 
@@ -108,7 +144,8 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
           </h2>
         </div>
 
-
+        {/* Crop Cycle Selector */}
+        <CropCycleSelector />
 
         {/* Category Overview */}
         <div className="p-6 border-b border-gray-200">
@@ -353,10 +390,20 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
       {showUploadModal && (
         <FileUploadModal
           onClose={() => setShowUploadModal(false)}
-          onUpload={(newAttachments) => {
-            setAttachments(prev => [...prev, ...newAttachments])
-            setShowUploadModal(false)
+          onUpload={async (newAttachments) => {
+            try {
+              // Save attachments to localStorage
+              const savedAttachments = await Promise.all(
+                newAttachments.map(attachment => AttachmentService.createAttachment(attachment))
+              )
+              setAttachments(prev => [...prev, ...savedAttachments])
+              setShowUploadModal(false)
+            } catch (error) {
+              console.error('Error saving attachments:', error)
+              alert(`Error saving attachments: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            }
           }}
+          activeCycleInfo={activeCycleInfo}
         />
       )}
     </div>
@@ -364,12 +411,14 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
 }
 
 // File Upload Modal Component
-function FileUploadModal({ 
-  onClose, 
-  onUpload 
+function FileUploadModal({
+  onClose,
+  onUpload,
+  activeCycleInfo
 }: {
   onClose: () => void
   onUpload: (attachments: BlocAttachment[]) => void
+  activeCycleInfo: any // Type from useCropCycleInfo hook
 }) {
   const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory>('other')
   const [description, setDescription] = useState('')
@@ -406,6 +455,11 @@ function FileUploadModal({
   const handleUpload = () => {
     if (uploadedFiles.length === 0) return
 
+    if (!activeCycleInfo) {
+      alert('No active crop cycle found. Please create a crop cycle first.')
+      return
+    }
+
     const newAttachments: BlocAttachment[] = uploadedFiles.map(file => ({
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -416,6 +470,8 @@ function FileUploadModal({
       uploadDate: new Date().toISOString(),
       description: description || undefined,
       tags: [], // No tags functionality
+      cropCycleId: activeCycleInfo.id,
+      cropCycleType: activeCycleInfo.type,
       mimeType: file.type,
       extension: '.' + file.name.split('.').pop()?.toLowerCase(),
       url: URL.createObjectURL(file), // Mock URL for demo

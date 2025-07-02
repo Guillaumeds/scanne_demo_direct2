@@ -29,7 +29,11 @@ export interface BlocActivity {
   description: string
   phase: ActivityPhase
   status: ActivityStatus
-  
+
+  // Crop cycle linking - MANDATORY
+  cropCycleId: string
+  cropCycleType: 'plantation' | 'ratoon'
+
   // Scheduling
   startDate: string
   endDate: string
@@ -43,24 +47,30 @@ export interface BlocActivity {
     quantity: number
     rate: number // per hectare
     unit: string
-    cost: number
+    estimatedCost: number // Auto-calculated, non-editable
+    actualCost?: number // User-entered actual cost
   }[]
-  
+
   // Resources used
   resources?: {
     resourceId: string
     resourceName: string
     hours: number
     unit: string
-    cost: number
+    estimatedCost: number // Auto-calculated, non-editable
+    actualCost?: number // User-entered actual cost
     category: string
   }[]
+
+  // Cost summaries (auto-calculated, non-editable)
+  totalEstimatedCost: number // Sum of all estimated costs
+  totalActualCost?: number // Sum of all actual costs (when available)
 
   // Legacy fields (for backward compatibility)
   resourceType?: ResourceType
   laborHours?: number
   machineHours?: number
-  totalCost?: number
+  totalCost?: number // Deprecated - use totalEstimatedCost and totalActualCost instead
   
   // Additional info
   weather?: string
@@ -703,3 +713,86 @@ export const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
     estimatedCost: 2000
   }
 ]
+
+// Helper functions for activity cost validation
+export const calculateActivityCosts = (activity: BlocActivity): {
+  totalEstimatedCost: number
+  totalActualCost?: number
+} => {
+  let totalEstimatedCost = 0
+  let totalActualCost = 0
+  let hasActualCosts = false
+
+  // Calculate product costs
+  if (activity.products) {
+    for (const product of activity.products) {
+      totalEstimatedCost += product.estimatedCost || 0
+      if (product.actualCost !== undefined) {
+        totalActualCost += product.actualCost
+        hasActualCosts = true
+      }
+    }
+  }
+
+  // Calculate resource costs
+  if (activity.resources) {
+    for (const resource of activity.resources) {
+      totalEstimatedCost += resource.estimatedCost || 0
+      if (resource.actualCost !== undefined) {
+        totalActualCost += resource.actualCost
+        hasActualCosts = true
+      }
+    }
+  }
+
+  return {
+    totalEstimatedCost,
+    totalActualCost: hasActualCosts ? totalActualCost : undefined
+  }
+}
+
+export const validateActivityForCycleClosure = (activity: BlocActivity): {
+  valid: boolean
+  errors: string[]
+} => {
+  const errors: string[] = []
+
+  // Check if activity is completed
+  if (activity.status !== 'completed') {
+    errors.push(`Activity "${activity.name}" must be completed before cycle closure`)
+  }
+
+  // Check if all products have actual costs
+  if (activity.products) {
+    for (const product of activity.products) {
+      if (product.actualCost === undefined || product.actualCost === null) {
+        errors.push(`Actual cost for product "${product.productName}" is required`)
+      }
+    }
+  }
+
+  // Check if all resources have actual costs
+  if (activity.resources) {
+    for (const resource of activity.resources) {
+      if (resource.actualCost === undefined || resource.actualCost === null) {
+        errors.push(`Actual cost for resource "${resource.resourceName}" is required`)
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  }
+}
+
+export const getAllActivitiesValidationErrors = (activities: BlocActivity[]): string[] => {
+  const allErrors: string[] = []
+
+  for (const activity of activities) {
+    const validation = validateActivityForCycleClosure(activity)
+    allErrors.push(...validation.errors)
+  }
+
+  return allErrors
+}
