@@ -32,8 +32,7 @@ import {
   ActivityStatus,
   ActivityTemplate,
   SUGARCANE_PHASES,
-  ACTIVITY_TEMPLATES,
-  ActivityTemplate
+  ACTIVITY_TEMPLATES
 } from '@/types/activities'
 
 interface DrawnArea {
