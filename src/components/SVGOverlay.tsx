@@ -123,7 +123,7 @@ async function loadSVGContent(url: string): Promise<SVGElement | null> {
       throw new Error('Failed to parse SVG content')
     }
 
-    const svgElement = doc.documentElement as SVGElement
+    const svgElement = doc.documentElement as unknown as SVGElement
     
     // Ensure it's an SVG element
     if (svgElement.tagName.toLowerCase() !== 'svg') {

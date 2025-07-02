@@ -36,7 +36,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
       const centerCoords = calculatePolygonCenter(drawnAreas[0].coordinates)
 
       const analysis = useMockData
-        ? getMockWeatherData(centerCoords)
+        ? await getMockWeatherData(centerCoords, '15-day-forecast')
         : await fetch15DayWeatherForecast(centerCoords)
 
       setWeatherData(analysis)

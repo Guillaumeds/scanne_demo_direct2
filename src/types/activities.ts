@@ -12,7 +12,7 @@ export type ActivityPhase =
   | 'harvest'
   | 'post-harvest'
 
-export type ActivityStatus = 'planned' | 'completed'
+export type ActivityStatus = 'planned' | 'in-progress' | 'completed' | 'cancelled'
 
 export type ResourceType = 'manual' | 'mechanical' | 'both'
 

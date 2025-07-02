@@ -47,7 +47,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
 
   useEffect(() => {
     // Auto-fetch vegetation data when component mounts
-    fetchVegetationData(true) // Use mock data for now
+    fetchVegetationData(false) // Use real data
   }, [bloc.id])
 
   const getVegetationHealth = (ndvi: number) => {

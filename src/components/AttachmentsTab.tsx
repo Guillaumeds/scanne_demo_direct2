@@ -10,8 +10,7 @@ import {
   ATTACHMENT_CATEGORIES,
   getFileIcon,
   formatFileSize,
-  validateFileUpload,
-  generateMockAttachments
+  validateFileUpload
 } from '@/types/attachments'
 import CategorySelector from './CategorySelector'
 
@@ -37,9 +36,10 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'category' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc') // Default to earliest to oldest
 
-  // Load mock attachments on component mount
+  // Load attachments from storage or start with empty array
   useEffect(() => {
-    setAttachments(generateMockAttachments())
+    // In a real application, this would load from a database or API
+    setAttachments([])
   }, [])
 
   // Filter and sort attachments

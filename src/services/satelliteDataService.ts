@@ -314,10 +314,16 @@ export async function fetchSatelliteAnalysis(
         evi: 0,
         savi: 0,
         ndwi: 0,
+        ndre: 0,
+        cci: 0,
         lai: 0,
         fcover: 0,
         fapar: 0,
-        chlorophyll: 0
+        chlorophyll: 0,
+        gndvi: 0,
+        arvi: 0,
+        mcari: 0,
+        tcari: 0
       },
       soilIndices: {
         brightness: 0,

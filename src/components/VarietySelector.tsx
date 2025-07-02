@@ -47,7 +47,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
     const sugarcaneVariety = variety as SugarcaneVariety
 
     // Create tags in fixed positions: Early=0, Mid=1, Late=2
-    const tagPositions = [null, null, null] // [Early, Mid, Late]
+    const tagPositions: ({ name: string; color: string } | null)[] = [null, null, null] // [Early, Mid, Late]
     const seasonOrder = ['early', 'mid', 'late']
 
     sugarcaneVariety.seasons.forEach(season => {

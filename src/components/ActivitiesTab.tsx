@@ -76,7 +76,10 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
   const getStatusColor = (status: ActivityStatus) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800 border-green-200'
+      case 'in-progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
       case 'planned': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -128,6 +131,12 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
                 {activity.status === 'in-progress' && (
                   <span className="text-yellow-600" title="In Progress">⏳</span>
                 )}
+                {activity.status === 'planned' && !overdueStatus && (
+                  <span className="text-blue-600" title="Planned">📅</span>
+                )}
+                {activity.status === 'cancelled' && (
+                  <span className="text-gray-600" title="Cancelled">❌</span>
+                )}
               </div>
             </div>
             <p className="text-sm text-gray-600 line-clamp-2">{activity.description}</p>
@@ -138,8 +147,8 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
         <div className="flex flex-col items-end space-y-2 ml-4">
           {/* Dates */}
           <div className="text-right text-xs text-gray-500">
-            <div>{format(new Date(activity.startDate || activity.plannedDate), 'MMM dd')}</div>
-            <div>{format(new Date(activity.endDate || activity.plannedDate), 'MMM dd')}</div>
+            <div>{format(new Date(activity.startDate), 'MMM dd')}</div>
+            <div>{format(new Date(activity.endDate), 'MMM dd')}</div>
           </div>
 
           {/* Actions */}
@@ -212,103 +221,10 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     })
   )
 
-  // Load mock activities on component mount
+  // Load activities from storage or start with empty array
   useEffect(() => {
-    const mockActivities: BlocActivity[] = [
-      {
-        id: '1',
-        name: 'Land Clearing',
-        description: 'Remove weeds, debris, and old crop residues',
-        phase: 'land-preparation',
-        status: 'completed',
-        startDate: '2024-01-15',
-        endDate: '2024-01-16',
-        actualDate: '2024-01-16',
-        duration: 8,
-        products: [],
-        resourceType: 'mechanical',
-        laborHours: 0,
-        machineHours: 8,
-        totalCost: 500,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      },
-      {
-        id: '2',
-        name: 'Primary Tillage (Plowing)',
-        description: 'Deep plowing to break hardpan and improve soil structure',
-        phase: 'land-preparation',
-        status: 'completed',
-        startDate: '2024-01-20',
-        endDate: '2024-01-21',
-        actualDate: '2024-01-21',
-        duration: 6,
-        products: [],
-        resourceType: 'mechanical',
-        laborHours: 2,
-        machineHours: 6,
-        totalCost: 400,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      },
-      {
-        id: '3',
-        name: 'Seed Placement',
-        description: 'Place seed cane in furrows',
-        phase: 'planting',
-        status: 'planned',
-        startDate: '2024-02-01',
-        endDate: '2024-02-03',
-        duration: 12,
-        products: [
-          {
-            productId: 'seed-cane',
-            productName: 'Seed Cane R570',
-            quantity: 3,
-            rate: 3,
-            unit: 'tons',
-            cost: 600
-          }
-        ],
-        resourceType: 'both',
-        laborHours: 8,
-        machineHours: 4,
-        totalCost: 800,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      },
-      {
-        id: '4',
-        name: 'First Fertilizer Application',
-        description: 'Apply NPK and micronutrients for establishment',
-        phase: 'establishment',
-        status: 'planned',
-        startDate: '2024-02-15',
-        endDate: '2024-02-15',
-        duration: 4,
-        products: [
-          {
-            productId: 'npk-fertilizer',
-            productName: 'NPK 12-12-17',
-            quantity: 200,
-            rate: 200,
-            unit: 'kg',
-            cost: 400
-          }
-        ],
-        resourceType: 'both',
-        laborHours: 2,
-        machineHours: 2,
-        totalCost: 600,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      }
-    ]
-    setActivities(mockActivities)
+    // In a real application, this would load from a database or API
+    setActivities([])
   }, [])
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -375,7 +291,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     const sorted = [...activities].sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(a.plannedDate).getTime() - new Date(b.plannedDate).getTime()
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
         case 'phase':
           const phaseOrder = SUGARCANE_PHASES.map(p => p.id)
           return phaseOrder.indexOf(a.phase) - phaseOrder.indexOf(b.phase)
@@ -414,9 +330,9 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     .sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(a.startDate || a.plannedDate).getTime() - new Date(b.startDate || b.plannedDate).getTime()
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
         case 'date-desc':
-          return new Date(b.startDate || b.plannedDate).getTime() - new Date(a.startDate || a.plannedDate).getTime()
+          return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         case 'phase':
           return SUGARCANE_PHASES.findIndex(p => p.id === a.phase) - SUGARCANE_PHASES.findIndex(p => p.id === b.phase)
         case 'status':
@@ -1034,7 +950,9 @@ function AddActivityModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="planned">Planned</option>
+                  <option value="in-progress">In Progress</option>
                   <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>

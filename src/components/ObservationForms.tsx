@@ -40,7 +40,7 @@ const MEASUREMENT_GUIDELINES = {
       "Flow Rate Measurement: Use flow meter or velocity-area method. For channels: measure cross-sectional area, use float method (multiply surface velocity by 0.85). Record in L/s or m³/h. Take multiple measurements across channel width."
     ]
   },
-  plant_morphological: {
+  'plant-morphological': {
     title: "Plant Morphological Observation Guidelines",
     guidelines: [
       "Plant Height: Use measuring tape/ruler from soil surface to highest leaf tip (not including inflorescence). Measure 20 plants per plot in diagonal pattern. Record to nearest centimeter. Measure at consistent time (morning) to avoid diurnal variation.",
@@ -51,7 +51,7 @@ const MEASUREMENT_GUIDELINES = {
       "Tiller Count: Count all tillers >10cm height emerging from main plant base. Include primary and secondary tillers. Count 20 plants per plot at 60, 90, and 120 days after planting. Record tillers per plant and per linear meter."
     ]
   },
-  growth_stage: {
+  'growth-stage': {
     title: "Growth Stage Observation Guidelines",
     guidelines: [
       "Emergence Stage: Record when 50% of planted setts show visible shoots >2cm above soil surface. Monitor daily from 7-21 days after planting. Document emergence percentage weekly. Note any uneven emergence patterns across field.",
@@ -62,7 +62,7 @@ const MEASUREMENT_GUIDELINES = {
       "Ripening/Harvest Maturity: Assess when Brix reaches >18% and Pol >14%. Lower leaves turn yellow/brown. Stems produce metallic sound when tapped. Growth completely stops. Optimal harvest window: 12-18 months depending on variety."
     ]
   },
-  yield_quality: {
+  'yield-quality': {
     title: "Yield and Quality Observation Guidelines",
     guidelines: [
       "Cane Yield Assessment: Harvest 10m row length from 3 representative areas per plot. Weigh fresh canes immediately using calibrated scale. Remove trash and dead leaves. Calculate: Yield (t/ha) = (Plot weight × 10,000) / (Plot area in m² × 1000). Record millable canes only.",
@@ -73,7 +73,7 @@ const MEASUREMENT_GUIDELINES = {
       "Commercial Cane Sugar (CCS): Calculate using formula: CCS = [Pol% - 0.4 × (Brix% - Pol%)] × 0.73. This represents recoverable sugar percentage. Minimum acceptable CCS: 10%. Premium quality: CCS >12%. Record for payment calculations."
     ]
   },
-  pest_disease: {
+  'pest-disease': {
     title: "Pest and Disease Observation Guidelines",
     guidelines: [
       "Visual Disease Assessment: Inspect 100 plants per hectare using W-pattern sampling. Record symptoms: leaf spots, wilting, discoloration, stunting. Use 0-9 severity scale: 0=no symptoms, 1=1-10% affected, 3=11-25%, 5=26-50%, 7=51-75%, 9=>75% plant affected. Photograph representative symptoms.",
@@ -93,6 +93,16 @@ const MEASUREMENT_GUIDELINES = {
       "Weed Height Measurement: Measure height of 10 tallest weeds per species using ruler. Record from soil surface to highest growing point. Measure separately for each dominant species. Record average, minimum, and maximum heights per species.",
       "Growth Stage Documentation: Use standardized growth stages: 1=seedling (cotyledons visible), 2=vegetative (true leaves developing), 3=stem elongation, 4=flowering/heading, 5=seed formation, 6=seed dispersal. Record percentage of each species at each stage.",
       "Spatial Distribution Mapping: Use GPS to map weed patches >5m². Record coordinates of heavy infestation areas. Note association with field conditions (wet spots, compacted areas, field edges). Create weed maps for targeted management. Update maps seasonally."
+    ]
+  },
+  'intercrop-yield': {
+    title: "Intercrop Yield Observation Guidelines",
+    guidelines: [
+      "Yield Sampling: Harvest representative 1m² areas from 5 locations per field. Weigh fresh produce immediately using calibrated scale. Record separately by intercrop type. Calculate yield per hectare: (Sample weight × 10,000) / Sample area in m².",
+      "Quality Assessment: Grade produce according to market standards. Record percentage in each grade category (Premium, Grade A, Grade B, Reject). Measure key quality parameters: size, color, firmness, sugar content (Brix for fruits).",
+      "Maturity Evaluation: Document harvest timing and maturity indicators. Record days from planting to harvest. Note optimal harvest window and post-harvest handling requirements. Monitor sugar content development for sweet crops.",
+      "Intercrop Performance: Compare intercrop yield with monoculture benchmarks. Calculate Land Equivalent Ratio (LER) = (Intercrop yield/Monoculture yield) + (Main crop yield with intercrop/Main crop monoculture yield). LER >1.0 indicates intercropping advantage.",
+      "Economic Analysis: Record all costs (seeds, labor, inputs) and revenues. Calculate gross margin per hectare. Compare profitability with alternative cropping systems. Include opportunity costs and risk factors in analysis."
     ]
   }
 }
@@ -122,6 +132,7 @@ export default function ObservationForm({
     category: selectedCategory,
     status: observation?.status || 'planned' as ObservationStatus,
     observationDate: observation?.observationDate || new Date().toISOString().split('T')[0],
+    actualDate: observation?.actualDate || '',
     numberOfSamples: observation?.numberOfSamples || undefined,
     numberOfPlants: observation?.numberOfPlants || undefined,
     notes: observation?.notes || '',
@@ -402,7 +413,7 @@ export default function ObservationForm({
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {MEASUREMENT_GUIDELINES[selectedCategory]?.guidelines.map((guideline, index) => (
+                {MEASUREMENT_GUIDELINES[selectedCategory]?.guidelines.map((guideline: string, index: number) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-medium">
                       {index + 1}

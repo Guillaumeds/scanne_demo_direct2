@@ -217,7 +217,7 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
           <div className="h-6 w-px bg-gray-300"></div>
           
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{blocData.blocName}</h1>
+            <h1 className="text-xl font-bold text-gray-900">Bloc {bloc.id}</h1>
             <p className="text-sm text-gray-600">
               Area: {bloc.area.toFixed(2)} ha • Fields: {bloc.fieldIds.length} parcelles
             </p>

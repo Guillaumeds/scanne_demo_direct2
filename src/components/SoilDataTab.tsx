@@ -509,7 +509,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900">{soc.value}</div>
-                    <div className="text-xs text-gray-600 mt-1">Good: >15 g/kg</div>
+                    <div className="text-xs text-gray-600 mt-1">Good: &gt;15 g/kg</div>
                   </div>
                 )
               })()}
@@ -526,7 +526,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900">{cec.value}</div>
-                    <div className="text-xs text-gray-600 mt-1">Good: >15 cmol/kg</div>
+                    <div className="text-xs text-gray-600 mt-1">Good: &gt;15 cmol/kg</div>
                   </div>
                 )
               })()}
@@ -543,7 +543,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900">{nitrogen.value}</div>
-                    <div className="text-xs text-gray-600 mt-1">Good: >1.5 g/kg</div>
+                    <div className="text-xs text-gray-600 mt-1">Good: &gt;1.5 g/kg</div>
                   </div>
                 )
               })()}

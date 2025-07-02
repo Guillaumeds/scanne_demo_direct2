@@ -225,48 +225,10 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     })
   )
 
-  // Load mock observations on component mount
+  // Load observations from storage or start with empty array
   useEffect(() => {
-    const mockObservations: BlocObservation[] = [
-      {
-        id: '1',
-        name: 'Soil pH Analysis',
-        description: 'Monthly soil pH measurement across field',
-        category: 'soil',
-        status: 'completed',
-        observationDate: '2024-01-15',
-        actualDate: '2024-01-15',
-        numberOfSamples: 5,
-        data: {
-          soilPH: 6.8,
-          electricalConductivity: 1.2,
-          soilOrganicMatter: 3.5
-        },
-        notes: 'pH levels within optimal range for sugarcane',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      },
-      {
-        id: '2',
-        name: 'Plant Height Measurement',
-        description: 'Weekly plant height monitoring',
-        category: 'plant-morphological',
-        status: 'planned',
-        observationDate: '2024-02-01',
-        numberOfPlants: 20,
-        data: {
-          plantHeight: 85,
-          stalkDiameter: 22,
-          numberOfTillersPerStool: 8
-        },
-        notes: 'Focus on main field area',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'user'
-      }
-    ]
-    setObservations(mockObservations)
+    // In a real application, this would load from a database or API
+    setObservations([])
   }, [])
 
   // Helper function to format cost without decimals
@@ -310,12 +272,16 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     setShowCategorySelector(true)
   }
 
-  const handleCategorySelect = (category: ObservationCategory) => {
+  const handleCategorySelect = (category: ObservationCategory | import('@/types/attachments').AttachmentCategory) => {
+    // Only handle observation categories
+    if (!['soil', 'water', 'plant-morphological', 'growth-stage', 'yield-quality', 'pest-disease', 'weed', 'intercrop-yield'].includes(category)) {
+      return
+    }
     setShowCategorySelector(false)
     setEditingObservation(null)
     setShowAddModal(true)
     // Set the selected category for the form
-    setSelectedCategory(category)
+    setSelectedCategory(category as ObservationCategory)
   }
 
   // Check if observation is overdue

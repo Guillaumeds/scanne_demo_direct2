@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
+// @ts-ignore - Turf.js types issue with package.json exports
 import * as turf from '@turf/turf'
 
 // Extend Leaflet types for vertex markers
@@ -147,7 +148,7 @@ export default function DrawingManager({
     map.off('contextmenu', handleRightClick)
     map.off('dblclick', handleDoubleClick)
     map.off('mousemove', handleMapMouseMove)
-    map.off('keydown', handleKeyDown)
+    document.removeEventListener('keydown', handleKeyDown)
 
     if (activeTool === 'polygon') {
       onDrawingStart()
@@ -157,7 +158,7 @@ export default function DrawingManager({
       map.on('contextmenu', handleRightClick) // Right-click to finish
       map.on('dblclick', handleDoubleClick) // Double-click to finish
       map.on('mousemove', handleMapMouseMove)
-      map.on('keydown', handleKeyDown) // Escape to cancel
+      document.addEventListener('keydown', handleKeyDown) // Escape to cancel
 
       // Disable double-click zoom during drawing
       map.doubleClickZoom.disable()
@@ -186,7 +187,7 @@ export default function DrawingManager({
         map.off('contextmenu', handleRightClick)
         map.off('dblclick', handleDoubleClick)
         map.off('mousemove', handleMapMouseMove)
-        map.off('keydown', handleKeyDown)
+        document.removeEventListener('keydown', handleKeyDown)
 
         map.getContainer().style.cursor = ''
         map.getContainer().removeAttribute('tabindex')
@@ -1269,6 +1270,7 @@ export default function DrawingManager({
     const center = calculatePolygonCentroid(drawingPointsRef.current)
 
     // Calculate responsive font size based on zoom and shape size
+    if (!map) return
     const currentZoom = map.getZoom()
     const bounds = finalPolygon.getBounds()
     const shapeWidthInPixels = map.distance(bounds.getSouthWest(), bounds.getSouthEast()) * Math.pow(2, currentZoom - 10) / 100
@@ -1423,8 +1425,8 @@ export default function DrawingManager({
       if (polygonOverlap.isOverlap) {
         // Show error and revert to original position or delete
         const latlngs = polygon.getLatLngs()[0] as L.LatLng[]
-        const centerPoint = calculatePolygonCentroid(latlngs.map(ll => [ll.lng, ll.lat] as [number, number]))
-        showOverlapIndicator(L.latLng(centerPoint[1], centerPoint[0]), 'Bloc overlaps with existing bloc - removing')
+        const centerPoint = calculatePolygonCentroid(latlngs)
+        showOverlapIndicator(centerPoint, 'Bloc overlaps with existing bloc - removing')
 
         // Remove the polygon entirely
         const polygonId = L.stamp(polygon).toString()

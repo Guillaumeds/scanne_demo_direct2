@@ -131,9 +131,9 @@ export default function MapComponent({
       soilOverlayRef.current = soilOverlay
 
       console.log('✅ Added composite layer: Satellite + Soil overlay')
-    } else if (config.type === 'image') {
+    } else if (config.type === 'image' && 'overlayBounds' in config && config.overlayBounds) {
       // Create image overlay for PNG/image files
-      const imageOverlay = L.imageOverlay(config.url, config.bounds!, {
+      const imageOverlay = L.imageOverlay(config.url, config.overlayBounds, {
         attribution: config.attribution,
         opacity: 0.8,
         interactive: false
@@ -332,9 +332,9 @@ export default function MapComponent({
           soilOverlay.addTo(map)
           soilOverlayRef.current = soilOverlay
           console.log('✅ Composite layer added: Satellite + Soil overlay')
-        } else if (config.type === 'image') {
+        } else if (config.type === 'image' && 'overlayBounds' in config && config.overlayBounds) {
           // Create image overlay for PNG/image files
-          const imageOverlay = L.imageOverlay(config.url, config.bounds!, {
+          const imageOverlay = L.imageOverlay(config.url, config.overlayBounds, {
             attribution: config.attribution,
             opacity: 0.8,
             interactive: false

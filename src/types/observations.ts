@@ -12,7 +12,7 @@ export type ObservationCategory =
   | 'weed'
   | 'intercrop-yield'
 
-export type ObservationStatus = 'planned' | 'in-progress' | 'completed'
+export type ObservationStatus = 'planned' | 'in-progress' | 'completed' | 'cancelled'
 
 // Base observation interface
 export interface BlocObservation {
