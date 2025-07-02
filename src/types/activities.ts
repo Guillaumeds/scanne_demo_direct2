@@ -159,156 +159,547 @@ export const SUGARCANE_PHASES: {
 ]
 
 export const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
-  // Land Preparation
+  // Land Preparation Phase
   {
-    id: 'land-clearing',
-    name: 'Land Clearing',
-    description: 'Remove weeds, debris, and old crop residues',
+    id: 'clearing',
+    name: 'Clearing',
+    description: 'Remove vegetation, rocks, and debris from the field',
     phase: 'land-preparation',
     estimatedDuration: 8,
     typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 500
+    estimatedCost: 5000
   },
   {
-    id: 'plowing',
-    name: 'Primary Tillage (Plowing)',
-    description: 'Deep plowing to break hardpan and improve soil structure',
+    id: 'deep-ploughing',
+    name: 'Deep Ploughing',
+    description: 'Deep tillage to break hardpan and improve soil structure',
     phase: 'land-preparation',
     estimatedDuration: 6,
     typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 400
+    estimatedCost: 8000
   },
   {
     id: 'harrowing',
-    name: 'Secondary Tillage (Harrowing)',
-    description: 'Break clods and prepare fine seedbed',
+    name: 'Harrowing',
+    description: 'Break up soil clods and create smooth seedbed',
     phase: 'land-preparation',
     estimatedDuration: 4,
     typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 300
+    estimatedCost: 3000
   },
-  
-  // Planting
   {
-    id: 'furrow-opening',
-    name: 'Furrow Opening',
-    description: 'Create planting furrows at proper spacing',
-    phase: 'planting',
+    id: 'leveling',
+    name: 'Leveling',
+    description: 'Level the field for uniform water distribution',
+    phase: 'land-preparation',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'mechanical',
+    estimatedCost: 4000
+  },
+  {
+    id: 'soil-testing',
+    name: 'Soil Testing',
+    description: 'Collect and analyze soil samples for nutrient content',
+    phase: 'land-preparation',
+    estimatedDuration: 2,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'furrow-preparation',
+    name: 'Furrow Preparation',
+    description: 'Create furrows for planting and drainage',
+    phase: 'land-preparation',
     estimatedDuration: 4,
     typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 200
+    estimatedCost: 3500
   },
   {
-    id: 'seed-placement',
-    name: 'Seed Placement',
-    description: 'Place seed cane in furrows',
-    phase: 'planting',
-    estimatedDuration: 12,
-    typicalProducts: [
-      { id: 'seed-cane', name: 'Seed Cane', type: 'seed', unit: 'tons' }
-    ],
-    resourceType: 'both',
-    estimatedCost: 800
+    id: 'fallowing',
+    name: 'Fallowing',
+    description: 'Leave field uncultivated to restore soil fertility',
+    phase: 'land-preparation',
+    estimatedDuration: 24,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 500
   },
   {
-    id: 'covering',
-    name: 'Covering and Compaction',
-    description: 'Cover seeds and compact soil',
-    phase: 'planting',
+    id: 'land-weed-control',
+    name: 'Weed Control',
+    description: 'Remove weeds before planting',
+    phase: 'land-preparation',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'basal-fertilization-land',
+    name: 'Basal Fertilization',
+    description: 'Apply base fertilizers before planting',
+    phase: 'land-preparation',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 4000
+  },
+  {
+    id: 'soil-amendment-land',
+    name: 'Soil Amendment',
+    description: 'Add organic matter or lime to improve soil conditions',
+    phase: 'land-preparation',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'trash-removal',
+    name: 'Trash Removal',
+    description: 'Remove crop residues and debris from previous harvest',
+    phase: 'land-preparation',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+  {
+    id: 'stubble-shaving',
+    name: 'Stubble Shaving',
+    description: 'Cut remaining stubble close to ground level',
+    phase: 'land-preparation',
     estimatedDuration: 3,
     typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 150
+    estimatedCost: 2500
   },
-  
-  // Establishment
   {
-    id: 'first-irrigation',
-    name: 'First Irrigation',
-    description: 'Initial watering after planting',
+    id: 'land-preparation-other',
+    name: 'Other',
+    description: 'Custom land preparation activity - add description and notes',
+    phase: 'land-preparation',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Planting Phase
+  {
+    id: 'seed-cane-selection',
+    name: 'Seed Cane Selection',
+    description: 'Select healthy seed cane for planting',
+    phase: 'planting',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+  {
+    id: 'sett-treatment',
+    name: 'Sett Treatment',
+    description: 'Treat seed cane setts with fungicides and insecticides',
+    phase: 'planting',
+    estimatedDuration: 3,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'sett-placement',
+    name: 'Sett Placement',
+    description: 'Place treated setts in furrows at proper spacing',
+    phase: 'planting',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'basal-fertilization-planting',
+    name: 'Basal Fertilization',
+    description: 'Apply fertilizers at the time of planting',
+    phase: 'planting',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'soil-amendment-planting',
+    name: 'Soil Amendment',
+    description: 'Apply soil amendments during planting',
+    phase: 'planting',
+    estimatedDuration: 3,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+  {
+    id: 'soil-covering',
+    name: 'Soil Covering',
+    description: 'Cover planted setts with soil',
+    phase: 'planting',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'irrigation-planting',
+    name: 'Irrigation',
+    description: 'Initial irrigation after planting',
+    phase: 'planting',
+    estimatedDuration: 2,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1000
+  },
+  {
+    id: 'planting-other',
+    name: 'Other',
+    description: 'Custom planting activity - add description and notes',
+    phase: 'planting',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Establishment Phase
+  {
+    id: 'germination-monitoring',
+    name: 'Germination Monitoring',
+    description: 'Monitor and assess germination rates',
     phase: 'establishment',
     estimatedDuration: 2,
     typicalProducts: [],
-    resourceType: 'mechanical',
-    estimatedCost: 100
+    resourceType: 'manual',
+    estimatedCost: 500
   },
   {
     id: 'gap-filling',
     name: 'Gap Filling',
-    description: 'Replace failed plants',
+    description: 'Replace failed setts with new ones',
     phase: 'establishment',
     estimatedDuration: 6,
-    typicalProducts: [
-      { id: 'replacement-cane', name: 'Replacement Cane', type: 'seed', unit: 'pieces' }
-    ],
+    typicalProducts: [],
     resourceType: 'manual',
-    estimatedCost: 200
-  },
-  
-  // Growth & Maintenance
-  {
-    id: 'fertilizer-application',
-    name: 'Fertilizer Application',
-    description: 'Apply NPK and micronutrients',
-    phase: 'maintenance',
-    estimatedDuration: 4,
-    typicalProducts: [
-      { id: 'npk-fertilizer', name: 'NPK Fertilizer', type: 'fertilizer', unit: 'kg' },
-      { id: 'urea', name: 'Urea', type: 'fertilizer', unit: 'kg' }
-    ],
-    resourceType: 'both',
-    estimatedCost: 600
+    estimatedCost: 2000
   },
   {
-    id: 'weed-control',
+    id: 'establishment-weed-control',
     name: 'Weed Control',
-    description: 'Herbicide application or manual weeding',
-    phase: 'maintenance',
+    description: 'Control weeds during establishment phase',
+    phase: 'establishment',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'fertilization-establishment',
+    name: 'Fertilization',
+    description: 'Apply fertilizers during establishment',
+    phase: 'establishment',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'irrigation-establishment',
+    name: 'Irrigation',
+    description: 'Regular irrigation during establishment',
+    phase: 'establishment',
+    estimatedDuration: 3,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'establishment-other',
+    name: 'Other',
+    description: 'Custom establishment activity - add description and notes',
+    phase: 'establishment',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Growth Phase
+  {
+    id: 'irrigation-growth',
+    name: 'Irrigation',
+    description: 'Regular irrigation during growth phase',
+    phase: 'growth',
+    estimatedDuration: 3,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'fertilization-growth',
+    name: 'Fertilization',
+    description: 'Apply fertilizers during growth phase',
+    phase: 'growth',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'intercultural-operations',
+    name: 'Intercultural Operations',
+    description: 'Earthing up, cultivation, and other field operations',
+    phase: 'growth',
     estimatedDuration: 6,
-    typicalProducts: [
-      { id: 'herbicide', name: 'Herbicide', type: 'herbicide', unit: 'L' }
-    ],
-    resourceType: 'both',
-    estimatedCost: 300
+    typicalProducts: [],
+    resourceType: 'mechanical',
+    estimatedCost: 2500
+  },
+  {
+    id: 'growth-weed-control',
+    name: 'Weed Control',
+    description: 'Control weeds during growth phase',
+    phase: 'growth',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'trash-mulching',
+    name: 'Trash Mulching',
+    description: 'Apply trash mulch around plants',
+    phase: 'growth',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+  {
+    id: 'intercrop-planting',
+    name: 'Intercrop Planting',
+    description: 'Plant intercrops between cane rows',
+    phase: 'growth',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'intercrop-harvesting',
+    name: 'Intercrop Harvesting',
+    description: 'Harvest intercrops',
+    phase: 'growth',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
   },
   {
     id: 'pest-control',
     name: 'Pest Control',
-    description: 'Apply pesticides for pest management',
-    phase: 'maintenance',
-    estimatedDuration: 3,
-    typicalProducts: [
-      { id: 'insecticide', name: 'Insecticide', type: 'pesticide', unit: 'L' }
-    ],
-    resourceType: 'mechanical',
-    estimatedCost: 250
+    description: 'Control pests and diseases',
+    phase: 'growth',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
   },
-  
-  // Harvest
   {
-    id: 'cutting',
+    id: 'growth-other',
+    name: 'Other',
+    description: 'Custom growth phase activity - add description and notes',
+    phase: 'growth',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Pre-Harvest Phase
+  {
+    id: 'detrashing',
+    name: 'Detrashing',
+    description: 'Remove dry leaves before harvest',
+    phase: 'pre-harvest',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'propping',
+    name: 'Propping',
+    description: 'Support lodged canes',
+    phase: 'pre-harvest',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'earthing-up',
+    name: 'Earthing Up',
+    description: 'Build up soil around cane base',
+    phase: 'pre-harvest',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'mechanical',
+    estimatedCost: 2000
+  },
+  {
+    id: 'flowering-regulation',
+    name: 'Flowering Regulation',
+    description: 'Control flowering to maintain sugar content',
+    phase: 'pre-harvest',
+    estimatedDuration: 2,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1000
+  },
+  {
+    id: 'water-shoot-removal',
+    name: 'Water Shoot Removal',
+    description: 'Remove excess shoots',
+    phase: 'pre-harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'irrigation-pre-harvest',
+    name: 'Irrigation',
+    description: 'Final irrigation before harvest',
+    phase: 'pre-harvest',
+    estimatedDuration: 2,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1000
+  },
+  {
+    id: 'maturity-assessment',
+    name: 'Maturity Assessment',
+    description: 'Assess cane maturity for optimal harvest timing',
+    phase: 'pre-harvest',
+    estimatedDuration: 2,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 500
+  },
+  {
+    id: 'pre-harvest-other',
+    name: 'Other',
+    description: 'Custom pre-harvest activity - add description and notes',
+    phase: 'pre-harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Maintenance Phase
+  {
+    id: 'infrastructure-maintenance',
+    name: 'Infrastructure Maintenance',
+    description: 'Maintain farm infrastructure, roads, and equipment',
+    phase: 'maintenance',
+    estimatedDuration: 8,
+    typicalProducts: [],
+    resourceType: 'mechanical',
+    estimatedCost: 5000
+  },
+  {
+    id: 'maintenance-other',
+    name: 'Other',
+    description: 'Custom maintenance activity - add description and notes',
+    phase: 'maintenance',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+
+  // Harvest Phase
+  {
+    id: 'field-draining',
+    name: 'Field Draining',
+    description: 'Drain excess water from fields before harvest',
+    phase: 'harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 1500
+  },
+  {
+    id: 'cane-cutting',
     name: 'Cane Cutting',
-    description: 'Cut mature sugarcane',
+    description: 'Manual cutting of sugarcane',
     phase: 'harvest',
     estimatedDuration: 16,
     typicalProducts: [],
-    resourceType: 'both',
-    estimatedCost: 1200
+    resourceType: 'manual',
+    estimatedCost: 8000
   },
   {
-    id: 'loading-transport',
-    name: 'Loading and Transport',
-    description: 'Load cut cane and transport to mill',
+    id: 'cane-bundling',
+    name: 'Cane Bundling',
+    description: 'Bundle cut canes for transport',
     phase: 'harvest',
     estimatedDuration: 8,
-    typicalProducts: [
-      { id: 'fuel', name: 'Diesel Fuel', type: 'fuel', unit: 'L' }
-    ],
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 3000
+  },
+  {
+    id: 'transport-preparation',
+    name: 'Transport Preparation',
+    description: 'Prepare canes for transport to mill',
+    phase: 'harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
+  },
+  {
+    id: 'field-cleanup',
+    name: 'Field Clean-up',
+    description: 'Clean field after harvest',
+    phase: 'harvest',
+    estimatedDuration: 6,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2500
+  },
+  {
+    id: 'mechanical-harvesting',
+    name: 'Mechanical Harvesting',
+    description: 'Machine harvesting of sugarcane',
+    phase: 'harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
     resourceType: 'mechanical',
-    estimatedCost: 800
+    estimatedCost: 6000
+  },
+  {
+    id: 'harvest-other',
+    name: 'Other',
+    description: 'Custom harvest activity - add description and notes',
+    phase: 'harvest',
+    estimatedDuration: 4,
+    typicalProducts: [],
+    resourceType: 'manual',
+    estimatedCost: 2000
   }
 ]

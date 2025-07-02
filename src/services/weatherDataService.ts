@@ -103,10 +103,44 @@ export function getWeatherInfo(code: number): { description: string; iconName: s
 }
 
 /**
- * Simplified function to fetch 7-day weather forecast
+ * Fetch 35-day weather forecast using multiple models
+ * Days 1-7: Standard forecast API
+ * Days 8-15: ECMWF AIFS model
+ * Days 16-35: GFS Ensemble model
+ */
+export async function fetch35DayWeatherForecast(
+  coordinates: [number, number]
+): Promise<WeatherAnalysis> {
+  const [lng, lat] = coordinates
+
+  try {
+    // Fetch all three forecast periods in parallel
+    const [shortTerm, mediumTerm, longTerm] = await Promise.all([
+      fetchShortTermForecast(coordinates), // Days 1-7
+      fetchECMWFAIFSForecast(coordinates), // Days 8-15
+      fetchGFSEnsembleForecast(coordinates) // Days 16-35
+    ])
+
+    // Combine all forecasts
+    const combinedForecast = combineForecasts([shortTerm, mediumTerm, longTerm])
+
+    return {
+      ...combinedForecast,
+      coordinates: [lng, lat],
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'Combined: Standard (1-7d) + ECMWF AIFS (8-15d) + GFS Ensemble (16-35d)'
+    }
+  } catch (error) {
+    console.error('Error fetching 35-day forecast:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch 15-day weather forecast using ECMWF IFS model
  * This is the main function used by the app
  */
-export async function fetch7DayWeatherForecast(
+export async function fetch15DayWeatherForecast(
   coordinates: [number, number]
 ): Promise<WeatherAnalysis> {
   const [lng, lat] = coordinates
@@ -115,6 +149,7 @@ export async function fetch7DayWeatherForecast(
     const params = new URLSearchParams({
       latitude: lat.toString(),
       longitude: lng.toString(),
+      models: 'ecmwf_ifs025', // Use ECMWF IFS 0.25° model
       current: [
         'temperature_2m',
         'relative_humidity_2m',
@@ -141,12 +176,12 @@ export async function fetch7DayWeatherForecast(
         'wind_speed_10m_max',
         'weather_code'
       ].join(','),
-      forecast_days: '7',
+      forecast_days: '15',
       timezone: 'auto'
     })
 
-    const url = `${WEATHER_API_CONFIG.baseUrl}/forecast?${params}`
-    console.log('Fetching 7-day weather forecast from:', url)
+    const url = `${WEATHER_API_CONFIG.baseUrl}/ecmwf?${params}`
+    console.log('Fetching 15-day ECMWF IFS forecast from:', url)
 
     const response = await fetch(url)
 
@@ -155,7 +190,7 @@ export async function fetch7DayWeatherForecast(
     }
 
     const data = await response.json()
-    console.log('7-day weather forecast API response:', data)
+    console.log('15-day ECMWF IFS forecast API response:', data)
 
     // Process the response into our format
     return {
@@ -197,18 +232,273 @@ export async function fetch7DayWeatherForecast(
         sunset: new Array(data.daily.time.length).fill('18:00') // Placeholder
       } : undefined,
       lastUpdated: new Date().toISOString(),
-      dataSource: ''
+      dataSource: 'ECMWF IFS 15-day forecast'
     }
   } catch (error) {
-    console.error('Error fetching 7-day weather forecast:', error)
+    console.error('Error fetching 15-day weather forecast:', error)
     return {
       coordinates: [lng, lat],
       timezone: 'UTC',
       lastUpdated: new Date().toISOString(),
-      dataSource: '',
+      dataSource: 'ECMWF IFS 15-day forecast (error)',
       error: error instanceof Error ? error.message : 'Failed to fetch weather data'
     }
   }
+}
+
+/**
+ * Legacy function for 7-day forecast (now returns 15 days)
+ * @deprecated Use fetch15DayWeatherForecast instead
+ */
+export async function fetch7DayWeatherForecast(
+  coordinates: [number, number]
+): Promise<WeatherAnalysis> {
+  return await fetch15DayWeatherForecast(coordinates)
+}
+
+/**
+ * Fetch short-term forecast (Days 1-7) using standard API
+ */
+async function fetchShortTermForecast(coordinates: [number, number]): Promise<WeatherAnalysis> {
+  return await fetch7DayWeatherForecast(coordinates)
+}
+
+/**
+ * Fetch medium-term forecast (Days 8-15) using ECMWF AIFS model
+ */
+async function fetchECMWFAIFSForecast(coordinates: [number, number]): Promise<WeatherAnalysis> {
+  const [lng, lat] = coordinates
+
+  try {
+    const params = new URLSearchParams({
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      models: 'ecmwf_aifs',
+      hourly: [
+        'temperature_2m',
+        'relative_humidity_2m',
+        'precipitation',
+        'wind_speed_10m',
+        'wind_direction_10m',
+        'weather_code',
+        'cloud_cover',
+        'pressure_msl'
+      ].join(','),
+      daily: [
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'precipitation_sum',
+        'wind_speed_10m_max',
+        'weather_code'
+      ].join(','),
+      forecast_days: '15',
+      timezone: 'auto'
+    })
+
+    const url = `${WEATHER_API_CONFIG.baseUrl}/ecmwf?${params}`
+    console.log('Fetching ECMWF AIFS forecast from:', url)
+
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`ECMWF AIFS API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Extract days 8-15 (skip first 7 days)
+    const startIndex = 7
+    const endIndex = 15
+
+    return {
+      coordinates: [lng, lat],
+      timezone: data.timezone || 'UTC',
+      hourly: data.hourly ? {
+        time: data.hourly.time.slice(startIndex * 24, endIndex * 24),
+        temperature_2m: data.hourly.temperature_2m.slice(startIndex * 24, endIndex * 24),
+        relative_humidity_2m: data.hourly.relative_humidity_2m.slice(startIndex * 24, endIndex * 24),
+        precipitation: data.hourly.precipitation.slice(startIndex * 24, endIndex * 24),
+        wind_speed_10m: data.hourly.wind_speed_10m.slice(startIndex * 24, endIndex * 24),
+        wind_direction_10m: data.hourly.wind_direction_10m.slice(startIndex * 24, endIndex * 24),
+        solar_radiation: new Array((endIndex - startIndex) * 24).fill(0),
+        cloud_cover: data.hourly.cloud_cover.slice(startIndex * 24, endIndex * 24),
+        pressure_msl: data.hourly.pressure_msl.slice(startIndex * 24, endIndex * 24),
+        weather_code: data.hourly.weather_code.slice(startIndex * 24, endIndex * 24)
+      } : undefined,
+      daily: data.daily ? {
+        time: data.daily.time.slice(startIndex, endIndex),
+        temperature_2m_max: data.daily.temperature_2m_max.slice(startIndex, endIndex),
+        temperature_2m_min: data.daily.temperature_2m_min.slice(startIndex, endIndex),
+        precipitation_sum: data.daily.precipitation_sum.slice(startIndex, endIndex),
+        wind_speed_10m_max: data.daily.wind_speed_10m_max.slice(startIndex, endIndex),
+        solar_radiation_sum: new Array(endIndex - startIndex).fill(0),
+        relative_humidity_2m_mean: new Array(endIndex - startIndex).fill(0),
+        weather_code: data.daily.weather_code.slice(startIndex, endIndex),
+        sunrise: new Array(endIndex - startIndex).fill('06:00'),
+        sunset: new Array(endIndex - startIndex).fill('18:00')
+      } : undefined,
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'ECMWF AIFS (Days 8-15)'
+    }
+  } catch (error) {
+    console.error('Error fetching ECMWF AIFS forecast:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch long-term forecast (Days 16-35) using GFS Ensemble model
+ */
+async function fetchGFSEnsembleForecast(coordinates: [number, number]): Promise<WeatherAnalysis> {
+  const [lng, lat] = coordinates
+
+  try {
+    const params = new URLSearchParams({
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      models: 'gfs_seamless',
+      hourly: [
+        'temperature_2m',
+        'relative_humidity_2m',
+        'precipitation',
+        'wind_speed_10m',
+        'wind_direction_10m',
+        'weather_code',
+        'cloud_cover',
+        'pressure_msl'
+      ].join(','),
+      daily: [
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'precipitation_sum',
+        'wind_speed_10m_max',
+        'weather_code'
+      ].join(','),
+      forecast_days: '35',
+      timezone: 'auto'
+    })
+
+    const url = `https://ensemble-api.open-meteo.com/v1/ensemble?${params}`
+    console.log('Fetching GFS Ensemble forecast from:', url)
+
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`GFS Ensemble API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Extract days 16-35 (skip first 15 days)
+    const startIndex = 15
+    const endIndex = 35
+
+    return {
+      coordinates: [lng, lat],
+      timezone: data.timezone || 'UTC',
+      hourly: data.hourly ? {
+        time: data.hourly.time.slice(startIndex * 24, endIndex * 24),
+        temperature_2m: data.hourly.temperature_2m.slice(startIndex * 24, endIndex * 24),
+        relative_humidity_2m: data.hourly.relative_humidity_2m.slice(startIndex * 24, endIndex * 24),
+        precipitation: data.hourly.precipitation.slice(startIndex * 24, endIndex * 24),
+        wind_speed_10m: data.hourly.wind_speed_10m.slice(startIndex * 24, endIndex * 24),
+        wind_direction_10m: data.hourly.wind_direction_10m.slice(startIndex * 24, endIndex * 24),
+        solar_radiation: new Array((endIndex - startIndex) * 24).fill(0),
+        cloud_cover: data.hourly.cloud_cover.slice(startIndex * 24, endIndex * 24),
+        pressure_msl: data.hourly.pressure_msl.slice(startIndex * 24, endIndex * 24),
+        weather_code: data.hourly.weather_code.slice(startIndex * 24, endIndex * 24)
+      } : undefined,
+      daily: data.daily ? {
+        time: data.daily.time.slice(startIndex, endIndex),
+        temperature_2m_max: data.daily.temperature_2m_max.slice(startIndex, endIndex),
+        temperature_2m_min: data.daily.temperature_2m_min.slice(startIndex, endIndex),
+        precipitation_sum: data.daily.precipitation_sum.slice(startIndex, endIndex),
+        wind_speed_10m_max: data.daily.wind_speed_10m_max.slice(startIndex, endIndex),
+        solar_radiation_sum: new Array(endIndex - startIndex).fill(0),
+        relative_humidity_2m_mean: new Array(endIndex - startIndex).fill(0),
+        weather_code: data.daily.weather_code.slice(startIndex, endIndex),
+        sunrise: new Array(endIndex - startIndex).fill('06:00'),
+        sunset: new Array(endIndex - startIndex).fill('18:00')
+      } : undefined,
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'GFS Ensemble (Days 16-35)'
+    }
+  } catch (error) {
+    console.error('Error fetching GFS Ensemble forecast:', error)
+    throw error
+  }
+}
+
+/**
+ * Combine multiple forecast periods into a single forecast
+ */
+function combineForecasts(forecasts: WeatherAnalysis[]): WeatherAnalysis {
+  const validForecasts = forecasts.filter(f => f.daily && f.hourly)
+
+  if (validForecasts.length === 0) {
+    throw new Error('No valid forecasts to combine')
+  }
+
+  const combined: WeatherAnalysis = {
+    coordinates: validForecasts[0].coordinates,
+    timezone: validForecasts[0].timezone,
+    current: validForecasts[0].current,
+    hourly: {
+      time: [],
+      temperature_2m: [],
+      relative_humidity_2m: [],
+      precipitation: [],
+      wind_speed_10m: [],
+      wind_direction_10m: [],
+      solar_radiation: [],
+      cloud_cover: [],
+      pressure_msl: [],
+      weather_code: []
+    },
+    daily: {
+      time: [],
+      temperature_2m_max: [],
+      temperature_2m_min: [],
+      precipitation_sum: [],
+      wind_speed_10m_max: [],
+      solar_radiation_sum: [],
+      relative_humidity_2m_mean: [],
+      weather_code: [],
+      sunrise: [],
+      sunset: []
+    },
+    lastUpdated: new Date().toISOString(),
+    dataSource: 'Combined forecast'
+  }
+
+  // Combine all forecasts
+  for (const forecast of validForecasts) {
+    if (forecast.hourly) {
+      combined.hourly!.time.push(...forecast.hourly.time)
+      combined.hourly!.temperature_2m.push(...forecast.hourly.temperature_2m)
+      combined.hourly!.relative_humidity_2m.push(...forecast.hourly.relative_humidity_2m)
+      combined.hourly!.precipitation.push(...forecast.hourly.precipitation)
+      combined.hourly!.wind_speed_10m.push(...forecast.hourly.wind_speed_10m)
+      combined.hourly!.wind_direction_10m.push(...forecast.hourly.wind_direction_10m)
+      combined.hourly!.solar_radiation.push(...forecast.hourly.solar_radiation)
+      combined.hourly!.cloud_cover.push(...forecast.hourly.cloud_cover)
+      combined.hourly!.pressure_msl.push(...forecast.hourly.pressure_msl)
+      combined.hourly!.weather_code.push(...forecast.hourly.weather_code)
+    }
+
+    if (forecast.daily) {
+      combined.daily!.time.push(...forecast.daily.time)
+      combined.daily!.temperature_2m_max.push(...forecast.daily.temperature_2m_max)
+      combined.daily!.temperature_2m_min.push(...forecast.daily.temperature_2m_min)
+      combined.daily!.precipitation_sum.push(...forecast.daily.precipitation_sum)
+      combined.daily!.wind_speed_10m_max.push(...forecast.daily.wind_speed_10m_max)
+      combined.daily!.solar_radiation_sum.push(...forecast.daily.solar_radiation_sum)
+      combined.daily!.relative_humidity_2m_mean.push(...forecast.daily.relative_humidity_2m_mean)
+      combined.daily!.weather_code.push(...forecast.daily.weather_code)
+      combined.daily!.sunrise.push(...forecast.daily.sunrise)
+      combined.daily!.sunset.push(...forecast.daily.sunset)
+    }
+  }
+
+  return combined
 }
 
 /**

@@ -34,9 +34,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Large files (over 100MB)
-*.tif
-*.tiff
-public/msiri_soil_map/*.tif
-svg_extracts/*.tiff

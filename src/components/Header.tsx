@@ -19,10 +19,13 @@ export default function Header() {
           <div className="flex items-center space-x-4 ml-4">
             {/* Scanne Logo */}
             <div className="flex-shrink-0">
-              <img
+              <Image
                 src="/scanne-logo.png"
-                alt="Scanne"
-                className="h-12 w-auto object-contain filter brightness-0 invert drop-shadow-lg"
+                alt="Scanne Logo"
+                width={48}
+                height={48}
+                className="drop-shadow-lg brightness-0 invert"
+                priority
               />
             </div>
 

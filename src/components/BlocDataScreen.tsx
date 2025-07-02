@@ -5,6 +5,7 @@ import SoilDataTab from './SoilDataTab'
 import VegetationDataTab from './VegetationDataTab'
 import WeatherDashboard from './WeatherDashboard'
 import ActivitiesTab from './ActivitiesTab'
+import ObservationsTab from './ObservationsTab'
 import AttachmentsTab from './AttachmentsTab'
 import VarietySelector from './VarietySelector'
 import { CropVariety, ALL_VARIETIES } from '@/types/varieties'
@@ -102,6 +103,7 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
   const tabs = [
     { id: 'general', name: 'General Info', icon: '📋' },
     { id: 'activities', name: 'Activities', icon: '📋' },
+    { id: 'observations', name: 'Observations', icon: '🔬' },
     { id: 'weather', name: 'Weather', icon: '🌤️' },
     { id: 'satellite-soil', name: 'Satellite Soil', icon: '🛰️' },
     { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿' },
@@ -765,6 +767,10 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
 
           {activeTab === 'activities' && (
             <ActivitiesTab bloc={bloc} />
+          )}
+
+          {activeTab === 'observations' && (
+            <ObservationsTab bloc={bloc} />
           )}
 
           {activeTab === 'attachments' && (

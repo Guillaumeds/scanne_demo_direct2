@@ -13,6 +13,7 @@ import {
   validateFileUpload,
   generateMockAttachments
 } from '@/types/attachments'
+import CategorySelector from './CategorySelector'
 
 interface DrawnArea {
   id: string
@@ -30,6 +31,8 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const [attachments, setAttachments] = useState<BlocAttachment[]>([])
   const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory | 'all'>('all')
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showCategorySelector, setShowCategorySelector] = useState(false)
+  const [selectedUploadCategory, setSelectedUploadCategory] = useState<AttachmentCategory>('other')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'category' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc') // Default to earliest to oldest

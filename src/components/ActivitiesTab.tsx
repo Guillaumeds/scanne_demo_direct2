@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import ProductSelector from './ProductSelector'
 import ResourceSelector from './ResourceSelector'
+import ActivitySelector from './ActivitySelector'
 import { Product } from '@/types/products'
 import { Resource } from '@/types/resources'
 import { 
@@ -25,11 +26,12 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { 
-  BlocActivity, 
-  ActivityPhase, 
-  ActivityStatus, 
-  SUGARCANE_PHASES, 
+import {
+  BlocActivity,
+  ActivityPhase,
+  ActivityStatus,
+  ActivityTemplate,
+  SUGARCANE_PHASES,
   ACTIVITY_TEMPLATES,
   ActivityTemplate
 } from '@/types/activities'
@@ -79,16 +81,26 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
     }
   }
 
+  // Check if activity is overdue
+  const isOverdue = () => {
+    const today = new Date()
+    const endDate = new Date(activity.endDate)
+    return activity.status !== 'completed' && activity.status !== 'cancelled' && endDate < today
+  }
+
   const getPhaseInfo = (phase: ActivityPhase) => {
     return SUGARCANE_PHASES.find(p => p.id === phase)
   }
 
   const phaseInfo = getPhaseInfo(activity.phase)
+  const overdueStatus = isOverdue()
 
   return (
     <div
       ref={setNodeRef}
-      className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+      className={`bg-white border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow ${
+        overdueStatus ? 'border-red-300 bg-red-50' : 'border-gray-200'
+      }`}
       style={style}
     >
       <div className="flex items-start justify-between">
@@ -106,6 +118,18 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
             <div className="flex items-center space-x-2 mb-1">
               <span className="text-lg">{phaseInfo?.icon}</span>
               <h4 className="font-semibold text-gray-900 truncate">{activity.name}</h4>
+              {/* Status Indicators */}
+              <div className="flex items-center space-x-1">
+                {activity.status === 'completed' && (
+                  <span className="text-green-600" title="Completed">✅</span>
+                )}
+                {overdueStatus && (
+                  <span className="text-red-600" title="Overdue">⚠️</span>
+                )}
+                {activity.status === 'in-progress' && (
+                  <span className="text-yellow-600" title="In Progress">⏳</span>
+                )}
+              </div>
             </div>
             <p className="text-sm text-gray-600 line-clamp-2">{activity.description}</p>
           </div>
@@ -175,9 +199,12 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const [activities, setActivities] = useState<BlocActivity[]>([])
   const [selectedPhase, setSelectedPhase] = useState<ActivityPhase | 'all'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showActivitySelector, setShowActivitySelector] = useState(false)
   const [editingActivity, setEditingActivity] = useState<BlocActivity | null>(null)
   const [sortBy, setSortBy] = useState<'date' | 'date-desc' | 'phase' | 'status'>('date')
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
+  const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -317,6 +344,34 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     setShowAddModal(true)
   }
 
+  const handleAddActivity = () => {
+    setShowActivitySelector(true)
+  }
+
+  const handleActivitySelect = (template: ActivityTemplate) => {
+    // Create new activity from template
+    const newActivity: BlocActivity = {
+      id: Date.now().toString(),
+      name: template.name,
+      description: template.description,
+      phase: template.phase,
+      status: 'planned',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + template.estimatedDuration * 60 * 60 * 1000).toISOString().split('T')[0],
+      duration: template.estimatedDuration,
+      products: [],
+      resources: [],
+      resourceType: template.resourceType,
+      totalCost: template.estimatedCost,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'user'
+    }
+
+    setEditingActivity(newActivity)
+    setShowAddModal(true)
+  }
+
   const handleSortActivities = () => {
     const sorted = [...activities].sort((a, b) => {
       switch (sortBy) {
@@ -335,23 +390,42 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     setActivities(sorted)
   }
 
-  const filteredActivities = (selectedPhase === 'all'
-    ? activities
-    : activities.filter(activity => activity.phase === selectedPhase)
-  ).sort((a, b) => {
-    switch (sortBy) {
-      case 'date':
-        return new Date(a.startDate || a.plannedDate).getTime() - new Date(b.startDate || b.plannedDate).getTime()
-      case 'date-desc':
-        return new Date(b.startDate || b.plannedDate).getTime() - new Date(a.startDate || a.plannedDate).getTime()
-      case 'phase':
-        return SUGARCANE_PHASES.findIndex(p => p.id === a.phase) - SUGARCANE_PHASES.findIndex(p => p.id === b.phase)
-      case 'status':
-        return a.status.localeCompare(b.status)
-      default:
-        return 0
-    }
-  })
+  // Check if activity is overdue
+  const isOverdue = (activity: BlocActivity) => {
+    const today = new Date()
+    const endDate = new Date(activity.endDate)
+    return activity.status !== 'completed' && activity.status !== 'cancelled' && endDate < today
+  }
+
+  const filteredActivities = activities
+    .filter(activity => {
+      // Phase filter
+      if (selectedPhase !== 'all' && activity.phase !== selectedPhase) return false
+
+      // Status filter
+      if (statusFilter === 'incomplete' && activity.status === 'completed') return false
+      if (statusFilter === 'overdue' && !isOverdue(activity)) return false
+
+      // Completion filter
+      if (completionFilter === 'complete' && activity.status !== 'completed') return false
+      if (completionFilter === 'incomplete' && activity.status === 'completed') return false
+
+      return true
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'date':
+          return new Date(a.startDate || a.plannedDate).getTime() - new Date(b.startDate || b.plannedDate).getTime()
+        case 'date-desc':
+          return new Date(b.startDate || b.plannedDate).getTime() - new Date(a.startDate || a.plannedDate).getTime()
+        case 'phase':
+          return SUGARCANE_PHASES.findIndex(p => p.id === a.phase) - SUGARCANE_PHASES.findIndex(p => p.id === b.phase)
+        case 'status':
+          return a.status.localeCompare(b.status)
+        default:
+          return 0
+      }
+    })
 
   const getPhaseStats = () => {
     const stats = SUGARCANE_PHASES.map(phase => {
@@ -401,6 +475,11 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     }, 0)
   }
 
+  // Helper function to format cost without decimals
+  const formatCostWithoutDecimals = (cost: number) => {
+    return Math.round(cost).toLocaleString()
+  }
+
   const getCropCycles = () => {
     const cycles = ['planted']
 
@@ -430,9 +509,9 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
               <span className="text-2xl mr-3">📋</span>
               Activities
             </h2>
-            <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-              <span>Est. Cost: <span className="font-medium text-green-600">Rs {getTotalEstimatedCost().toLocaleString()}</span></span>
-              <span>Actual Cost: <span className="font-medium text-blue-600">Rs {getTotalActualCost().toLocaleString()}</span></span>
+            <div className="mt-2 text-sm text-gray-600 space-y-1">
+              <div>Est Cost: <span className="font-medium text-green-600">Rs {formatCostWithoutDecimals(getTotalEstimatedCost())}</span></div>
+              <div>Actual Cost: <span className="font-medium text-blue-600">Rs {formatCostWithoutDecimals(getTotalActualCost())}</span></div>
             </div>
           </div>
 
@@ -529,7 +608,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
             {/* Add Activity Button */}
             <button
               type="button"
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddActivity}
               className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
               title="Add activity"
             >
@@ -539,9 +618,42 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
               </svg>
             </button>
 
-            {/* Sort Controls */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Sort by date:</span>
+            {/* Enhanced Controls */}
+            <div className="flex items-center space-x-4">
+              {/* Completion Status Filter */}
+              <div className="flex items-center space-x-1">
+                <span className="text-sm text-gray-500">Status:</span>
+                <button
+                  type="button"
+                  onClick={() => setCompletionFilter(completionFilter === 'incomplete' ? 'all' : 'incomplete')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+                    completionFilter === 'incomplete'
+                      ? 'bg-orange-100 text-orange-600 border border-orange-200'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Show incomplete activities"
+                >
+                  <span>⏳</span>
+                  <span>Incomplete</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+                    statusFilter === 'overdue'
+                      ? 'bg-red-100 text-red-600 border border-red-200'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Show overdue activities"
+                >
+                  <span>⚠️</span>
+                  <span>Overdue</span>
+                </button>
+              </div>
+
+              {/* Sort Controls */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">Sort:</span>
               <button
                 type="button"
                 onClick={() => setSortBy('date')}
@@ -572,6 +684,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                   <path d="M16 10l-4-4-4 4M16 14l-4 4-4-4"/>
                 </svg>
               </button>
+              </div>
             </div>
           </div>
 
@@ -610,7 +723,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(true)}
+                  onClick={handleAddActivity}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                 >
                   Add Activity
@@ -639,6 +752,15 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
             setShowAddModal(false)
             setEditingActivity(null)
           }}
+        />
+      )}
+
+      {/* Activity Selector Modal */}
+      {showActivitySelector && (
+        <ActivitySelector
+          onSelect={handleActivitySelect}
+          onClose={() => setShowActivitySelector(false)}
+          selectedPhase={selectedPhase}
         />
       )}
     </div>
