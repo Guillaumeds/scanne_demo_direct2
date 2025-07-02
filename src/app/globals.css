@@ -61,3 +61,43 @@ body {
 .leaflet-default-icon-path {
   background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png');
 }
+
+/* ========================================
+   VERCEL DEPLOYMENT SCALING FIX
+   ========================================
+   Force consistent scaling across all environments
+   Counteracts 20-30% enlargement on Vercel deployment
+*/
+
+/* Force consistent scaling across all environments */
+html {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  /* Force scale down to counteract Vercel's enlargement */
+  transform: scale(0.8) !important;
+  transform-origin: 0 0 !important;
+  width: 125% !important;
+  min-height: 125vh !important;
+  overflow-x: hidden !important;
+}
+
+body {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  min-height: 125vh !important;
+  width: 100% !important;
+}
+
+/* Prevent any additional zoom or scale transformations */
+* {
+  zoom: 1 !important;
+}
+
+/* Ensure main containers fill the scaled viewport */
+.min-h-screen {
+  min-height: 125vh !important;
+}
+
+main {
+  min-height: 125vh !important;
+}
