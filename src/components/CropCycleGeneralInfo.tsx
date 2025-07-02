@@ -53,7 +53,7 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
     intercropVarietyName: '',
     plantingDate: '',
     plannedHarvestDate: '',
-    expectedYield: 0
+    expectedYield: '' as string | number
   })
 
   useEffect(() => {
@@ -91,8 +91,12 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
       errors.push('Planting date is required for plantation cycle')
     }
 
-    if (!newCycleData.expectedYield || newCycleData.expectedYield <= 0) {
-      errors.push('Expected yield must be greater than 0')
+    const expectedYieldNum = typeof newCycleData.expectedYield === 'string'
+      ? parseFloat(newCycleData.expectedYield)
+      : newCycleData.expectedYield
+
+    if (!expectedYieldNum || expectedYieldNum <= 0 || isNaN(expectedYieldNum)) {
+      errors.push('Expected yield must be greater than 0 tons/ha')
     }
 
     setValidationErrors(errors)
@@ -103,12 +107,16 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
     if (!validateCycleData()) return
 
     try {
+      const expectedYieldNum = typeof newCycleData.expectedYield === 'string'
+        ? parseFloat(newCycleData.expectedYield)
+        : newCycleData.expectedYield
+
       const cycleRequest: CreateCycleRequest = {
         blocId: bloc.id,
         type: 'plantation',
         sugarcaneVarietyId: newCycleData.sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
-        expectedYield: newCycleData.expectedYield,
+        expectedYield: expectedYieldNum,
         intercropVarietyId: newCycleData.intercropVarietyId || undefined,
         plantingDate: newCycleData.plantingDate
       }
@@ -128,7 +136,7 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
         intercropVarietyName: '',
         plantingDate: '',
         plannedHarvestDate: '',
-        expectedYield: 0
+        expectedYield: ''
       })
     } catch (error) {
       console.error('Error creating plantation cycle:', error)
@@ -148,12 +156,16 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
     }
 
     try {
+      const expectedYieldNum = typeof newCycleData.expectedYield === 'string'
+        ? parseFloat(newCycleData.expectedYield)
+        : newCycleData.expectedYield
+
       const cycleRequest: CreateCycleRequest = {
         blocId: bloc.id,
         type: 'ratoon',
         sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
-        expectedYield: newCycleData.expectedYield,
+        expectedYield: expectedYieldNum,
         intercropVarietyId: newCycleData.intercropVarietyId || undefined,
         parentCycleId: activeCycle.id
       }
@@ -173,7 +185,7 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
         intercropVarietyName: '',
         plantingDate: '',
         plannedHarvestDate: '',
-        expectedYield: 0
+        expectedYield: ''
       })
     } catch (error) {
       console.error('Error creating ratoon cycle:', error)
@@ -501,12 +513,15 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
               </label>
               <input
                 type="number"
-                min="0"
+                min="0.1"
                 step="0.1"
                 value={newCycleData.expectedYield}
-                onChange={(e) => setNewCycleData(prev => ({ ...prev, expectedYield: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => setNewCycleData(prev => ({
+                  ...prev,
+                  expectedYield: e.target.value === '' ? '' : parseFloat(e.target.value) || ''
+                }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Enter expected yield in tons per hectare"
+                placeholder="e.g., 85.5"
               />
             </div>
 
