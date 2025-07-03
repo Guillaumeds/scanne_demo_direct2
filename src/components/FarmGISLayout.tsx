@@ -7,7 +7,7 @@ import BlocList from './BlocList'
 import DrawingToolbar from './DrawingToolbar'
 import DrawnAreasList from './DrawnAreasList'
 import PolygonInfoModal from './PolygonInfoModal'
-import Header from './Header'
+
 import BlocDataScreen from './BlocDataScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { FieldData } from '@/types/field'
@@ -256,10 +256,7 @@ export default function FarmGISLayout() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col">
-      {/* Header */}
-      <Header />
-
+    <div className="h-full w-full flex">
       {/* Main content area */}
       <div className="flex-1 flex">
         {/* Conditionally show sidebar only when not in data screen mode */}

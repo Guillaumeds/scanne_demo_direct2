@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Comfortaa } from 'next/font/google'
 import './globals.css'
 
@@ -10,6 +10,15 @@ export const metadata: Metadata = {
   description: 'Advanced farm field management with GIS capabilities',
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1.0,
+  minimumScale: 1.0,
+  maximumScale: 1.0,
+  userScalable: false,
+  viewportFit: 'cover',
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -17,7 +26,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${comfortaa.variable}`}>{children}</body>
+      <body className={`${inter.className} ${comfortaa.variable}`}>
+        <div className="min-h-screen bg-gray-50">
+          {children}
+        </div>
+      </body>
     </html>
   )
 }
