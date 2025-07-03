@@ -4,6 +4,7 @@
  */
 
 import { BlocObservation } from '@/types/observations'
+import { CropCycleMetricsService } from './cropCycleMetricsService'
 
 export class ObservationService {
   private static STORAGE_KEY = 'scanne_observations'
@@ -34,7 +35,7 @@ export class ObservationService {
    */
   static async createObservation(observation: BlocObservation): Promise<BlocObservation> {
     const observations = this.getAllObservations()
-    
+
     // Ensure unique ID
     const newObservation: BlocObservation = {
       ...observation,
@@ -42,10 +43,17 @@ export class ObservationService {
       createdAt: observation.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
-    
+
     observations.push(newObservation)
     this.saveObservations(observations)
-    
+
+    // Update crop cycle metrics
+    try {
+      await CropCycleMetricsService.onObservationChange(newObservation)
+    } catch (error) {
+      console.error('Failed to update crop cycle metrics after observation creation:', error)
+    }
+
     return newObservation
   }
   
@@ -59,16 +67,23 @@ export class ObservationService {
     if (index === -1) {
       throw new Error(`Observation not found: ${observationId}`)
     }
-    
+
     const updatedObservation: BlocObservation = {
       ...observations[index],
       ...updates,
       updatedAt: new Date().toISOString()
     }
-    
+
     observations[index] = updatedObservation
     this.saveObservations(observations)
-    
+
+    // Update crop cycle metrics
+    try {
+      await CropCycleMetricsService.onObservationChange(updatedObservation)
+    } catch (error) {
+      console.error('Failed to update crop cycle metrics after observation update:', error)
+    }
+
     return updatedObservation
   }
   

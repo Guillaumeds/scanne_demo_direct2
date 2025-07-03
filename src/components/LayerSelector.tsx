@@ -13,6 +13,10 @@ export default function LayerSelector({ onLayerChange, currentLayer }: LayerSele
   const layers = [
     { id: 'osm', name: 'OpenStreetMap', icon: '🗺️' },
     { id: 'satellite', name: 'Satellite', icon: '🛰️' },
+    { id: 'crop_cycles', name: 'Crop Cycles', icon: '🌾' },
+    { id: 'variety', name: 'Variety', icon: '🌿' },
+    { id: 'growth_stages', name: 'Growth Stages', icon: '🌱' },
+    { id: 'harvest_planning', name: 'Harvest Planning', icon: '🚜' },
     { id: 'soil', name: 'MSIRI Soil Map', icon: '🌱' }
   ]
 

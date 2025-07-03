@@ -28,6 +28,7 @@ interface DrawingManagerProps {
   savedAreas?: DrawnArea[]
   selectedAreaId?: string | null
   hoveredAreaId?: string | null
+  currentLayer?: string
   onAreaDrawn: (area: DrawnArea) => void
   onAreaUpdated?: (area: DrawnArea) => void
   onPolygonClick?: (areaId: string) => void
@@ -45,6 +46,7 @@ export default function DrawingManager({
   savedAreas = [],
   selectedAreaId,
   hoveredAreaId,
+  currentLayer,
   onAreaDrawn,
   onAreaUpdated,
   onPolygonClick,
@@ -73,6 +75,122 @@ export default function DrawingManager({
   // Hysteresis snapping state
   const [currentSnapPoint, setCurrentSnapPoint] = useState<L.LatLng | null>(null)
   const [isCurrentlySnapped, setIsCurrentlySnapped] = useState<boolean>(false)
+
+  // Function to get polygon color based on layer type and data
+  const getPolygonColor = (area: DrawnArea, isSelected: boolean, isHovered: boolean) => {
+    // Default styling for selection and hover states
+    if (isSelected) {
+      return { color: '#2563eb', fillColor: '#2563eb', weight: 4, fillOpacity: 0.5 }
+    }
+    if (isHovered) {
+      return { color: '#f59e0b', fillColor: '#f59e0b', weight: 3, fillOpacity: 0.4 }
+    }
+
+    // Layer-specific coloring
+    if (currentLayer === 'crop_cycles') {
+      // TODO: Get actual crop cycle data from area
+      // For now, use mock data based on area ID
+      const cyclePhase = getCropCyclePhase(area.id)
+      return getCropCycleColor(cyclePhase)
+    } else if (currentLayer === 'variety') {
+      // TODO: Get actual variety data from area
+      // For now, use mock data based on area ID
+      const varietyType = getVarietyType(area.id)
+      return getVarietyColor(varietyType)
+    } else if (currentLayer === 'growth_stages') {
+      // TODO: Get actual growth stage data from area
+      // For now, use mock data based on area ID
+      const growthStage = getGrowthStage(area.id)
+      return getGrowthStageColor(growthStage)
+    } else if (currentLayer === 'harvest_planning') {
+      // TODO: Get actual harvest planning data from area
+      // For now, use mock data based on area ID
+      const harvestTiming = getHarvestTiming(area.id)
+      return getHarvestPlanningColor(harvestTiming)
+    }
+
+    // Default green for saved blocs
+    return { color: '#22c55e', fillColor: '#22c55e', weight: 2, fillOpacity: 0.3 }
+  }
+
+  // Mock function to get crop cycle phase - replace with actual data
+  const getCropCyclePhase = (areaId: string): string => {
+    const hash = areaId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+    const phases = ['plantation', 'ratoon1', 'ratoon2', 'ratoon3', 'ratoon4+', 'no_cycle']
+    return phases[hash % phases.length]
+  }
+
+  // Mock function to get variety type - replace with actual data
+  const getVarietyType = (areaId: string): string => {
+    const hash = areaId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+    const varieties = ['early', 'mid', 'late', 'inter_crop', 'no_variety']
+    return varieties[hash % varieties.length]
+  }
+
+  // Mock function to get growth stage - replace with actual data
+  const getGrowthStage = (areaId: string): string => {
+    const hash = areaId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+    const stages = ['germination', 'tillering', 'grand_growth', 'maturation', 'ripening', 'no_stage']
+    return stages[hash % stages.length]
+  }
+
+  // Mock function to get harvest timing - replace with actual data
+  const getHarvestTiming = (areaId: string): string => {
+    const hash = areaId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+    const timings = ['within_1_month', '1_2_months', '2_3_months', '3_4_months', '4_5_months', 'not_planned']
+    return timings[hash % timings.length]
+  }
+
+  // Get color for crop cycle phase
+  const getCropCycleColor = (phase: string) => {
+    const colors = {
+      plantation: { color: '#22c55e', fillColor: '#22c55e' },
+      ratoon1: { color: '#3b82f6', fillColor: '#3b82f6' },
+      ratoon2: { color: '#8b5cf6', fillColor: '#8b5cf6' },
+      ratoon3: { color: '#f59e0b', fillColor: '#f59e0b' },
+      'ratoon4+': { color: '#ef4444', fillColor: '#ef4444' },
+      no_cycle: { color: '#6b7280', fillColor: '#6b7280' }
+    }
+    return { ...colors[phase as keyof typeof colors] || colors.no_cycle, weight: 2, fillOpacity: 0.6 }
+  }
+
+  // Get color for variety type
+  const getVarietyColor = (variety: string) => {
+    const colors = {
+      early: { color: '#22c55e', fillColor: '#22c55e' },
+      mid: { color: '#3b82f6', fillColor: '#3b82f6' },
+      late: { color: '#f59e0b', fillColor: '#f59e0b' },
+      inter_crop: { color: '#8b5cf6', fillColor: '#8b5cf6' },
+      no_variety: { color: '#6b7280', fillColor: '#6b7280' }
+    }
+    return { ...colors[variety as keyof typeof colors] || colors.no_variety, weight: 2, fillOpacity: 0.6 }
+  }
+
+  // Get color for growth stage
+  const getGrowthStageColor = (stage: string) => {
+    const colors = {
+      germination: { color: '#22c55e', fillColor: '#22c55e' },
+      tillering: { color: '#3b82f6', fillColor: '#3b82f6' },
+      grand_growth: { color: '#8b5cf6', fillColor: '#8b5cf6' },
+      maturation: { color: '#f59e0b', fillColor: '#f59e0b' },
+      ripening: { color: '#ef4444', fillColor: '#ef4444' },
+      no_stage: { color: '#6b7280', fillColor: '#6b7280' }
+    }
+    return { ...colors[stage as keyof typeof colors] || colors.no_stage, weight: 2, fillOpacity: 0.6 }
+  }
+
+  // Get color for harvest planning (blue gradient based on timing)
+  const getHarvestPlanningColor = (timing: string) => {
+    const colors = {
+      within_1_month: { color: '#1e3a8a', fillColor: '#1e3a8a' },    // Dark blue
+      '1_2_months': { color: '#1e40af', fillColor: '#1e40af' },      // Darker blue
+      '2_3_months': { color: '#2563eb', fillColor: '#2563eb' },      // Medium blue
+      '3_4_months': { color: '#3b82f6', fillColor: '#3b82f6' },      // Light blue
+      '4_5_months': { color: '#60a5fa', fillColor: '#60a5fa' },      // Lighter blue
+      not_planned: { color: '#6b7280', fillColor: '#6b7280' }        // Gray
+    }
+    return { ...colors[timing as keyof typeof colors] || colors.not_planned, weight: 2, fillOpacity: 0.6 }
+  }
 
   // Calculate polygon centroid for better label positioning
   const calculatePolygonCentroid = (points: L.LatLng[]): L.LatLng => {
@@ -120,6 +238,10 @@ export default function DrawingManager({
   // Initialize drawing layers
   useEffect(() => {
     if (!map) return
+
+    // Clear layer tracking when map is initialized/changed
+    console.log('🔄 Initializing drawing layers - clearing layer map')
+    layerMapRef.current.clear()
 
     // Add drawn layers group to map
     const drawnLayers = drawnLayersRef.current
@@ -195,6 +317,105 @@ export default function DrawingManager({
       }
     }
   }, [activeTool, map])
+
+  // Create Leaflet polygons for saved areas loaded from database
+  useEffect(() => {
+    if (!map) {
+      console.log('🚫 Map not ready for saved areas processing')
+      return
+    }
+
+    console.log('🗺️ Processing saved areas for map display:', savedAreas.length)
+    console.log('🔍 Saved areas data:', savedAreas.map(a => ({
+      id: a.id,
+      coordsLength: a.coordinates?.length || 0,
+      firstCoord: a.coordinates?.[0] || null,
+      coordinates: a.coordinates
+    })))
+
+    savedAreas.forEach(area => {
+      // Check if this saved area already has a polygon on the map
+      const hasExistingPolygon = layerMapRef.current.has(area.id)
+      console.log(`🔍 Checking saved area ${area.id}: hasExistingPolygon=${hasExistingPolygon}`)
+
+      if (!hasExistingPolygon) {
+        console.log('🔄 Creating polygon for saved area:', area.id)
+        console.log('🚨 NEW DEBUG CODE IS RUNNING! 🚨')
+        console.log('🔍 Area coordinates before conversion:', area.coordinates)
+
+        // Validate coordinates
+        if (!area.coordinates || area.coordinates.length < 3) {
+          console.error('❌ Invalid coordinates for saved area:', area.id, area.coordinates)
+          return
+        }
+
+        // Database stores coordinates as [lat, lng] which is what Leaflet expects
+        const latlngs = area.coordinates.map(coord => {
+          if (!Array.isArray(coord) || coord.length !== 2) {
+            console.error('❌ Invalid coordinate format:', coord)
+            return [0, 0] as [number, number]
+          }
+          // Keep coordinates as-is: [lat, lng]
+          return [coord[0], coord[1]] as [number, number]
+        })
+
+        console.log('🔍 Coordinates for Leaflet (no conversion needed):', latlngs)
+        console.log('🔍 Sample coordinate check:', {
+          originalCoord: area.coordinates[0],
+          leafletCoord: latlngs[0],
+          isValidLat: latlngs[0][0] >= -90 && latlngs[0][0] <= 90,
+          isValidLng: latlngs[0][1] >= -180 && latlngs[0][1] <= 180
+        })
+
+        // Create polygon with green styling for saved blocs
+        const polygon = L.polygon(latlngs, {
+          color: '#22c55e', // Green for saved blocs
+          fillColor: '#22c55e',
+          fillOpacity: 0.3,
+          weight: 2,
+          opacity: 0.8
+        })
+
+        console.log('🔍 Polygon bounds:', polygon.getBounds())
+        console.log('🔍 Polygon center:', polygon.getBounds().getCenter())
+
+        // Add to map and store reference
+        drawnLayersRef.current.addLayer(polygon)
+        layerMapRef.current.set(area.id, polygon)
+
+        // Check if polygon is within current map view
+        const mapBounds = map.getBounds()
+        const polygonBounds = polygon.getBounds()
+        const isInView = mapBounds.intersects(polygonBounds)
+
+        console.log('✅ Created and added saved polygon to map:', area.id)
+        console.log('🔍 Map bounds:', mapBounds)
+        console.log('🔍 Polygon bounds:', polygonBounds)
+        console.log('🔍 Polygon in current view:', isInView)
+
+        if (!isInView) {
+          console.log('⚠️ Polygon is outside current map view - you may need to zoom out or pan to see it')
+        }
+
+        // Add click handler
+        polygon.on('click', (e) => {
+          console.log('🖱️ Saved polygon clicked:', area.id)
+          if (e.originalEvent) {
+            e.originalEvent.stopPropagation()
+            e.originalEvent.preventDefault()
+            e.originalEvent.stopImmediatePropagation()
+          }
+          L.DomEvent.stopPropagation(e)
+          onPolygonClick?.(area.id)
+        })
+
+        console.log('✅ Created and added saved polygon to map:', area.id)
+        console.log('🔍 DrawnLayers now has layers:', drawnLayersRef.current.getLayers().length)
+      } else {
+        console.log('🔄 Polygon already exists for saved area:', area.id)
+      }
+    })
+  }, [map, savedAreas, onPolygonClick])
 
   // Detect when areas are saved and clear totals
   useEffect(() => {
@@ -347,32 +568,40 @@ export default function DrawingManager({
       const isSaved = savedAreas.some(a => a.id === areaId)
       const isDrawn = drawnAreas.some(a => a.id === areaId)
 
-      // Bloc colors: green when saved, blue when drawn but not saved
-      let baseColor = '#3b82f6' // Blue for drawn blocs (not saved)
-      if (isSaved) {
-        baseColor = '#22c55e' // Green for saved blocs
+      // Get the actual area object
+      const area = savedAreas.find(a => a.id === areaId) || drawnAreas.find(a => a.id === areaId)
+
+      if (!area) {
+        console.warn(`Area not found for ID: ${areaId}`)
+        return
       }
 
-      // Highlighting
-      let color = baseColor
-      let weight = 2
-      let fillOpacity = 0.3
+      // Get polygon styling based on layer type and state
+      const styling = getPolygonColor(area, isSelected, isHovered)
 
-      if (isSelected) {
-        color = '#f59e0b' // Orange for selected
-        weight = 4
-        fillOpacity = 0.5
-      } else if (isHovered) {
-        color = '#f59e0b' // Orange for hovered
-        weight = 3
-        fillOpacity = 0.4
+      // If not selected or hovered, use default colors based on saved state
+      if (!isSelected && !isHovered) {
+        if (isSaved) {
+          // Use layer-specific colors for saved blocs, or default green
+          const layerStyling = getPolygonColor(area, false, false)
+          styling.color = layerStyling.color
+          styling.fillColor = layerStyling.fillColor
+          styling.fillOpacity = layerStyling.fillOpacity
+        } else {
+          // Blue for drawn but not saved blocs
+          styling.color = '#3b82f6'
+          styling.fillColor = '#3b82f6'
+          styling.fillOpacity = 0.3
+        }
       }
+
+      const { color, fillColor, weight, fillOpacity } = styling
 
       layer.setStyle({
         color,
         weight,
         fillOpacity,
-        fillColor: color
+        fillColor
       })
     })
   }, [selectedAreaId, hoveredAreaId, drawnAreas, savedAreas])

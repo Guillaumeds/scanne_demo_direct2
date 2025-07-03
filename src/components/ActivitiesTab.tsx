@@ -38,6 +38,7 @@ import {
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
+import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
 import CropCycleSelector from './CropCycleSelector'
 
 interface DrawnArea {
@@ -229,6 +230,10 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showActivitySelector, setShowActivitySelector] = useState(false)
   const [editingActivity, setEditingActivity] = useState<BlocActivity | null>(null)
+  const [globalMetrics, setGlobalMetrics] = useState<{
+    totalEstimatedCosts: number
+    totalActualCosts: number
+  }>({ totalEstimatedCosts: 0, totalActualCosts: 0 })
   const [sortBy, setSortBy] = useState<'date' | 'date-desc' | 'phase' | 'status'>('date')
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
@@ -259,6 +264,30 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
     loadActivities()
   }, [selectedCycleInfo?.id])
+
+  // Load global metrics for the selected cycle
+  const loadGlobalMetrics = async () => {
+    if (!selectedCycleInfo?.id) {
+      setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
+      return
+    }
+
+    try {
+      const metrics = await CropCycleMetricsService.calculateCycleMetrics(selectedCycleInfo.id)
+      setGlobalMetrics({
+        totalEstimatedCosts: metrics.totalEstimatedCosts,
+        totalActualCosts: metrics.totalActualCosts
+      })
+    } catch (error) {
+      console.error('Failed to load global metrics:', error)
+      setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
+    }
+  }
+
+  // Load metrics when activities change
+  useEffect(() => {
+    loadGlobalMetrics()
+  }, [activities, selectedCycleInfo?.id])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -476,8 +505,8 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
               </button>
             </div>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <div>Est Cost: <span className="font-medium text-green-600">Rs {formatCostWithoutDecimals(getTotalEstimatedCost())}</span></div>
-              <div>Actual Cost: <span className="font-medium text-blue-600">Rs {formatCostWithoutDecimals(getTotalActualCost())}</span></div>
+              <div>Est Cost: <span className="font-medium text-green-600">Rs {formatCostWithoutDecimals(globalMetrics.totalEstimatedCosts)}</span></div>
+              <div>Actual Cost: <span className="font-medium text-blue-600">Rs {formatCostWithoutDecimals(globalMetrics.totalActualCosts)}</span></div>
             </div>
           </div>
 

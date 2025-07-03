@@ -10,7 +10,7 @@ interface SentinelOverlaySelectorProps {
 interface SentinelLayer {
   name: string
   displayName: string
-  type: 'vegetation' | 'moisture' | 'soil'
+  type: 'vegetation' | 'moisture' | 'soil' | 'crop_cycles' | 'variety'
   url: string
   bounds: [[number, number], [number, number]]
   opacity: number

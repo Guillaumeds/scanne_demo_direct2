@@ -5,6 +5,7 @@ import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/c
 import { SugarcaneVariety, InterCropPlant, CropVariety, SUGARCANE_VARIETIES, INTERCROP_PLANTS } from '@/types/varieties'
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
 import { CropCycleService } from '@/services/cropCycleService'
+import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
 import CycleClosureModal from './CycleClosureModal'
@@ -31,6 +32,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
 
     const [cropCycles, setCropCycles] = useState<CropCycle[]>([])
     const [activeCycle, setActiveCycle] = useState<CropCycle | null>(null)
+    const [cycleMetrics, setCycleMetrics] = useState<{[cycleId: string]: any}>({})
     const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
     const [showIntercropSelector, setShowIntercropSelector] = useState(false)
     const [showClosureModal, setShowClosureModal] = useState(false)
@@ -95,6 +97,35 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
     // Load existing crop cycles for this bloc
     loadCropCycles()
   }, [bloc.id])
+
+  // Load metrics for all cycles
+  const loadCycleMetrics = async () => {
+    const metricsData: {[cycleId: string]: any} = {}
+
+    for (const cycle of cropCycles) {
+      try {
+        const metrics = await CropCycleMetricsService.getFormattedMetrics(cycle.id)
+        metricsData[cycle.id] = metrics
+      } catch (error) {
+        console.error(`Failed to load metrics for cycle ${cycle.id}:`, error)
+        metricsData[cycle.id] = {
+          costs: { estimated: 'N/A', actual: 'N/A' },
+          yield: { sugarcane: 'TBC', intercrop: 'N/A' },
+          revenue: { total: 'N/A', sugarcane: 'N/A', intercrop: 'N/A' },
+          profit: { total: 'TBC', perHa: 'TBC', margin: 'N/A' }
+        }
+      }
+    }
+
+    setCycleMetrics(metricsData)
+  }
+
+  // Load metrics when cycles change
+  useEffect(() => {
+    if (cropCycles.length > 0) {
+      loadCycleMetrics()
+    }
+  }, [cropCycles])
 
   const loadCropCycles = async () => {
     try {
@@ -635,18 +666,20 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                         <>
                           <p>Harvested: {cycle.actualHarvestDate ? new Date(cycle.actualHarvestDate).toLocaleDateString() : 'TBC'}</p>
                           <p>Expected Yield: {cycle.expectedYield} tons/ha</p>
-                          <p>Yield: TBC</p>
-                          <p>Profit: TBC</p>
+                          <p>Yield: {cycleMetrics[cycle.id]?.yield?.sugarcane || 'TBC'}</p>
+                          <p>Profit: {cycleMetrics[cycle.id]?.profit?.total || 'TBC'}</p>
+                          <p>Profit/ha: {cycleMetrics[cycle.id]?.profit?.perHa || 'TBC'}</p>
                           <p>Precipitation: TBC</p>
                           <p>Solar Radiation: TBC</p>
                         </>
                       ) : (
-                        /* For active cycles, show predicted values */
+                        /* For active cycles, show current values */
                         <>
                           <p>Planned Harvest: {new Date(cycle.plannedHarvestDate).toLocaleDateString()}</p>
                           <p>Expected Yield: {cycle.expectedYield} tons/ha</p>
-                          <p>Yield: TBC</p>
-                          <p>Profit: TBC</p>
+                          <p>Yield: {cycleMetrics[cycle.id]?.yield?.sugarcane || 'TBC'}</p>
+                          <p>Profit: {cycleMetrics[cycle.id]?.profit?.total || 'TBC'}</p>
+                          <p>Profit/ha: {cycleMetrics[cycle.id]?.profit?.perHa || 'TBC'}</p>
                           <p>Predicted Precipitation: TBC</p>
                           <p>Predicted Solar Radiation: TBC</p>
                         </>

@@ -21,6 +21,12 @@ export default function DrawingToolbar({
       description: 'Draw cultivation area'
     },
     {
+      id: 'farm_boundary',
+      name: 'Farm Boundary',
+      icon: '🏞️',
+      description: 'Draw farm boundary'
+    },
+    {
       id: 'select',
       name: 'Select',
       icon: '👆',
@@ -40,6 +46,7 @@ export default function DrawingToolbar({
         {tools.map(tool => (
           <button
             key={tool.id}
+            type="button"
             onClick={() => onToolSelect(activeTool === tool.id ? null : tool.id)}
             className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm transition-colors ${
               activeTool === tool.id
@@ -57,6 +64,7 @@ export default function DrawingToolbar({
         {/* Cancel drawing button */}
         {isDrawing && (
           <button
+            type="button"
             onClick={() => onToolSelect(null)}
             className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm bg-red-100 text-red-800 border border-red-300 hover:bg-red-200 transition-colors"
           >
@@ -73,6 +81,16 @@ export default function DrawingToolbar({
                 <div className="font-medium text-blue-800 mb-1">Drawing Polygon:</div>
                 <div>• Click to add points</div>
                 <div>• Snaps to field edges</div>
+                <div>• Right-click or double-click to finish</div>
+                <div>• ESC to cancel</div>
+              </div>
+            )}
+
+            {activeTool === 'farm_boundary' && (
+              <div>
+                <div className="font-medium text-blue-800 mb-1">Drawing Farm Boundary:</div>
+                <div>• Click to add boundary points</div>
+                <div>• Fields inside will be auto-selected</div>
                 <div>• Right-click or double-click to finish</div>
                 <div>• ESC to cancel</div>
               </div>

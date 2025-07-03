@@ -7,6 +7,7 @@ import DrawingManager from './DrawingManager'
 import LayerSelector from './LayerSelector'
 import DrawingProgress from './DrawingProgress'
 import SentinelOverlaySelector from './SentinelOverlaySelector'
+import MapLegend from './MapLegend'
 
 // Fix for default markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -75,6 +76,30 @@ export default function MapComponent({
           attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
           type: 'tile'
         }
+      case 'crop_cycles':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+          type: 'crop_cycles'
+        }
+      case 'variety':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+          type: 'variety'
+        }
+      case 'growth_stages':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+          type: 'growth_stages'
+        }
+      case 'harvest_planning':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+          type: 'harvest_planning'
+        }
       case 'soil':
         return {
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -131,6 +156,46 @@ export default function MapComponent({
       soilOverlayRef.current = soilOverlay
 
       console.log('✅ Added composite layer: Satellite + Soil overlay')
+    } else if (config.type === 'crop_cycles') {
+      // Create satellite base layer for crop cycles visualization
+      const satelliteLayer = L.tileLayer(config.url, {
+        attribution: config.attribution,
+        maxZoom: 19
+      })
+      satelliteLayer.addTo(map)
+      currentTileLayerRef.current = satelliteLayer
+
+      console.log('✅ Added crop cycles layer - polygons will be colored by cycle phase')
+    } else if (config.type === 'variety') {
+      // Create satellite base layer for variety visualization
+      const satelliteLayer = L.tileLayer(config.url, {
+        attribution: config.attribution,
+        maxZoom: 19
+      })
+      satelliteLayer.addTo(map)
+      currentTileLayerRef.current = satelliteLayer
+
+      console.log('✅ Added variety layer - polygons will be colored by variety type')
+    } else if (config.type === 'growth_stages') {
+      // Create satellite base layer for growth stages visualization
+      const satelliteLayer = L.tileLayer(config.url, {
+        attribution: config.attribution,
+        maxZoom: 19
+      })
+      satelliteLayer.addTo(map)
+      currentTileLayerRef.current = satelliteLayer
+
+      console.log('✅ Added growth stages layer - polygons will be colored by growth stage')
+    } else if (config.type === 'harvest_planning') {
+      // Create satellite base layer for harvest planning visualization
+      const satelliteLayer = L.tileLayer(config.url, {
+        attribution: config.attribution,
+        maxZoom: 19
+      })
+      satelliteLayer.addTo(map)
+      currentTileLayerRef.current = satelliteLayer
+
+      console.log('✅ Added harvest planning layer - polygons will be colored by harvest timeline')
     } else if (config.type === 'image' && 'overlayBounds' in config && config.overlayBounds) {
       // Create image overlay for PNG/image files
       const imageOverlay = L.imageOverlay(config.url, config.overlayBounds, {
@@ -218,7 +283,21 @@ export default function MapComponent({
 
   // Calculate polygon centroid for better label positioning
   const calculatePolygonCentroid = (coordinates: [number, number][]): L.LatLng => {
-    if (coordinates.length === 0) return L.latLng(0, 0)
+    if (!coordinates || coordinates.length === 0) {
+      console.error('❌ calculatePolygonCentroid: No coordinates provided')
+      return L.latLng(0, 0)
+    }
+
+    // Validate coordinates
+    const invalidCoords = coordinates.filter(coord =>
+      !coord || !Array.isArray(coord) || coord.length < 2 ||
+      typeof coord[0] !== 'number' || typeof coord[1] !== 'number'
+    )
+
+    if (invalidCoords.length > 0) {
+      console.error('❌ calculatePolygonCentroid: Invalid coordinates found:', invalidCoords)
+      return L.latLng(0, 0)
+    }
 
     let area = 0
     let centroidLat = 0
@@ -239,15 +318,14 @@ export default function MapComponent({
 
     area *= 0.5
     if (area === 0) {
-      // Fallback to simple average if area calculation fails
-      const avgLat = coordinates.reduce((sum, coord) => sum + coord[1], 0) / coordinates.length
-      const avgLng = coordinates.reduce((sum, coord) => sum + coord[0], 0) / coordinates.length
-      return L.latLng(avgLat, avgLng)
+      console.error('❌ calculatePolygonCentroid: Area calculation resulted in 0')
+      return L.latLng(0, 0)
     }
 
     centroidLat /= (6 * area)
     centroidLng /= (6 * area)
 
+    console.log(`✅ calculatePolygonCentroid: Calculated centroid [${centroidLat}, ${centroidLng}]`)
     return L.latLng(centroidLat, centroidLng)
   }
 
@@ -471,9 +549,24 @@ export default function MapComponent({
       })
 
       if (field.coordinates && field.coordinates.length > 0) {
+        console.log(`🔍 Field ${field.field_id} raw coordinates:`, field.coordinates)
+        console.log(`🔍 Field ${field.field_id} coordinates type:`, typeof field.coordinates, Array.isArray(field.coordinates))
+
+        // Validate coordinates before processing
+        const invalidCoords = field.coordinates.filter(coord =>
+          !coord || !Array.isArray(coord) || coord.length < 2 ||
+          typeof coord[0] !== 'number' || typeof coord[1] !== 'number'
+        )
+
+        if (invalidCoords.length > 0) {
+          console.error(`❌ Field ${field.field_id} has invalid coordinates:`, invalidCoords)
+          console.log(`❌ Skipping field ${field.field_id} - invalid coordinates`)
+          return
+        }
+
         // Convert coordinates to Leaflet format [lat, lng]
         const latlngs = field.coordinates.map(coord => [coord[1], coord[0]] as [number, number])
-        console.log(`Field ${field.field_id} latlngs:`, latlngs)
+        console.log(`✅ Field ${field.field_id} processed latlngs:`, latlngs)
 
         // Create polygon with grey styling (all parcelles are inactive)
         const polygon = L.polygon(latlngs, {
@@ -527,13 +620,27 @@ export default function MapComponent({
 
     // Fit map to show all fields if we have any
     if (fields.length > 0) {
-      console.log('Fitting map bounds to show all fields')
-      const group = L.featureGroup(fieldLayersRef.current.getLayers())
-      const bounds = group.getBounds()
-      console.log('Field bounds:', bounds)
-      map.fitBounds(bounds.pad(0.1))
+      console.log('🔍 Fitting map bounds to show all fields')
+      const layers = fieldLayersRef.current.getLayers()
+      console.log('🔍 Available layers for bounds:', layers.length)
+
+      if (layers.length > 0) {
+        const group = L.featureGroup(layers)
+        const bounds = group.getBounds()
+        console.log('🔍 Field bounds:', bounds)
+
+        if (bounds && bounds.isValid && bounds.isValid()) {
+          console.log('✅ Fitting map to valid bounds')
+          map.fitBounds(bounds.pad(0.1))
+        } else {
+          console.error('❌ Invalid bounds returned from field layer group')
+          console.log('❌ Bounds object:', bounds)
+        }
+      } else {
+        console.error('❌ No valid layers found for bounds calculation')
+      }
     } else {
-      console.log('No fields to fit bounds to')
+      console.log('⚠️ No fields to fit bounds to')
     }
 
   }, [fields, mapReady])
@@ -605,6 +712,7 @@ export default function MapComponent({
           savedAreas={savedAreas}
           selectedAreaId={selectedAreaId}
           hoveredAreaId={hoveredAreaId}
+          currentLayer={currentLayer}
           onAreaDrawn={onAreaDrawn || (() => {})}
           onAreaUpdated={onAreaUpdated}
           onPolygonClick={onPolygonClick}
@@ -640,6 +748,10 @@ export default function MapComponent({
         />
       )}
 
+      {/* Map Legend for Crop Cycles and Variety layers */}
+      {mapReady && (
+        <MapLegend layerType={currentLayer} />
+      )}
 
     </div>
   )

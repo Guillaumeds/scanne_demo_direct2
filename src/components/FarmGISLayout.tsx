@@ -12,6 +12,7 @@ import BlocDataScreen from './BlocDataScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { FieldData } from '@/types/field'
 import { loadFieldData } from '@/utils/csvParser'
+import { loadBelleVueFields, hasFieldsInDatabase } from '@/services/fieldService'
 
 interface DrawnArea {
   id: string
@@ -51,7 +52,19 @@ export default function FarmGISLayout() {
       try {
         console.log('🔄 Starting to load field data...')
         setLoading(true)
-        const fieldData = await loadFieldData()
+
+        // Check if database has fields, otherwise fall back to GeoJSON
+        const hasDbFields = await hasFieldsInDatabase()
+
+        let fieldData
+        if (hasDbFields) {
+          console.log('📊 Loading fields from database...')
+          fieldData = await loadBelleVueFields()
+        } else {
+          console.log('📊 No fields in database, loading from GeoJSON...')
+          fieldData = await loadFieldData()
+        }
+
         console.log('✅ Loaded fields:', fieldData.length, 'fields')
         console.log('📊 First field sample:', fieldData[0])
         console.log('📊 Field data structure:', {
@@ -62,13 +75,34 @@ export default function FarmGISLayout() {
         setFields(fieldData)
       } catch (error) {
         console.error('❌ Failed to load field data:', error)
-        setError('Failed to load field data. Please check your CSV file.')
+        setError('Failed to load field data. Please check your database connection.')
       } finally {
         setLoading(false)
       }
     }
 
     loadFields()
+  }, [])
+
+  // Load saved blocs from database on component mount
+  useEffect(() => {
+    const loadSavedBlocs = async () => {
+      try {
+        console.log('🔄 Loading saved blocs from database...')
+        const { BlocService } = await import('@/services/blocService')
+        const savedBlocs = await BlocService.getAllBlocs()
+
+        // Convert database blocs to drawn area format for display
+        const savedAreasFromDB = savedBlocs.map(bloc => BlocService.convertBlocToDrawnArea(bloc))
+        setSavedAreas(savedAreasFromDB)
+        console.log('✅ Loaded saved blocs from database:', savedBlocs.length)
+      } catch (error) {
+        console.warn('⚠️ Could not load saved blocs from database:', error)
+        // Don't fail the app if blocs can't be loaded
+      }
+    }
+
+    loadSavedBlocs()
   }, [])
 
   // Field selection handlers removed - parcelles are background only
@@ -196,12 +230,32 @@ export default function FarmGISLayout() {
     console.log('Area deleted:', areaId)
   }
 
-  const handleSaveAll = () => {
-    setSavedAreas(prev => [...prev, ...drawnAreas])
-    setDrawnAreas([])
-    setSelectedPolygon(null)
-    setSelectedAreaId(null)
-    console.log('All areas saved!')
+  const handleSaveAll = async () => {
+    if (drawnAreas.length === 0) return
+
+    try {
+      console.log('💾 Saving blocs to database...', drawnAreas)
+
+      // Import BlocService dynamically to avoid import issues
+      const { BlocService } = await import('@/services/blocService')
+
+      // Save all drawn areas to database
+      const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas)
+      console.log('✅ Blocs saved successfully:', savedBlocs)
+
+      // Move to saved areas in local state
+      setSavedAreas(prev => [...prev, ...drawnAreas])
+      setDrawnAreas([])
+      setSelectedPolygon(null)
+      setSelectedAreaId(null)
+
+      // Show success message
+      alert(`Successfully saved ${savedBlocs.length} bloc(s) to database!`)
+
+    } catch (error) {
+      console.error('❌ Failed to save blocs:', error)
+      alert(`Failed to save blocs: ${error.message}. Please check that the database is properly set up with fields data.`)
+    }
   }
 
   const handleCancelAll = () => {
@@ -244,7 +298,8 @@ export default function FarmGISLayout() {
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Data</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
+          <button
+            type="button"
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
           >

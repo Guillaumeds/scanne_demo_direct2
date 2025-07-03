@@ -274,12 +274,34 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   }
 
   const handleDeleteBloc = () => {
-    if (window.confirm('Are you sure you want to delete this bloc? All data will be lost and this action cannot be undone.')) {
-      console.log('Deleting bloc:', bloc.id)
-      if (onDelete) {
-        onDelete(bloc.id) // Call the delete function passed from parent
+    const confirmText = prompt('To confirm deletion, please type "delete this bloc" exactly:')
+    if (confirmText === 'delete this bloc') {
+      const finalConfirm = window.confirm('Are you absolutely sure? This will permanently delete the bloc and ALL related data including activities, products, resources, observations, and attachments. This action cannot be undone.')
+      if (finalConfirm) {
+        console.log('Deleting bloc:', bloc.id)
+        if (onDelete) {
+          onDelete(bloc.id) // Call the delete function passed from parent
+        }
+        onBack() // Return to main view after deletion
       }
-      onBack() // Return to main view after deletion
+    } else if (confirmText !== null) {
+      alert('Deletion cancelled. The text did not match exactly.')
+    }
+  }
+
+  const handleRetireBloc = () => {
+    const confirmText = prompt('To confirm retirement, please type "retire this bloc" exactly:')
+    if (confirmText === 'retire this bloc') {
+      const finalConfirm = window.confirm('Are you sure you want to retire this bloc? It will be marked as retired but data will be preserved.')
+      if (finalConfirm) {
+        console.log('Retiring bloc:', bloc.id)
+        // TODO: Implement bloc retirement logic - update status from active to retired
+        // This should call a service to update the bloc status in the database
+        alert('Bloc retirement functionality will be implemented with database integration.')
+        onBack() // Return to main view after retirement
+      }
+    } else if (confirmText !== null) {
+      alert('Retirement cancelled. The text did not match exactly.')
     }
   }
 
@@ -648,6 +670,24 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Delete and Retire Buttons */}
+              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={handleRetireBloc}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-medium"
+                >
+                  Retire Bloc
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteBloc}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                >
+                  Delete Bloc
+                </button>
               </div>
             </div>
           )}

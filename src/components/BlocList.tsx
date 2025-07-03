@@ -178,22 +178,7 @@ function BlocCard({
             {bloc.area.toFixed(2)} ha
           </span>
         </div>
-        <div className="flex justify-between">
-          <span>Status:</span>
-          <span className="text-xs">
-            {isLoading ? (
-              <span className="text-gray-400">Loading...</span>
-            ) : (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                cropCycleData?.blocStatus === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {cropCycleData?.blocStatus || 'Unknown'}
-              </span>
-            )}
-          </span>
-        </div>
+
         <div className="flex justify-between">
           <span>Cycle:</span>
           <span className="capitalize text-xs">
@@ -242,14 +227,7 @@ function BlocCard({
             </span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span>Status:</span>
-          <span className={`font-medium ${
-            isSaved ? 'text-green-600' : 'text-orange-600'
-          }`}>
-            {isSaved ? 'Saved' : 'Draft'}
-          </span>
-        </div>
+
       </div>
     </div>
   )
@@ -538,24 +516,7 @@ export default function BlocList({
                         {bloc.area.toFixed(2)} ha
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span className="text-xs">
-                        {(() => {
-                          const cycleData = cropCycleDataMap[bloc.id]
-                          const status = cycleData?.blocStatus || 'active'
-                          return (
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              status === 'active'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {status}
-                            </span>
-                          )
-                        })()}
-                      </span>
-                    </div>
+
                     <div className="flex justify-between">
                       <span>Cycle:</span>
                       <span className="capitalize text-xs">

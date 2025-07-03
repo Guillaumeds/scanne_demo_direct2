@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useDropzone } from 'react-dropzone'
 import {
   BlocObservation,
   ObservationCategory,
@@ -15,6 +16,7 @@ import {
   IntercropYieldQualityData,
   OBSERVATION_CATEGORIES
 } from '@/types/observations'
+import { BlocAttachment, AttachmentCategory } from '@/types/bloc'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 
 // Measurement guidelines for each observation category
@@ -176,7 +178,7 @@ export default function ObservationForm({
   const [showInfoModal, setShowInfoModal] = useState(false)
 
   const [formData, setFormData] = useState({
-    name: observation?.name || '',
+    name: observation?.name || categoryInfo?.name || '',
     description: observation?.description || '',
     category: selectedCategory,
     status: observation?.status || 'planned' as ObservationStatus,
@@ -187,6 +189,9 @@ export default function ObservationForm({
     notes: observation?.notes || '',
     data: observation?.data || {}
   })
+
+  const [attachments, setAttachments] = useState<BlocAttachment[]>(observation?.attachments || [])
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -210,6 +215,7 @@ export default function ObservationForm({
       numberOfPlants: formData.numberOfPlants,
       notes: formData.notes,
       data: formData.data,
+      attachments: attachments,
       createdAt: observation?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: observation?.createdBy || 'user'
@@ -228,6 +234,15 @@ export default function ObservationForm({
     }))
   }
 
+  const handleAttachmentUpload = (newAttachments: BlocAttachment[]) => {
+    setAttachments(prev => [...prev, ...newAttachments])
+    setShowAttachmentModal(false)
+  }
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId))
+  }
+
   const renderCategorySpecificFields = () => {
     switch (selectedCategory) {
       case 'soil':
@@ -239,13 +254,13 @@ export default function ObservationForm({
       case 'growth-stage':
         return <GrowthStageFields data={formData.data as GrowthStageData} updateField={updateDataField} />
       case 'sugarcane-yield-quality':
-        return <SugarcaneYieldQualityFields data={formData.data as SugarcaneYieldQualityData} updateField={updateDataField} />
+        return <SugarcaneYieldQualityFields data={formData.data as SugarcaneYieldQualityData} updateField={updateDataField} blocArea={blocArea} />
       case 'pest-disease':
         return <PestDiseaseFields data={formData.data as PestDiseaseData} updateField={updateDataField} />
       case 'weed':
         return <WeedObservationFields data={formData.data as WeedObservationData} updateField={updateDataField} />
       case 'intercrop-yield-quality':
-        return <IntercropYieldQualityFields data={formData.data as IntercropYieldQualityData} updateField={updateDataField} />
+        return <IntercropYieldQualityFields data={formData.data as IntercropYieldQualityData} updateField={updateDataField} blocArea={blocArea} />
       default:
         return null
     }
@@ -416,20 +431,60 @@ export default function ObservationForm({
               <h3 className="text-lg font-medium text-gray-900">Attachments</h3>
               <button
                 type="button"
-                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                onClick={() => setShowAttachmentModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
                 title="Add attachment"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7,10 12,15 17,10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14"/>
                 </svg>
+                <span>Add Files</span>
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
-              No attachments yet. Click the + button to add files.
-            </div>
+            {attachments.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                No attachments yet. Click "Add Files" to upload files.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {attachment.fileType?.startsWith('image/') ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21,15 16,10 5,21"/>
+                          </svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{attachment.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {attachment.category} • {(attachment.fileSize / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttachment(attachment.id)}
+                      className="text-red-400 hover:text-red-600 p-1"
+                      title="Remove attachment"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -481,6 +536,15 @@ export default function ObservationForm({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Attachment Upload Modal */}
+      {showAttachmentModal && (
+        <AttachmentUploadModal
+          onClose={() => setShowAttachmentModal(false)}
+          onUpload={handleAttachmentUpload}
+          activeCycleInfo={activeCycleInfo}
+        />
       )}
     </div>
   )
@@ -1271,7 +1335,85 @@ function IntercropYieldFields({ data, updateField }: { data: any, updateField: (
 }
 
 // Sugarcane Yield Quality Fields (MANDATORY)
-function SugarcaneYieldQualityFields({ data, updateField }: { data: SugarcaneYieldQualityData, updateField: (field: string, value: any) => void }) {
+function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: SugarcaneYieldQualityData, updateField: (field: string, value: any) => void, blocArea?: number }) {
+
+  // Auto-calculate yield per hectare when total yield changes
+  const handleTotalYieldChange = (value: string) => {
+    const totalYield = value ? parseFloat(value) : undefined
+    updateField('totalYieldTons', totalYield)
+
+    if (totalYield && blocArea && blocArea > 0) {
+      const yieldPerHa = totalYield / blocArea
+      updateField('yieldPerHectare', parseFloat(yieldPerHa.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate total yield when yield per hectare changes
+  const handleYieldPerHaChange = (value: string) => {
+    const yieldPerHa = value ? parseFloat(value) : undefined
+    updateField('yieldPerHectare', yieldPerHa)
+
+    if (yieldPerHa && blocArea && blocArea > 0) {
+      const totalYield = yieldPerHa * blocArea
+      updateField('totalYieldTons', parseFloat(totalYield.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate revenue per hectare when total revenue changes
+  const handleTotalRevenueChange = (value: string) => {
+    const totalRevenue = value ? parseFloat(value) : undefined
+    updateField('sugarcaneRevenue', totalRevenue)
+
+    if (totalRevenue && blocArea && blocArea > 0) {
+      const revenuePerHa = totalRevenue / blocArea
+      updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate total revenue when revenue per hectare changes
+  const handleRevenuePerHaChange = (value: string) => {
+    const revenuePerHa = value ? parseFloat(value) : undefined
+    updateField('revenuePerHa', revenuePerHa)
+
+    if (revenuePerHa && blocArea && blocArea > 0) {
+      const totalRevenue = revenuePerHa * blocArea
+      updateField('sugarcaneRevenue', parseFloat(totalRevenue.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate total revenue when price per tonne changes
+  const handlePricePerTonneChange = (value: string) => {
+    const pricePerTonne = value ? parseFloat(value) : undefined
+    updateField('pricePerTonne', pricePerTonne)
+
+    if (pricePerTonne && data.totalYieldTons && data.totalYieldTons > 0) {
+      const totalRevenue = pricePerTonne * data.totalYieldTons
+      updateField('sugarcaneRevenue', parseFloat(totalRevenue.toFixed(2)))
+
+      // Also update revenue per hectare
+      if (blocArea && blocArea > 0) {
+        const revenuePerHa = totalRevenue / blocArea
+        updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+      }
+    }
+  }
+
+  // Auto-calculate price per tonne when total revenue changes (update existing function)
+  const handleTotalRevenueChangeWithPrice = (value: string) => {
+    const totalRevenue = value ? parseFloat(value) : undefined
+    updateField('sugarcaneRevenue', totalRevenue)
+
+    if (totalRevenue && blocArea && blocArea > 0) {
+      const revenuePerHa = totalRevenue / blocArea
+      updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+    }
+
+    // Calculate price per tonne
+    if (totalRevenue && data.totalYieldTons && data.totalYieldTons > 0) {
+      const pricePerTonne = totalRevenue / data.totalYieldTons
+      updateField('pricePerTonne', parseFloat(pricePerTonne.toFixed(2)))
+    }
+  }
   return (
     <div className="space-y-6">
       {/* Required for Cycle Closure */}
@@ -1280,36 +1422,39 @@ function SugarcaneYieldQualityFields({ data, updateField }: { data: SugarcaneYie
         <p className="text-xs text-blue-700 mb-3">These fields must be completed before the crop cycle can be closed.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Total Yield (tons)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Yield (tons) *</label>
             <input
               type="number"
               step="0.1"
               min="0"
               value={data.totalYieldTons || ''}
-              onChange={(e) => updateField('totalYieldTons', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleTotalYieldChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="120.5"
+              title="Total yield in tons - will auto-calculate yield per hectare"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Yield per Hectare (t/ha)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Yield per Hectare (t/ha) *</label>
             <input
               type="number"
               step="0.1"
               min="0"
               value={data.yieldPerHectare || ''}
-              onChange={(e) => updateField('yieldPerHectare', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleYieldPerHaChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="85.5"
+              title="Yield per hectare - will auto-calculate total yield"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Harvest Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Actual Harvest Date</label>
             <input
               type="date"
               value={data.harvestDate || ''}
               onChange={(e) => updateField('harvestDate', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              title="Actual harvest date"
             />
           </div>
           <div>
@@ -1344,112 +1489,80 @@ function SugarcaneYieldQualityFields({ data, updateField }: { data: SugarcaneYie
       {/* Revenue Section */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <h4 className="text-sm font-semibold text-green-800 mb-3">Revenue Information</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sugarcane Revenue (MUR)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Sugarcane Revenue (MUR)</label>
             <input
               type="number"
               step="0.01"
               min="0"
               value={data.sugarcaneRevenue || ''}
-              onChange={(e) => updateField('sugarcaneRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleTotalRevenueChangeWithPrice(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="450000"
+              title="Total sugarcane revenue - will auto-calculate revenue per hectare and price per tonne"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sugar Revenue (MUR)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Revenue / ha (MUR/ha)</label>
             <input
               type="number"
               step="0.01"
               min="0"
-              value={data.sugarRevenue || ''}
-              onChange={(e) => updateField('sugarRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              value={data.revenuePerHa || ''}
+              onChange={(e) => handleRevenuePerHaChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="180000"
+              placeholder="300000"
+              title="Revenue per hectare - will auto-calculate total revenue"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Energy Revenue (MUR)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price per Tonne (MUR/t)</label>
             <input
               type="number"
               step="0.01"
               min="0"
-              value={data.energyRevenue || ''}
-              onChange={(e) => updateField('energyRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              value={data.pricePerTonne || ''}
+              onChange={(e) => handlePricePerTonneChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="25000"
+              placeholder="3600"
+              title="Price per tonne - will auto-calculate total revenue"
             />
           </div>
         </div>
       </div>
 
-      {/* Additional Quality Metrics */}
+      {/* Quality Metrics */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-800 mb-3">Additional Quality Metrics</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h4 className="text-sm font-semibold text-blue-800 mb-3">Quality Metrics</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pol (%)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Brix (%)</label>
             <input
               type="number"
               step="0.1"
               min="0"
-              value={data.pol || ''}
-              onChange={(e) => updateField('pol', e.target.value ? parseFloat(e.target.value) : undefined)}
+              max="30"
+              value={data.brix || ''}
+              onChange={(e) => updateField('brix', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="18.5"
+              title="Brix percentage - measure of sugar content"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sugar Content (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="25"
+              value={data.sugarContent || ''}
+              onChange={(e) => updateField('sugarContent', e.target.value ? parseFloat(e.target.value) : undefined)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="15.2"
+              title="Sugar content percentage"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Purity (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              value={data.purity || ''}
-              onChange={(e) => updateField('purity', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="85.5"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CCS (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={data.ccs || ''}
-              onChange={(e) => updateField('ccs', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="11.8"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fiber Content (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={data.fiberContent || ''}
-              onChange={(e) => updateField('fiberContent', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="12.5"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quality Grade</label>
-            <select
-              value={data.qualityGrade || ''}
-              onChange={(e) => updateField('qualityGrade', e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Select grade</option>
-              <option value="A">Grade A (Premium)</option>
-              <option value="B">Grade B (Good)</option>
-              <option value="C">Grade C (Average)</option>
-              <option value="D">Grade D (Below Average)</option>
-            </select>
           </div>
         </div>
       </div>
@@ -1458,7 +1571,51 @@ function SugarcaneYieldQualityFields({ data, updateField }: { data: SugarcaneYie
 }
 
 // Intercrop Yield Quality Fields (MANDATORY if intercrop planted)
-function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYieldQualityData, updateField: (field: string, value: any) => void }) {
+function IntercropYieldQualityFields({ data, updateField, blocArea }: { data: IntercropYieldQualityData, updateField: (field: string, value: any) => void, blocArea?: number }) {
+
+  // Auto-calculate yield per hectare when total yield changes
+  const handleTotalYieldChange = (value: string) => {
+    const totalYield = value ? parseFloat(value) : undefined
+    updateField('totalYieldTons', totalYield)
+
+    if (totalYield && blocArea && blocArea > 0) {
+      const yieldPerHa = totalYield / blocArea
+      updateField('yieldPerHectare', parseFloat(yieldPerHa.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate total yield when yield per hectare changes
+  const handleYieldPerHaChange = (value: string) => {
+    const yieldPerHa = value ? parseFloat(value) : undefined
+    updateField('yieldPerHectare', yieldPerHa)
+
+    if (yieldPerHa && blocArea && blocArea > 0) {
+      const totalYield = yieldPerHa * blocArea
+      updateField('totalYieldTons', parseFloat(totalYield.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate total revenue when price per tonne changes
+  const handlePricePerTonneChange = (value: string) => {
+    const pricePerTonne = value ? parseFloat(value) : undefined
+    updateField('pricePerTonne', pricePerTonne)
+
+    if (pricePerTonne && data.totalYieldTons && data.totalYieldTons > 0) {
+      const totalRevenue = pricePerTonne * data.totalYieldTons
+      updateField('intercropRevenue', parseFloat(totalRevenue.toFixed(2)))
+    }
+  }
+
+  // Auto-calculate price per tonne when total revenue changes
+  const handleTotalRevenueChange = (value: string) => {
+    const totalRevenue = value ? parseFloat(value) : undefined
+    updateField('intercropRevenue', totalRevenue)
+
+    if (totalRevenue && data.totalYieldTons && data.totalYieldTons > 0) {
+      const pricePerTonne = totalRevenue / data.totalYieldTons
+      updateField('pricePerTonne', parseFloat(pricePerTonne.toFixed(2)))
+    }
+  }
   return (
     <div className="space-y-6">
       {/* Required for Cycle Closure */}
@@ -1484,13 +1641,13 @@ function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYie
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Harvest Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Planned Harvest Date</label>
             <input
               type="date"
               value={data.harvestDate || ''}
               onChange={(e) => updateField('harvestDate', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              title="Harvest date"
+              title="Planned harvest date"
             />
           </div>
           <div>
@@ -1500,9 +1657,10 @@ function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYie
               step="0.1"
               min="0"
               value={data.totalYieldTons || ''}
-              onChange={(e) => updateField('totalYieldTons', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleTotalYieldChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="15.5"
+              title="Total yield in tons - will auto-calculate yield per hectare"
               required
             />
           </div>
@@ -1513,9 +1671,10 @@ function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYie
               step="0.1"
               min="0"
               value={data.yieldPerHectare || ''}
-              onChange={(e) => updateField('yieldPerHectare', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleYieldPerHaChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="12.5"
+              title="Yield per hectare - will auto-calculate total yield"
               required
             />
           </div>
@@ -1527,27 +1686,29 @@ function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYie
         <h4 className="text-sm font-semibold text-green-800 mb-3">Revenue Information</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Intercrop Revenue (MUR)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Intercrop Revenue (MUR)</label>
             <input
               type="number"
               step="0.01"
               min="0"
               value={data.intercropRevenue || ''}
-              onChange={(e) => updateField('intercropRevenue', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onChange={(e) => handleTotalRevenueChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="75000"
+              title="Total intercrop revenue - will auto-calculate price per tonne"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price per Ton (MUR)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price per Tonne (MUR/t)</label>
             <input
               type="number"
               step="0.01"
               min="0"
-              value={data.intercropPrice || ''}
-              onChange={(e) => updateField('intercropPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+              value={data.pricePerTonne || ''}
+              onChange={(e) => handlePricePerTonneChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="6000"
+              title="Price per tonne - will auto-calculate total revenue"
             />
           </div>
         </div>
@@ -1593,6 +1754,195 @@ function IntercropYieldQualityFields({ data, updateField }: { data: IntercropYie
               <option value="mixed">Mixed</option>
             </select>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Attachment Upload Modal Component
+function AttachmentUploadModal({
+  onClose,
+  onUpload,
+  activeCycleInfo
+}: {
+  onClose: () => void
+  onUpload: (attachments: BlocAttachment[]) => void
+  activeCycleInfo: any
+}) {
+  const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory>('other')
+  const [description, setDescription] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [errors, setErrors] = useState<string[]>([])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      setErrors([])
+      setUploadedFiles(prev => [...prev, ...acceptedFiles])
+    },
+    multiple: true
+  })
+
+  const handleUpload = () => {
+    if (uploadedFiles.length === 0) return
+
+    if (!activeCycleInfo) {
+      alert('No active crop cycle found. Please create a crop cycle first.')
+      return
+    }
+
+    const newAttachments: BlocAttachment[] = uploadedFiles.map(file => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      originalName: file.name,
+      category: selectedCategory,
+      fileType: file.type,
+      fileSize: file.size,
+      uploadDate: new Date().toISOString(),
+      description: description || undefined,
+      tags: [],
+      cropCycleId: activeCycleInfo.id,
+      cropCycleType: activeCycleInfo.type,
+      mimeType: file.type,
+      extension: '.' + file.name.split('.').pop()?.toLowerCase(),
+      url: URL.createObjectURL(file),
+      thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+      uploadedBy: 'user',
+      lastModified: new Date().toISOString()
+    }))
+
+    onUpload(newAttachments)
+  }
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Upload Files</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as AttachmentCategory)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              title="Select attachment category"
+            >
+              <option value="other">Other</option>
+              <option value="photo">Photo</option>
+              <option value="document">Document</option>
+              <option value="report">Report</option>
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              rows={3}
+              placeholder="Add a description for these files..."
+            />
+          </div>
+
+          {/* File Upload Area */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Files</label>
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                isDragActive
+                  ? 'border-green-400 bg-green-50'
+                  : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <p className="mt-2 text-sm text-gray-600">
+                {isDragActive ? 'Drop files here...' : 'Drag & drop files here, or click to select'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Supports images, documents, and other file types
+              </p>
+            </div>
+          </div>
+
+          {/* Uploaded Files List */}
+          {uploadedFiles.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Files ({uploadedFiles.length})</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {uploadedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                      <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm text-gray-900 truncate">{file.name}</span>
+                      <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-red-400 hover:text-red-600 p-1"
+                      title="Remove file"
+                    >
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <h4 className="text-sm font-medium text-red-800 mb-1">Upload Errors:</h4>
+              <ul className="text-sm text-red-700 space-y-1">
+                {errors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={uploadedFiles.length === 0}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            Upload {uploadedFiles.length > 0 ? `${uploadedFiles.length} File${uploadedFiles.length > 1 ? 's' : ''}` : 'Files'}
+          </button>
         </div>
       </div>
     </div>

@@ -19,6 +19,7 @@ import {
   AppError,
   retry
 } from '@/types/utils'
+import { CropCycleMetricsService } from './cropCycleMetricsService'
 
 export class ActivityService {
   private static readonly STORAGE_KEY = 'scanne_activities'
@@ -57,7 +58,7 @@ export class ActivityService {
    */
   static async createActivity(activity: BlocActivity): Promise<BlocActivity> {
     const activities = this.getAllActivities()
-    
+
     // Ensure unique ID
     const newActivity: BlocActivity = {
       ...activity,
@@ -65,10 +66,17 @@ export class ActivityService {
       createdAt: activity.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
-    
+
     activities.push(newActivity)
     this.saveActivities(activities)
-    
+
+    // Update crop cycle metrics
+    try {
+      await CropCycleMetricsService.onActivityChange(newActivity)
+    } catch (error) {
+      console.error('Failed to update crop cycle metrics after activity creation:', error)
+    }
+
     return newActivity
   }
   
@@ -82,16 +90,23 @@ export class ActivityService {
     if (index === -1) {
       throw new Error(`Activity not found: ${activityId}`)
     }
-    
+
     const updatedActivity: BlocActivity = {
       ...activities[index],
       ...updates,
       updatedAt: new Date().toISOString()
     }
-    
+
     activities[index] = updatedActivity
     this.saveActivities(activities)
-    
+
+    // Update crop cycle metrics
+    try {
+      await CropCycleMetricsService.onActivityChange(updatedActivity)
+    } catch (error) {
+      console.error('Failed to update crop cycle metrics after activity update:', error)
+    }
+
     return updatedActivity
   }
   

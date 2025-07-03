@@ -30,6 +30,8 @@ export default function RootLayout({
         <div className="h-full bg-gray-50 overflow-hidden">
           {children}
         </div>
+        {/* Debug Console WebSocket Client */}
+        <script src="/debug-client.js"></script>
       </body>
     </html>
   )
