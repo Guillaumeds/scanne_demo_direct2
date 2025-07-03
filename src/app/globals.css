@@ -89,16 +89,19 @@ html {
   /* Ensure consistent font rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent all scrolling */
+  overflow: hidden;
+  height: 100vh;
 }
 
 body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent horizontal scrolling and ensure consistent layout */
-  overflow-x: hidden;
+  /* Prevent all scrolling and ensure consistent layout */
+  overflow: hidden;
   width: 100%;
   position: relative;
 }

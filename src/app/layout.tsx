@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} ${comfortaa.variable}`}>
-        <div className="min-h-screen bg-gray-50">
+        <div className="h-screen bg-gray-50 overflow-hidden">
           {children}
         </div>
       </body>
