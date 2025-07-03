@@ -13,12 +13,19 @@ interface DrawnArea {
 }
 
 interface BlocCycleData {
+  blocId: string
+  blocStatus: 'active' | 'retired' // Bloc status from database (removed 'planned')
   hasActiveCycle: boolean
   cycleType?: string
   varietyName?: string
   intercropName?: string
-  plannedHarvestDate?: string
   cycleNumber?: number
+  plannedHarvestDate?: string
+  growthStage?: string
+  growthStageName?: string
+  growthStageColor?: string
+  growthStageIcon?: string
+  daysSincePlanting?: number
 }
 
 interface BlocListProps {
@@ -172,6 +179,22 @@ function BlocCard({
           </span>
         </div>
         <div className="flex justify-between">
+          <span>Status:</span>
+          <span className="text-xs">
+            {isLoading ? (
+              <span className="text-gray-400">Loading...</span>
+            ) : (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                cropCycleData?.blocStatus === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {cropCycleData?.blocStatus || 'Unknown'}
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="flex justify-between">
           <span>Cycle:</span>
           <span className="capitalize text-xs">
             {isLoading ? (
@@ -197,6 +220,16 @@ function BlocCard({
             )}
           </span>
         </div>
+        {cropCycleData?.hasActiveCycle && cropCycleData.growthStageName && (
+          <div className="flex justify-between">
+            <span>Stage:</span>
+            <span className="text-xs">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${cropCycleData.growthStageColor}`}>
+                {cropCycleData.growthStageIcon} {cropCycleData.growthStageName}
+              </span>
+            </span>
+          </div>
+        )}
         {cropCycleData?.plannedHarvestDate && (
           <div className="flex justify-between">
             <span>Harvest:</span>
@@ -506,6 +539,24 @@ export default function BlocList({
                       </span>
                     </div>
                     <div className="flex justify-between">
+                      <span>Status:</span>
+                      <span className="text-xs">
+                        {(() => {
+                          const cycleData = cropCycleDataMap[bloc.id]
+                          const status = cycleData?.blocStatus || 'active'
+                          return (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {status}
+                            </span>
+                          )
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
                       <span>Cycle:</span>
                       <span className="capitalize text-xs">
                         {(() => {
@@ -534,6 +585,16 @@ export default function BlocList({
                         })()}
                       </span>
                     </div>
+                    {cropCycleDataMap[bloc.id]?.hasActiveCycle && cropCycleDataMap[bloc.id]?.growthStageName && (
+                      <div className="flex justify-between">
+                        <span>Stage:</span>
+                        <span className="text-xs">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${cropCycleDataMap[bloc.id]?.growthStageColor}`}>
+                            {cropCycleDataMap[bloc.id]?.growthStageIcon} {cropCycleDataMap[bloc.id]?.growthStageName}
+                          </span>
+                        </span>
+                      </div>
+                    )}
                     {cropCycleDataMap[bloc.id]?.plannedHarvestDate && (
                       <div className="flex justify-between">
                         <span>Harvest:</span>

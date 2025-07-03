@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { fetchSoilAnalysis, getMockSoilAnalysis, SoilAnalysis, SoilDepth, SOIL_DEPTHS } from '@/services/soilDataService'
-import { fetchSatelliteAnalysis, getCoordinateBasedSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
+import { fetchSoilAnalysis, SoilAnalysis, SoilDepth, SOIL_DEPTHS } from '@/services/soilDataService'
+import { fetchSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
 import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
@@ -30,7 +30,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
   const [showAnimation, setShowAnimation] = useState(true)
 
-  const fetchAllSoilData = async (useMock = false) => {
+  const fetchAllSoilData = async () => {
     setLoading(true)
     setError(null)
 
@@ -41,10 +41,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
       // Fetch data for all soil depths
       for (const depth of SOIL_DEPTHS) {
         try {
-          const analysis = useMock
-            ? await getMockSoilAnalysis(center)
-            : await fetchSoilAnalysis(center, depth.id)
-
+          const analysis = await fetchSoilAnalysis(center, depth.id)
           allData[depth.id] = analysis
 
           if (analysis.error && !error) {
@@ -83,15 +80,12 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
     }
   }
 
-  const fetchSatelliteData = async (useMock = false) => {
+  const fetchSatelliteData = async () => {
     setSatelliteLoading(true)
 
     try {
       const center = calculatePolygonCenter(bloc.coordinates)
-      const analysis = useMock
-        ? await getCoordinateBasedSatelliteAnalysis(center, 'soil')
-        : await fetchSatelliteAnalysis(center, 'soil')
-
+      const analysis = await fetchSatelliteAnalysis(center, 'soil')
       setSatelliteAnalysis(analysis)
     } catch (err) {
       console.error('Error fetching satellite data:', err)
@@ -111,8 +105,8 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
   useEffect(() => {
     // Only fetch data on first mount or when bloc changes
     if (!hasInitiallyLoaded) {
-      fetchAllSoilData(false) // Use real API data
-      fetchSatelliteData(true) // Use mock satellite data for now
+      fetchAllSoilData() // Use real API data
+      fetchSatelliteData() // Use real satellite data
     }
   }, [bloc.id, hasInitiallyLoaded])
 
@@ -172,52 +166,52 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
     const isNoDataError = error.includes('null values') || error.includes('No soil data available')
 
     return (
-      <div className={`rounded-lg p-6 ${
-        isNoDataError ? 'bg-yellow-50 border border-yellow-200' : 'bg-red-50 border border-red-200'
-      }`}>
-        <div className="flex items-center mb-4">
-          <div className={`text-xl mr-3 ${isNoDataError ? 'text-yellow-600' : 'text-red-600'}`}>
-            {isNoDataError ? '🌊' : '⚠️'}
+      <div className="flex flex-col items-center justify-center p-12 bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg min-h-[400px]">
+        <div className="text-center">
+          {/* Soil Icon */}
+          <div className="mx-auto mb-6 w-24 h-24 bg-amber-200 rounded-full flex items-center justify-center">
+            <svg className="w-12 h-12 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
-          <h3 className={`text-lg font-semibold ${
-            isNoDataError ? 'text-yellow-800' : 'text-red-800'
-          }`}>
-            {isNoDataError ? 'No Soil Data Available' : 'Error Loading Soil Data'}
+
+          {/* Scanne Logo */}
+          <div className="mb-4">
+            <img
+              src="/scanne-logo.png"
+              alt="Scanne"
+              className="h-8 mx-auto opacity-60"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          </div>
+
+          <h3 className="text-2xl font-semibold text-gray-800 mb-3">
+            {isNoDataError ? 'No Soil Data Available' : 'Soil Analysis Service Unavailable'}
           </h3>
-        </div>
-        <p className={`mb-4 ${isNoDataError ? 'text-yellow-700' : 'text-red-700'}`}>
-          {isNoDataError
-            ? 'SoilGrids data is not available for this location. This may be because the area is over water or outside the coverage area.'
-            : error
-          }
-        </p>
-        <div className="flex space-x-3">
+          <p className="text-gray-600 mb-6 max-w-md">
+            {isNoDataError
+              ? 'SoilGrids data is not available for this location. This may be because the area is over water or outside the coverage area.'
+              : 'We\'re unable to fetch soil analysis data at the moment. Please check your internet connection and try again later.'
+            }
+          </p>
+
           <button
             type="button"
             onClick={() => {
               setHasInitiallyLoaded(false)
               setShowAnimation(true)
-              fetchAllSoilData(true)
+              fetchAllSoilData()
             }}
-            className={`px-4 py-2 text-white rounded-lg transition-colors ${
-              isNoDataError
-                ? 'bg-blue-600 hover:bg-blue-700'
-                : 'bg-red-600 hover:bg-red-700'
-            }`}
+            className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors duration-200 font-medium"
           >
-            {isNoDataError ? 'Use Sample Data' : 'Try Mock Data'}
+            Try Again
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setHasInitiallyLoaded(false)
-              setShowAnimation(true)
-              fetchAllSoilData(false)
-            }}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-          >
-            Retry API
-          </button>
+
+          <p className="text-xs text-gray-500 mt-4">
+            Error: {error}
+          </p>
         </div>
       </div>
     )
@@ -232,7 +226,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
           onClick={() => {
             setHasInitiallyLoaded(false)
             setShowAnimation(true)
-            fetchAllSoilData(false) // Use real API data
+            fetchAllSoilData() // Use real API data
           }}
           className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
         >
@@ -268,7 +262,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
               onClick={() => {
                 setHasInitiallyLoaded(false)
                 setShowAnimation(true)
-                fetchAllSoilData(false)
+                fetchAllSoilData()
               }}
               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
               disabled={loading || satelliteLoading}

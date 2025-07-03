@@ -5,6 +5,73 @@
 export type CropCycleType = 'plantation' | 'ratoon'
 export type CropCycleStatus = 'active' | 'closed' | 'archived'
 
+// Growth stages for sugarcane crop cycles
+export type GrowthStage =
+  | 'germination'      // 0-30 days: Sprouting and initial growth
+  | 'tillering'        // 30-120 days: Multiple shoots development
+  | 'grand-growth'     // 120-270 days: Rapid height and biomass increase
+  | 'maturation'       // 270-360 days: Sugar accumulation
+  | 'ripening'         // 360+ days: Ready for harvest
+  | 'harvested'        // Post-harvest
+
+export const GROWTH_STAGES: {
+  stage: GrowthStage
+  name: string
+  description: string
+  dayRange: string
+  color: string
+  icon: string
+}[] = [
+  {
+    stage: 'germination',
+    name: 'Germination',
+    description: 'Sprouting and initial root development',
+    dayRange: '0-30 days',
+    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    icon: '🌱'
+  },
+  {
+    stage: 'tillering',
+    name: 'Tillering',
+    description: 'Multiple shoots and tiller development',
+    dayRange: '30-120 days',
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: '🌿'
+  },
+  {
+    stage: 'grand-growth',
+    name: 'Grand Growth',
+    description: 'Rapid height and biomass increase',
+    dayRange: '120-270 days',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: '🎋'
+  },
+  {
+    stage: 'maturation',
+    name: 'Maturation',
+    description: 'Sugar accumulation and stalk development',
+    dayRange: '270-360 days',
+    color: 'bg-amber-100 text-amber-800 border-amber-200',
+    icon: '🌾'
+  },
+  {
+    stage: 'ripening',
+    name: 'Ripening',
+    description: 'Ready for harvest - peak sugar content',
+    dayRange: '360+ days',
+    color: 'bg-orange-100 text-orange-800 border-orange-200',
+    icon: '🏆'
+  },
+  {
+    stage: 'harvested',
+    name: 'Harvested',
+    description: 'Crop has been harvested',
+    dayRange: 'Complete',
+    color: 'bg-gray-100 text-gray-800 border-gray-200',
+    icon: '✅'
+  }
+]
+
 // Core crop cycle interface
 export interface CropCycle {
   id: string
@@ -12,7 +79,7 @@ export interface CropCycle {
   type: CropCycleType
   status: CropCycleStatus
   cycleNumber: number // 1 for plantation, 2+ for ratoons
-  
+
   // Mandatory fields for plantation cycles
   sugarcaneVarietyId: string
   sugarcaneVarietyName: string
@@ -23,10 +90,15 @@ export interface CropCycle {
   // Optional intercrop (for both plantation and ratoon)
   intercropVarietyId?: string
   intercropVarietyName?: string
-  
+
   // Ratoon-specific fields
   parentCycleId?: string // Links to previous cycle
   ratoonPlantingDate?: string // For ratoon cycles
+
+  // Growth stage tracking
+  growthStage: GrowthStage
+  growthStageUpdatedAt: string
+  daysSincePlanting: number
   
   // Cycle closure data
   actualHarvestDate?: string

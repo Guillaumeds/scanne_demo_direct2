@@ -3,14 +3,15 @@
  * Handles CRUD operations and business logic for crop cycles
  */
 
-import { 
-  CropCycle, 
-  CreateCycleRequest, 
+import {
+  CropCycle,
+  CreateCycleRequest,
   CloseCycleRequest,
   CycleClosureValidation,
   CyclePermissions,
   getCyclePermissions,
-  formatCycleDisplayName
+  formatCycleDisplayName,
+  GrowthStage
 } from '@/types/cropCycles'
 import { BlocActivity } from '@/types/activities'
 import { BlocObservation } from '@/types/observations'
@@ -75,6 +76,11 @@ export class CropCycleService {
     const intercropVarietyName = request.intercropVarietyId ? 
       this.getIntercropVarietyName(request.intercropVarietyId) : undefined
     
+    // Calculate initial growth stage and days since planting
+    const plantingDate = new Date(request.plantingDate || new Date())
+    const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
+    const initialGrowthStage = this.calculateGrowthStage(daysSincePlanting)
+
     const newCycle: CropCycle = {
       id: `cycle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       blocId: request.blocId,
@@ -90,6 +96,9 @@ export class CropCycleService {
       intercropVarietyName,
       parentCycleId: request.parentCycleId,
       ratoonPlantingDate: request.type === 'ratoon' ? new Date().toISOString().split('T')[0] : undefined,
+      growthStage: initialGrowthStage,
+      growthStageUpdatedAt: new Date().toISOString(),
+      daysSincePlanting,
       closureValidated: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -317,30 +326,117 @@ export class CropCycleService {
    */
   static async getBlocSummary(blocId: string): Promise<{
     blocId: string
+    blocStatus: 'active' | 'retired'
     hasActiveCycle: boolean
     cycleType?: string
     varietyName?: string
     intercropName?: string
-    plannedHarvestDate?: string
     cycleNumber?: number
+    plannedHarvestDate?: string
+    growthStage?: string
+    growthStageName?: string
+    growthStageColor?: string
+    growthStageIcon?: string
+    daysSincePlanting?: number
   }> {
-    const activeCycle = await this.getActiveCropCycleForBloc(blocId)
+    // In real database implementation, this would be a single query:
+    // SELECT b.status, cc.*, sv.name as variety_name
+    // FROM blocs b
+    // LEFT JOIN crop_cycles cc ON b.id = cc.bloc_id AND cc.status = 'active'
+    // LEFT JOIN sugarcane_varieties sv ON cc.sugarcane_variety_id = sv.id
+    // WHERE b.id = ?
+
+    // For now, simulate getting bloc status from localStorage or service
+    const blocStatus = this.getBlocStatus(blocId) // This would come from BlocService
+    const activeCycle = await this.getActiveCropCycle(blocId)
 
     if (!activeCycle) {
       return {
         blocId,
+        blocStatus,
         hasActiveCycle: false
       }
     }
 
+    // Get growth stage information
+    const growthStageInfo = this.getGrowthStageInfo(activeCycle.growthStage)
+
     return {
       blocId,
+      blocStatus,
       hasActiveCycle: true,
       cycleType: activeCycle.type,
       varietyName: activeCycle.sugarcaneVarietyName,
       intercropName: activeCycle.intercropVarietyName,
+      cycleNumber: activeCycle.cycleNumber,
       plannedHarvestDate: activeCycle.plannedHarvestDate,
-      cycleNumber: activeCycle.cycleNumber
+      growthStage: activeCycle.growthStage,
+      growthStageName: growthStageInfo?.name,
+      growthStageColor: growthStageInfo?.color,
+      growthStageIcon: growthStageInfo?.icon,
+      daysSincePlanting: activeCycle.daysSincePlanting
     }
+  }
+
+  /**
+   * Get bloc status (would come from BlocService in real implementation)
+   */
+  private static getBlocStatus(blocId: string): 'active' | 'retired' {
+    // This is a placeholder - in real implementation this would come from the blocs table
+    // For now, assume all blocs are active
+    return 'active'
+  }
+
+  /**
+   * Calculate growth stage based on days since planting
+   */
+  private static calculateGrowthStage(daysSincePlanting: number): GrowthStage {
+    if (daysSincePlanting <= 30) return 'germination'
+    if (daysSincePlanting <= 120) return 'tillering'
+    if (daysSincePlanting <= 270) return 'grand-growth'
+    if (daysSincePlanting <= 360) return 'maturation'
+    return 'ripening'
+  }
+
+  /**
+   * Update growth stages for all active crop cycles
+   * This would be called by a database trigger or scheduled job in real implementation
+   */
+  static async updateGrowthStages(): Promise<void> {
+    const cycles = this.getAllCropCycles()
+    const activeCycles = cycles.filter(cycle => cycle.status === 'active')
+
+    for (const cycle of activeCycles) {
+      if (cycle.plantingDate) {
+        const plantingDate = new Date(cycle.plantingDate)
+        const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
+        const newGrowthStage = this.calculateGrowthStage(daysSincePlanting)
+
+        if (cycle.growthStage !== newGrowthStage) {
+          cycle.growthStage = newGrowthStage
+          cycle.growthStageUpdatedAt = new Date().toISOString()
+          cycle.daysSincePlanting = daysSincePlanting
+          cycle.updatedAt = new Date().toISOString()
+        }
+      }
+    }
+
+    // Save updated cycles
+    this.saveCropCycles(cycles)
+  }
+
+  /**
+   * Get growth stage display information
+   */
+  private static getGrowthStageInfo(stage: string) {
+    const stageMap: Record<string, { name: string; color: string; icon: string }> = {
+      'germination': { name: 'Germination', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: '🌱' },
+      'tillering': { name: 'Tillering', color: 'bg-green-100 text-green-800 border-green-200', icon: '🌿' },
+      'grand-growth': { name: 'Grand Growth', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: '🎋' },
+      'maturation': { name: 'Maturation', color: 'bg-amber-100 text-amber-800 border-amber-200', icon: '🌾' },
+      'ripening': { name: 'Ripening', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: '🏆' },
+      'harvested': { name: 'Harvested', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅' }
+    }
+    return stageMap[stage]
   }
 }

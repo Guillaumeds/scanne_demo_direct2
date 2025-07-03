@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/cropCycles'
 import { SugarcaneVariety, InterCropPlant, CropVariety, SUGARCANE_VARIETIES, INTERCROP_PLANTS } from '@/types/varieties'
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
@@ -8,6 +8,8 @@ import { CropCycleService } from '@/services/cropCycleService'
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
 import CycleClosureModal from './CycleClosureModal'
+import { useFormWithAutoCommit, FormCommitRef } from '@/hooks/useFormWithAutoCommit'
+import { FormSaveStatus } from './UnsavedChangesIndicator'
 
 interface DrawnArea {
   id: string
@@ -22,39 +24,72 @@ interface CropCycleGeneralInfoProps {
   onSave: (data: any) => void
 }
 
-export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralInfoProps) {
-  // Use crop cycle context
-  const { createCycle } = useCropCycle()
+const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps>(
+  ({ bloc, onSave }, ref) => {
+    // Use crop cycle context
+    const { createCycle } = useCropCycle()
 
-  const [cropCycles, setCropCycles] = useState<CropCycle[]>([])
-  const [activeCycle, setActiveCycle] = useState<CropCycle | null>(null)
-  const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
-  const [showIntercropSelector, setShowIntercropSelector] = useState(false)
-  const [showClosureModal, setShowClosureModal] = useState(false)
-  const [showEditCycle, setShowEditCycle] = useState(false)
-  const [editCycleData, setEditCycleData] = useState({
-    plantingDate: '',
-    plannedHarvestDate: '',
-    expectedYield: 0,
-    sugarcaneVarietyId: '',
-    sugarcaneVarietyName: '',
-    intercropVarietyId: '',
-    intercropVarietyName: ''
-  })
-  const [closureValidation, setClosureValidation] = useState<CycleClosureValidation | null>(null)
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [isValidating, setIsValidating] = useState(false)
+    const [cropCycles, setCropCycles] = useState<CropCycle[]>([])
+    const [activeCycle, setActiveCycle] = useState<CropCycle | null>(null)
+    const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
+    const [showIntercropSelector, setShowIntercropSelector] = useState(false)
+    const [showClosureModal, setShowClosureModal] = useState(false)
+    const [showEditCycle, setShowEditCycle] = useState(false)
+    const [editCycleData, setEditCycleData] = useState({
+      plantingDate: '',
+      plannedHarvestDate: '',
+      expectedYield: 0,
+      sugarcaneVarietyId: '',
+      sugarcaneVarietyName: '',
+      intercropVarietyId: '',
+      intercropVarietyName: ''
+    })
+    const [closureValidation, setClosureValidation] = useState<CycleClosureValidation | null>(null)
+    const [validationErrors, setValidationErrors] = useState<string[]>([])
+    const [isValidating, setIsValidating] = useState(false)
 
-  // Form state for new cycle creation
-  const [newCycleData, setNewCycleData] = useState({
-    sugarcaneVarietyId: '',
-    sugarcaneVarietyName: '',
-    intercropVarietyId: '',
-    intercropVarietyName: '',
-    plantingDate: '',
-    plannedHarvestDate: '',
-    expectedYield: '' as string | number
-  })
+    // Enhanced form state with auto-commit
+    const {
+      formData: newCycleData,
+      updateData: setNewCycleData,
+      save: saveForm,
+      commitOnTabChange,
+      isDirty,
+      isSaving,
+      lastSaved
+    } = useFormWithAutoCommit(
+      {
+        sugarcaneVarietyId: '',
+        sugarcaneVarietyName: '',
+        intercropVarietyId: '',
+        intercropVarietyName: '',
+        plantingDate: '',
+        plannedHarvestDate: '',
+        expectedYield: '' as string | number
+      },
+      async (data) => {
+        // Only auto-save if form has minimum required data
+        if (data.sugarcaneVarietyId && data.plannedHarvestDate) {
+          console.log('Auto-saving crop cycle form data...')
+          // Could save as draft here if needed
+        }
+      },
+      {
+        commitOnTabChange: true,
+        resetOnSave: false, // Don't reset after save to preserve data
+        validateBeforeSave: (data) => {
+          // Basic validation for auto-save
+          return !!(data.sugarcaneVarietyId && data.plannedHarvestDate)
+        }
+      }
+    )
+
+    // Expose form methods to parent component
+    useImperativeHandle(ref, () => ({
+      commitOnTabChange,
+      isDirty,
+      save: saveForm
+    }))
 
   useEffect(() => {
     // Load existing crop cycles for this bloc
@@ -487,7 +522,7 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
                 <input
                   type="date"
                   value={newCycleData.plantingDate}
-                  onChange={(e) => setNewCycleData(prev => ({ ...prev, plantingDate: e.target.value }))}
+                  onChange={(e) => setNewCycleData({ plantingDate: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
@@ -501,7 +536,7 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
               <input
                 type="date"
                 value={newCycleData.plannedHarvestDate}
-                onChange={(e) => setNewCycleData(prev => ({ ...prev, plannedHarvestDate: e.target.value }))}
+                onChange={(e) => setNewCycleData({ plannedHarvestDate: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -516,30 +551,41 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
                 min="0.1"
                 step="0.1"
                 value={newCycleData.expectedYield}
-                onChange={(e) => setNewCycleData(prev => ({
-                  ...prev,
+                onChange={(e) => setNewCycleData({
                   expectedYield: e.target.value === '' ? '' : parseFloat(e.target.value) || ''
-                }))}
+                })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="e.g., 85.5"
               />
             </div>
 
+            {/* Form Save Status */}
+            <FormSaveStatus
+              isDirty={isDirty}
+              isSaving={isSaving}
+              lastSaved={lastSaved}
+              className="mb-4"
+            />
+
             {/* Action Buttons */}
             <div className="flex space-x-3">
               {!activeCycle ? (
                 <button
+                  type="button"
                   onClick={handleCreatePlantationCycle}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  Create Plantation Cycle
+                  {isSaving ? 'Creating...' : 'Create Plantation Cycle'}
                 </button>
               ) : canCreateRatoonCycle() ? (
                 <button
+                  type="button"
                   onClick={handleCreateRatoonCycle}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  Create Ratoon Cycle
+                  {isSaving ? 'Creating...' : 'Create Ratoon Cycle'}
                 </button>
               ) : (
                 <div className="flex-1 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-center">
@@ -804,4 +850,8 @@ export default function CropCycleGeneralInfo({ bloc, onSave }: CropCycleGeneralI
       )}
     </div>
   )
-}
+})
+
+CropCycleGeneralInfo.displayName = 'CropCycleGeneralInfo'
+
+export default CropCycleGeneralInfo

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { fetch15DayWeatherForecast, getMockWeatherData, WeatherAnalysis } from '@/services/weatherDataService'
+import { fetch15DayWeatherForecast, WeatherAnalysis } from '@/services/weatherDataService'
 import { calculatePolygonCenter } from '@/utils/geoUtils'
 
 interface DrawnArea {
@@ -26,7 +26,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
   const [canScrollRight, setCanScrollRight] = useState(false)
 
   // Fetch weather data
-  const fetchWeatherData = async (useMockData = false) => {
+  const fetchWeatherData = async () => {
     if (drawnAreas.length === 0) return
 
     setLoading(true)
@@ -34,11 +34,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
 
     try {
       const centerCoords = calculatePolygonCenter(drawnAreas[0].coordinates)
-
-      const analysis = useMockData
-        ? await getMockWeatherData(centerCoords, '15-day-forecast')
-        : await fetch15DayWeatherForecast(centerCoords)
-
+      const analysis = await fetch15DayWeatherForecast(centerCoords)
       setWeatherData(analysis)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch weather data')
@@ -49,7 +45,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
 
   useEffect(() => {
     if (drawnAreas.length > 0) {
-      fetchWeatherData(false)
+      fetchWeatherData()
     }
   }, [drawnAreas])
 
@@ -199,26 +195,43 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-medium">Error Loading Weather Data</h3>
-          <p className="text-red-600 text-sm mt-1">{error}</p>
-          <div className="mt-4 space-x-2">
-            <button
-              type="button"
-              onClick={() => fetchWeatherData(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Retry API
-            </button>
-            <button
-              type="button"
-              onClick={() => fetchWeatherData(true)}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              Use Mock Data
-            </button>
+      <div className="flex flex-col items-center justify-center p-12 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg min-h-[400px]">
+        <div className="text-center">
+          {/* Weather Icon */}
+          <div className="mx-auto mb-6 w-24 h-24 bg-blue-200 rounded-full flex items-center justify-center">
+            <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.002 4.002 0 003 15z" />
+            </svg>
           </div>
+
+          {/* Scanne Logo */}
+          <div className="mb-4">
+            <img
+              src="/scanne-logo.png"
+              alt="Scanne"
+              className="h-8 mx-auto opacity-60"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          </div>
+
+          <h3 className="text-2xl font-semibold text-gray-800 mb-3">Weather Service Unavailable</h3>
+          <p className="text-gray-600 mb-6 max-w-md">
+            We're unable to fetch weather data at the moment. Please check your internet connection and try again later.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => fetchWeatherData()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+          >
+            Try Again
+          </button>
+
+          <p className="text-xs text-gray-500 mt-4">
+            Error: {error}
+          </p>
         </div>
       </div>
     )

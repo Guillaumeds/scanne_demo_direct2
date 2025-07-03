@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { fetchSatelliteAnalysis, getCoordinateBasedSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
+import { fetchSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
 import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
@@ -23,16 +23,14 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
   const [error, setError] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<'current' | 'historical'>('current')
 
-  const fetchVegetationData = async (useMock = false) => {
+  const fetchVegetationData = async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
       const center = calculatePolygonCenter(bloc.coordinates)
-      const analysis = useMock
-        ? await getCoordinateBasedSatelliteAnalysis(center, 'vegetation')
-        : await fetchSatelliteAnalysis(center, 'vegetation')
-      
+      const analysis = await fetchSatelliteAnalysis(center, 'vegetation')
+
       setSatelliteAnalysis(analysis)
       if (analysis.error) {
         setError(analysis.error)
@@ -47,7 +45,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
 
   useEffect(() => {
     // Auto-fetch vegetation data when component mounts
-    fetchVegetationData(false) // Use real data
+    fetchVegetationData() // Use real data
   }, [bloc.id])
 
   const getVegetationHealth = (ndvi: number) => {
@@ -93,27 +91,43 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
 
   if (error && !satelliteAnalysis) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <div className="flex items-center mb-4">
-          <div className="text-red-600 text-xl mr-3">⚠️</div>
-          <h3 className="text-lg font-semibold text-red-800">Error Loading Vegetation Data</h3>
-        </div>
-        <p className="text-red-700 mb-4">{error}</p>
-        <div className="flex space-x-3">
+      <div className="flex flex-col items-center justify-center p-12 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg min-h-[400px]">
+        <div className="text-center">
+          {/* Vegetation Icon */}
+          <div className="mx-auto mb-6 w-24 h-24 bg-green-200 rounded-full flex items-center justify-center">
+            <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+
+          {/* Scanne Logo */}
+          <div className="mb-4">
+            <img
+              src="/scanne-logo.png"
+              alt="Scanne"
+              className="h-8 mx-auto opacity-60"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          </div>
+
+          <h3 className="text-2xl font-semibold text-gray-800 mb-3">Vegetation Analysis Service Unavailable</h3>
+          <p className="text-gray-600 mb-6 max-w-md">
+            We're unable to fetch vegetation analysis data at the moment. Please check your internet connection and try again later.
+          </p>
+
           <button
             type="button"
-            onClick={() => fetchVegetationData(true)}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            onClick={() => fetchVegetationData()}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
           >
-            Try Mock Data
+            Try Again
           </button>
-          <button
-            type="button"
-            onClick={() => fetchVegetationData(false)}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-          >
-            Retry Analysis
-          </button>
+
+          <p className="text-xs text-gray-500 mt-4">
+            Error: {error}
+          </p>
         </div>
       </div>
     )
@@ -125,7 +139,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
         <p className="text-gray-600">No vegetation data available</p>
         <button
           type="button"
-          onClick={() => fetchVegetationData(true)}
+          onClick={() => fetchVegetationData()}
           className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
         >
           Load Vegetation Data
@@ -150,7 +164,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
             </h2>
             <button
               type="button"
-              onClick={() => fetchVegetationData(false)}
+              onClick={() => fetchVegetationData()}
               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
               disabled={loading}
             >

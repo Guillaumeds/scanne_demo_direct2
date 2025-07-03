@@ -5,6 +5,7 @@ import { Layers, Sprout, Shield } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
+
 // Dynamically import the layout component to avoid SSR issues with Leaflet
 const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
   ssr: false,
@@ -84,6 +85,8 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+
 
       {/* Main Content */}
       <div className="flex-1 h-0 overflow-hidden">

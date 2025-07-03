@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import SoilDataTab from './SoilDataTab'
 import VegetationDataTab from './VegetationDataTab'
 import WeatherDashboard from './WeatherDashboard'
@@ -9,9 +9,11 @@ import ObservationsTab from './ObservationsTab'
 import AttachmentsTab from './AttachmentsTab'
 import VarietySelector from './VarietySelector'
 import CropCycleGeneralInfo from './CropCycleGeneralInfo'
+import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
 import { CropCycleProvider, useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
 import { SelectedCropCycleProvider } from '@/contexts/SelectedCropCycleContext'
 import { CropVariety, ALL_VARIETIES } from '@/types/varieties'
+import { FormCommitRef } from '@/hooks/useFormWithAutoCommit'
 
 
 
@@ -82,6 +84,11 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   const [activeTab, setActiveTab] = useState('general')
   const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
   const [showIntercropSelector, setShowIntercropSelector] = useState(false)
+
+  // Form refs for auto-commit functionality
+  const cropCycleFormRef = useRef<FormCommitRef>(null)
+  const activitiesFormRef = useRef<FormCommitRef>(null)
+  const observationsFormRef = useRef<FormCommitRef>(null)
   const [blocData, setBlocData] = useState<BlocData>({
     // Initialize with default values
     blocDescription: '',
@@ -207,6 +214,38 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
     return ALL_VARIETIES.find(v => v.name === blocData.intercropVariety && v.category === 'intercrop')
   }
 
+  // Enhanced tab change handler with auto-commit
+  const handleTabChange = async (newTabId: string) => {
+    if (newTabId === activeTab) return
+
+    try {
+      // Auto-commit any unsaved data from current tab
+      console.log(`Switching from ${activeTab} to ${newTabId}`)
+
+      if (activeTab === 'general' && cropCycleFormRef.current?.isDirty) {
+        console.log('Auto-committing crop cycle form...')
+        await cropCycleFormRef.current.commitOnTabChange()
+      }
+
+      if (activeTab === 'activities' && activitiesFormRef.current?.isDirty) {
+        console.log('Auto-committing activities form...')
+        await activitiesFormRef.current.commitOnTabChange()
+      }
+
+      if (activeTab === 'observations' && observationsFormRef.current?.isDirty) {
+        console.log('Auto-committing observations form...')
+        await observationsFormRef.current.commitOnTabChange()
+      }
+
+      // Switch to new tab
+      setActiveTab(newTabId)
+    } catch (error) {
+      console.error('Error during tab change auto-commit:', error)
+      // Still allow tab change even if auto-commit fails
+      setActiveTab(newTabId)
+    }
+  }
+
   // Auto-save function that saves data immediately
   const autoSave = (data: Partial<BlocData>) => {
     try {
@@ -304,30 +343,43 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
       {/* Tab Navigation */}
       <div className="bg-white border-b border-gray-200 px-6">
         <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 relative ${
-                activeTab === tab.id
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <span className="flex items-center space-x-2">
-                <span>{tab.icon}</span>
-                <span>{tab.name}</span>
-                {/* Status indicator */}
-                {tab.status === 'warning' && (
-                  <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                )}
-                {tab.status === 'complete' && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                )}
-              </span>
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            // Check if tab has unsaved changes
+            const hasUnsavedChanges = Boolean(
+              (tab.id === 'general' && cropCycleFormRef.current?.isDirty) ||
+              (tab.id === 'activities' && activitiesFormRef.current?.isDirty) ||
+              (tab.id === 'observations' && observationsFormRef.current?.isDirty)
+            )
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 relative ${
+                  activeTab === tab.id
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span className="flex items-center space-x-2">
+                  <span>{tab.icon}</span>
+                  <span>{tab.name}</span>
+
+                  {/* Unsaved changes indicator */}
+                  <TabUnsavedIndicator isDirty={hasUnsavedChanges} />
+
+                  {/* Status indicator */}
+                  {tab.status === 'warning' && (
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                  )}
+                  {tab.status === 'complete' && (
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  )}
+                </span>
+              </button>
+            )
+          })}
         </nav>
       </div>
 
@@ -336,6 +388,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         <div className="max-w-4xl mx-auto">
           {activeTab === 'general' && (
             <CropCycleGeneralInfo
+              ref={cropCycleFormRef}
               bloc={bloc}
               onSave={async (data) => {
                 try {
