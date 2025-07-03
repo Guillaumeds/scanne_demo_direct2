@@ -12,6 +12,15 @@ interface DrawnArea {
   fieldIds: string[]
 }
 
+interface BlocCycleData {
+  hasActiveCycle: boolean
+  cycleType?: string
+  varietyName?: string
+  intercropName?: string
+  plannedHarvestDate?: string
+  cycleNumber?: number
+}
+
 interface BlocListProps {
   drawnAreas: DrawnArea[]
   savedAreas: DrawnArea[]
@@ -50,8 +59,19 @@ function BlocCard({
   onBlocCardClick?: (areaId: string) => void
   onBlocPopOut?: (areaId: string) => void
 }) {
-  // Note: Crop cycle info will be loaded when the bloc data screen opens
-  // This component only shows basic bloc information
+  const [cropCycleData, setCropCycleData] = useState<BlocCycleData | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Load crop cycle data for saved blocs
+  useEffect(() => {
+    if (isSaved && !isLoading && !cropCycleData) {
+      setIsLoading(true)
+      CropCycleService.getBlocSummary(bloc.id)
+        .then(setCropCycleData)
+        .catch(console.error)
+        .finally(() => setIsLoading(false))
+    }
+  }, [bloc.id, isSaved, isLoading, cropCycleData])
 
   return (
     <div
@@ -153,16 +173,42 @@ function BlocCard({
         </div>
         <div className="flex justify-between">
           <span>Cycle:</span>
-          <span className="capitalize">
-            No Cycle
+          <span className="capitalize text-xs">
+            {isLoading ? (
+              <span className="text-gray-400">Loading...</span>
+            ) : cropCycleData?.hasActiveCycle ? (
+              <span className="text-green-600">
+                {cropCycleData.cycleType === 'plantation' ? 'Plantation' : `Ratoon ${cropCycleData.cycleNumber! - 1}`}
+              </span>
+            ) : (
+              <span className="text-gray-500">No Cycle</span>
+            )}
           </span>
         </div>
         <div className="flex justify-between">
           <span>Variety:</span>
           <span className="text-xs">
-            Not Set
+            {isLoading ? (
+              <span className="text-gray-400">Loading...</span>
+            ) : cropCycleData?.varietyName ? (
+              <span className="text-blue-600 font-medium">{cropCycleData.varietyName}</span>
+            ) : (
+              <span className="text-gray-500">Not Set</span>
+            )}
           </span>
         </div>
+        {cropCycleData?.plannedHarvestDate && (
+          <div className="flex justify-between">
+            <span>Harvest:</span>
+            <span className="text-xs text-orange-600 font-medium">
+              {new Date(cropCycleData.plannedHarvestDate).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span>Status:</span>
           <span className={`font-medium ${
@@ -192,6 +238,31 @@ export default function BlocList({
 }: BlocListProps) {
   const allBlocs = [...drawnAreas, ...savedAreas]
   const totalArea = allBlocs.reduce((sum, bloc) => sum + bloc.area, 0)
+
+  // Crop cycle data for all blocs
+  const [cropCycleDataMap, setCropCycleDataMap] = useState<Record<string, BlocCycleData>>({})
+
+  // Load crop cycle data for all saved blocs
+  useEffect(() => {
+    const loadCropCycleData = async () => {
+      const dataMap: typeof cropCycleDataMap = {}
+
+      for (const bloc of savedAreas) {
+        try {
+          const data = await CropCycleService.getBlocSummary(bloc.id)
+          dataMap[bloc.id] = data
+        } catch (error) {
+          console.error(`Error loading crop cycle data for bloc ${bloc.id}:`, error)
+        }
+      }
+
+      setCropCycleDataMap(dataMap)
+    }
+
+    if (savedAreas.length > 0) {
+      loadCropCycleData()
+    }
+  }, [savedAreas.length]) // Re-run when number of saved areas changes
 
   // Debug props
   console.log('📋 BlocList props:', {
@@ -436,16 +507,45 @@ export default function BlocList({
                     </div>
                     <div className="flex justify-between">
                       <span>Cycle:</span>
-                      <span className="capitalize text-gray-500">
-                        Not Set
+                      <span className="capitalize text-xs">
+                        {(() => {
+                          const cycleData = cropCycleDataMap[bloc.id]
+                          if (!cycleData) return <span className="text-gray-500">No Cycle</span>
+                          if (cycleData.hasActiveCycle) {
+                            return (
+                              <span className="text-green-600">
+                                {cycleData.cycleType === 'plantation' ? 'Plantation' : `Ratoon ${cycleData.cycleNumber! - 1}`}
+                              </span>
+                            )
+                          }
+                          return <span className="text-gray-500">No Cycle</span>
+                        })()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Variety:</span>
-                      <span className="text-xs text-gray-500">
-                        Not Set
+                      <span className="text-xs">
+                        {(() => {
+                          const cycleData = cropCycleDataMap[bloc.id]
+                          if (cycleData?.varietyName) {
+                            return <span className="text-blue-600 font-medium">{cycleData.varietyName}</span>
+                          }
+                          return <span className="text-gray-500">Not Set</span>
+                        })()}
                       </span>
                     </div>
+                    {cropCycleDataMap[bloc.id]?.plannedHarvestDate && (
+                      <div className="flex justify-between">
+                        <span>Harvest:</span>
+                        <span className="text-xs text-orange-600 font-medium">
+                          {new Date(cropCycleDataMap[bloc.id].plannedHarvestDate!).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span>Status:</span>
                       <span className={`font-medium ${
