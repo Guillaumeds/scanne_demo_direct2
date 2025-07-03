@@ -63,7 +63,7 @@ export default function Home() {
 
               {/* HSE Management Module */}
               <a
-                href="https://hse.scanne.mu/"
+                href="https://scanne-hse.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"

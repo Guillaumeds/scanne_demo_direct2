@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
+import { CropCycleService } from '@/services/cropCycleService'
 
 
 interface DrawnArea {

@@ -311,4 +311,36 @@ export class CropCycleService {
     // For now, return empty array - observations will be linked to cycles later
     return []
   }
+
+  /**
+   * Get bloc summary with active crop cycle data for bloc cards
+   */
+  static async getBlocSummary(blocId: string): Promise<{
+    blocId: string
+    hasActiveCycle: boolean
+    cycleType?: string
+    varietyName?: string
+    intercropName?: string
+    plannedHarvestDate?: string
+    cycleNumber?: number
+  }> {
+    const activeCycle = await this.getActiveCropCycleForBloc(blocId)
+
+    if (!activeCycle) {
+      return {
+        blocId,
+        hasActiveCycle: false
+      }
+    }
+
+    return {
+      blocId,
+      hasActiveCycle: true,
+      cycleType: activeCycle.type,
+      varietyName: activeCycle.sugarcaneVarietyName,
+      intercropName: activeCycle.intercropVarietyName,
+      plannedHarvestDate: activeCycle.plannedHarvestDate,
+      cycleNumber: activeCycle.cycleNumber
+    }
+  }
 }
