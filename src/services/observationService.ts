@@ -5,6 +5,7 @@
 
 import { BlocObservation } from '@/types/observations'
 import { CropCycleMetricsService } from './cropCycleMetricsService'
+import { SupabaseObservationService } from './supabaseObservationService'
 
 export class ObservationService {
   private static STORAGE_KEY = 'scanne_observations'
@@ -25,9 +26,12 @@ export class ObservationService {
    * Get all observations for a specific crop cycle
    */
   static async getObservationsForCycle(cycleId: string): Promise<BlocObservation[]> {
-    const observations = this.getAllObservations()
-    return observations.filter(observation => observation.cropCycleId === cycleId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    try {
+      return await SupabaseObservationService.getObservationsForCycle(cycleId)
+    } catch (error) {
+      console.error('Error loading observations for cycle:', error)
+      return []
+    }
   }
   
   /**

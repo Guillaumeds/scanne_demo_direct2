@@ -151,7 +151,7 @@ export class CropCycleValidationService {
     missingObservations: MissingObservation[],
     validationErrors: ValidationError[]
   ) {
-    const hasIntercrop = !!cycle.intercropVarietyId
+    const hasIntercrop = !!(cycle.intercropVarietyId && cycle.intercropVarietyId !== 'none')
     const hasElectricityYield = false // observations.some(obs => obs.category === 'electricity-yield')
     
     const mandatoryCategories = getMandatoryObservationsForCycle(

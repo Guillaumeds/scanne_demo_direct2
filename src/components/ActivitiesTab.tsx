@@ -40,6 +40,7 @@ import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
 import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
 import CropCycleSelector from './CropCycleSelector'
+import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
 interface DrawnArea {
   id: string
@@ -840,6 +841,7 @@ function AddActivityModal({
   const [showResourceEditor, setShowResourceEditor] = useState(false)
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null)
   const [editingResourceIndex, setEditingResourceIndex] = useState<number | null>(null)
+  const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
   const handleTemplateSelect = (templateId: string) => {
     const template = ACTIVITY_TEMPLATES.find(t => t.id === templateId)
@@ -1306,6 +1308,19 @@ function AddActivityModal({
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Additional notes or observations..."
+              />
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Attachments
+              </label>
+              <AttachmentUploader
+                onFilesChange={setAttachmentFiles}
+                maxFiles={10}
+                maxSize={50}
+                className="mt-2"
               />
             </div>
           </div>

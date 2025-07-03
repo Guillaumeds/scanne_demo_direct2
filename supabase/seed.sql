@@ -74,6 +74,7 @@ INSERT INTO sugarcane_varieties (variety_id, name, category, harvest_start_month
 -- =====================================================
 
 INSERT INTO intercrop_varieties (variety_id, name, scientific_name, benefits, planting_time, harvest_time, description, icon, active) VALUES
+('none', 'None', '', ARRAY['No intercrop selected', 'Monoculture sugarcane'], '', '', 'No intercrop companion plant selected', 'x', true),
 ('potato-spunta', 'Potato Spunta', 'Solanum tuberosum', ARRAY['Soil improvement', 'Additional income', 'Pest control'], 'May-June', 'August-September', 'Popular potato variety suitable for intercropping with sugarcane', 'apple', true),
 ('bean-common', 'Common Bean', 'Phaseolus vulgaris', ARRAY['Nitrogen fixation', 'Soil improvement', 'Food security'], 'April-May', 'July-August', 'Nitrogen-fixing legume that improves soil fertility', 'leaf', true),
 ('onion-red', 'Red Onion', 'Allium cepa', ARRAY['Pest deterrent', 'Market value', 'Space utilization'], 'March-April', 'June-July', 'High-value crop with natural pest deterrent properties', 'circle', true),

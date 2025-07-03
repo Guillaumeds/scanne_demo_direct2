@@ -20,6 +20,7 @@ import {
   retry
 } from '@/types/utils'
 import { CropCycleMetricsService } from './cropCycleMetricsService'
+import { SupabaseActivityService } from './supabaseActivityService'
 
 export class ActivityService {
   private static readonly STORAGE_KEY = 'scanne_activities'
@@ -48,9 +49,12 @@ export class ActivityService {
    * Get all activities for a specific crop cycle
    */
   static async getActivitiesForCycle(cycleId: string): Promise<BlocActivity[]> {
-    const activities = this.getAllActivities()
-    return activities.filter(activity => activity.cropCycleId === cycleId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    try {
+      return await SupabaseActivityService.getActivitiesForCycle(cycleId)
+    } catch (error) {
+      console.error('Error loading activities for cycle:', error)
+      return []
+    }
   }
   
   /**

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Map, Satellite, Wheat, Leaf, Sprout, Tractor, Mountain } from 'lucide-react'
 
 interface LayerSelectorProps {
   onLayerChange: (layerType: string) => void
@@ -11,13 +12,13 @@ export default function LayerSelector({ onLayerChange, currentLayer }: LayerSele
   const [isOpen, setIsOpen] = useState(false)
 
   const layers = [
-    { id: 'osm', name: 'OpenStreetMap', icon: '🗺️' },
-    { id: 'satellite', name: 'Satellite', icon: '🛰️' },
-    { id: 'crop_cycles', name: 'Crop Cycles', icon: '🌾' },
-    { id: 'variety', name: 'Variety', icon: '🌿' },
-    { id: 'growth_stages', name: 'Growth Stages', icon: '🌱' },
-    { id: 'harvest_planning', name: 'Harvest Planning', icon: '🚜' },
-    { id: 'soil', name: 'MSIRI Soil Map', icon: '🌱' }
+    { id: 'osm', name: 'OpenStreetMap', icon: Map },
+    { id: 'satellite', name: 'Satellite', icon: Satellite },
+    { id: 'crop_cycles', name: 'Crop Cycles', icon: Wheat },
+    { id: 'variety', name: 'Variety', icon: Leaf },
+    { id: 'growth_stages', name: 'Growth Stages', icon: Sprout },
+    { id: 'harvest_planning', name: 'Harvest Planning', icon: Tractor },
+    { id: 'soil', name: 'MSIRI Soil Map', icon: Mountain }
   ]
 
   const currentLayerInfo = layers.find(layer => layer.id === currentLayer) || layers[0]
@@ -32,7 +33,7 @@ export default function LayerSelector({ onLayerChange, currentLayer }: LayerSele
           className="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 shadow-md transition-colors duration-200"
           title="Change map layer"
         >
-          <span className="text-lg">{currentLayerInfo.icon}</span>
+          <currentLayerInfo.icon className="w-5 h-5" />
           <span className="text-sm font-medium text-gray-700">{currentLayerInfo.name}</span>
           <svg 
             width="16" 
@@ -62,7 +63,7 @@ export default function LayerSelector({ onLayerChange, currentLayer }: LayerSele
                   currentLayer === layer.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
                 }`}
               >
-                <span className="text-lg">{layer.icon}</span>
+                <layer.icon className="w-5 h-5" />
                 <div className="flex-1">
                   <div className="font-medium">{layer.name}</div>
                   <div className="text-xs text-gray-500">

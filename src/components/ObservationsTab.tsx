@@ -33,6 +33,7 @@ import { useCropCyclePermissions, useCropCycleValidation } from '@/contexts/Crop
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ObservationService } from '@/services/observationService'
 import CropCycleSelector from './CropCycleSelector'
+import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
 interface DrawnArea {
   id: string
@@ -381,6 +382,33 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
 
         {/* Crop Cycle Selector */}
         <CropCycleSelector />
+
+        {/* Yield and Revenue Summary */}
+        {selectedCycleInfo && (
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Yield & Revenue</h3>
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-blue-800">SC Yield/ha</span>
+                  <span className="text-sm font-bold text-blue-900">
+                    {selectedCycleInfo.sugarcaneYieldTonsPerHa > 0
+                      ? `${selectedCycleInfo.sugarcaneYieldTonsPerHa.toFixed(1)} t`
+                      : '0 t'}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-green-800">Total Revenue</span>
+                  <span className="text-sm font-bold text-green-900">
+                    Rs {((selectedCycleInfo.sugarcaneRevenue || 0) + (selectedCycleInfo.intercropRevenue || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Category Selection */}
         <div className="p-6 border-b border-gray-200 flex-1 overflow-y-auto">

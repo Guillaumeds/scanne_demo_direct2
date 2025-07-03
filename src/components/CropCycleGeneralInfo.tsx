@@ -11,6 +11,7 @@ import VarietySelector from './VarietySelector'
 import CycleClosureModal from './CycleClosureModal'
 import { useFormWithAutoCommit, FormCommitRef } from '@/hooks/useFormWithAutoCommit'
 import { FormSaveStatus } from './UnsavedChangesIndicator'
+import { Trash2, Archive, AlertTriangle } from 'lucide-react'
 
 interface DrawnArea {
   id: string
@@ -50,6 +51,14 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
     const [validationErrors, setValidationErrors] = useState<string[]>([])
     const [isValidating, setIsValidating] = useState(false)
 
+    // Delete/Retire confirmation states
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showRetireConfirm, setShowRetireConfirm] = useState(false)
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
+    const [retireConfirmText, setRetireConfirmText] = useState('')
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [isRetiring, setIsRetiring] = useState(false)
+
     // Enhanced form state with auto-commit
     const {
       formData: newCycleData,
@@ -63,8 +72,8 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
       {
         sugarcaneVarietyId: '',
         sugarcaneVarietyName: '',
-        intercropVarietyId: '',
-        intercropVarietyName: '',
+        intercropVarietyId: 'none',
+        intercropVarietyName: 'None',
         plantingDate: '',
         plannedHarvestDate: '',
         expectedYield: '' as string | number
@@ -127,6 +136,17 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
     }
   }, [cropCycles])
 
+  // Refresh metrics periodically to catch updates from activities/observations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (cropCycles.length > 0) {
+        loadCycleMetrics()
+      }
+    }, 5000) // Refresh every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [cropCycles])
+
   const loadCropCycles = async () => {
     try {
       const cycles = await CropCycleService.getCropCyclesForBloc(bloc.id)
@@ -183,7 +203,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
         sugarcaneVarietyId: newCycleData.sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
         expectedYield: expectedYieldNum,
-        intercropVarietyId: newCycleData.intercropVarietyId || undefined,
+        intercropVarietyId: newCycleData.intercropVarietyId || 'none',
         plantingDate: newCycleData.plantingDate
       }
 
@@ -198,8 +218,8 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
       setNewCycleData({
         sugarcaneVarietyId: '',
         sugarcaneVarietyName: '',
-        intercropVarietyId: '',
-        intercropVarietyName: '',
+        intercropVarietyId: 'none',
+        intercropVarietyName: 'None',
         plantingDate: '',
         plannedHarvestDate: '',
         expectedYield: ''
@@ -232,7 +252,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
         sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
         expectedYield: expectedYieldNum,
-        intercropVarietyId: newCycleData.intercropVarietyId || undefined,
+        intercropVarietyId: newCycleData.intercropVarietyId || 'none',
         parentCycleId: activeCycle.id
       }
 
@@ -247,8 +267,8 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
       setNewCycleData({
         sugarcaneVarietyId: '',
         sugarcaneVarietyName: '',
-        intercropVarietyId: '',
-        intercropVarietyName: '',
+        intercropVarietyId: 'none',
+        intercropVarietyName: 'None',
         plantingDate: '',
         plannedHarvestDate: '',
         expectedYield: ''
@@ -338,6 +358,75 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
     return activeCycle && activeCycle.status === 'active'
   }
 
+  // Delete and Retire handlers
+  const handleDeleteBloc = async () => {
+    if (deleteConfirmText !== 'delete bloc') {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+
+      // Call delete API (you'll need to implement this in your service)
+      // await BlocService.deleteBloc(bloc.id)
+
+      console.log('Deleting bloc:', bloc.id)
+      alert('Bloc deletion functionality will be implemented')
+
+      // Close modal and reset
+      setShowDeleteConfirm(false)
+      setDeleteConfirmText('')
+
+      // Navigate back or refresh parent component
+      // onBlocDeleted?.()
+
+    } catch (error) {
+      console.error('Error deleting bloc:', error)
+      alert(`Error deleting bloc: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleRetireBloc = async () => {
+    if (retireConfirmText !== 'retire bloc') {
+      return
+    }
+
+    try {
+      setIsRetiring(true)
+
+      // Call retire API (you'll need to implement this in your service)
+      // await BlocService.retireBloc(bloc.id)
+
+      console.log('Retiring bloc:', bloc.id)
+      alert('Bloc retirement functionality will be implemented')
+
+      // Close modal and reset
+      setShowRetireConfirm(false)
+      setRetireConfirmText('')
+
+      // Refresh parent component to show retired status
+      // onBlocRetired?.()
+
+    } catch (error) {
+      console.error('Error retiring bloc:', error)
+      alert(`Error retiring bloc: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsRetiring(false)
+    }
+  }
+
+  const resetDeleteConfirm = () => {
+    setShowDeleteConfirm(false)
+    setDeleteConfirmText('')
+  }
+
+  const resetRetireConfirm = () => {
+    setShowRetireConfirm(false)
+    setRetireConfirmText('')
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="mb-6">
@@ -415,7 +504,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
             <div>
               <span className="text-green-700 font-medium">Intercrop:</span>
               <p className="text-green-900">
-                {activeCycle.intercropVarietyName === 'None' || !activeCycle.intercropVarietyName
+                {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
                   ? 'None'
                   : activeCycle.intercropVarietyName}
               </p>
@@ -528,10 +617,10 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-lg">🌿</span>
+                  <span className="text-lg">{newCycleData.intercropVarietyId === 'none' ? '❌' : '🌿'}</span>
                   <div>
                     <div className="font-medium text-gray-900">
-                      {newCycleData.intercropVarietyName || 'Select intercrop variety...'}
+                      {newCycleData.intercropVarietyName || (newCycleData.intercropVarietyId === 'none' ? 'None' : 'Select intercrop variety...')}
                     </div>
                     {getSelectedIntercropVariety() && getSelectedIntercropVariety()?.id !== 'none' && (
                       <div className="text-xs text-gray-500">
@@ -878,6 +967,164 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete and Retire Buttons */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="flex justify-end space-x-3">
+          <button
+            type="button"
+            onClick={() => setShowRetireConfirm(true)}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition-colors"
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            Retire Bloc
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Bloc
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Bloc</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-gray-700 mb-4">
+                  This will permanently delete <strong>{bloc.blocName}</strong> and all associated data including:
+                </p>
+                <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
+                  <li>All crop cycles and their history</li>
+                  <li>All activities and observations</li>
+                  <li>All attachments and files</li>
+                  <li>All metrics and analytics data</li>
+                </ul>
+                <p className="text-sm text-gray-700 mb-4">
+                  To confirm deletion, type <strong>delete bloc</strong> in the box below:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="delete bloc"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={resetDeleteConfirm}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteBloc}
+                  disabled={deleteConfirmText !== 'delete bloc' || isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isDeleting ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </div>
+                  ) : (
+                    'Delete Bloc'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retire Confirmation Modal */}
+      {showRetireConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Archive className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Retire Bloc</h3>
+                  <p className="text-sm text-gray-600">Mark this bloc as retired</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-gray-700 mb-4">
+                  This will retire <strong>{bloc.blocName}</strong> and:
+                </p>
+                <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
+                  <li>Mark the bloc as retired (not deleted)</li>
+                  <li>Preserve all historical data</li>
+                  <li>Remove from active bloc lists</li>
+                  <li>Close any active crop cycles</li>
+                </ul>
+                <p className="text-sm text-gray-700 mb-4">
+                  To confirm retirement, type <strong>retire bloc</strong> in the box below:
+                </p>
+                <input
+                  type="text"
+                  value={retireConfirmText}
+                  onChange={(e) => setRetireConfirmText(e.target.value)}
+                  placeholder="retire bloc"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={resetRetireConfirm}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isRetiring}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRetireBloc}
+                  disabled={retireConfirmText !== 'retire bloc' || isRetiring}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isRetiring ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Retiring...
+                    </div>
+                  ) : (
+                    'Retire Bloc'
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

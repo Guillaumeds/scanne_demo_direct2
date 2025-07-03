@@ -18,6 +18,7 @@ import {
 } from '@/types/observations'
 import { BlocAttachment, AttachmentCategory } from '@/types/bloc'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
 // Measurement guidelines for each observation category
 const MEASUREMENT_GUIDELINES = {
@@ -192,6 +193,7 @@ export default function ObservationForm({
 
   const [attachments, setAttachments] = useState<BlocAttachment[]>(observation?.attachments || [])
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
+  const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -485,6 +487,19 @@ export default function ObservationForm({
                 ))}
               </div>
             )}
+
+            {/* New Attachment Uploader */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Add New Attachments
+              </label>
+              <AttachmentUploader
+                onFilesChange={setAttachmentFiles}
+                maxFiles={10}
+                maxSize={50}
+                className="mt-2"
+              />
+            </div>
           </div>
 
           {/* Footer */}
@@ -1345,6 +1360,12 @@ function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: Su
     if (totalYield && blocArea && blocArea > 0) {
       const yieldPerHa = totalYield / blocArea
       updateField('yieldPerHectare', parseFloat(yieldPerHa.toFixed(2)))
+
+      // Update price per tonne if total revenue is set
+      if (data.sugarcaneRevenue && data.sugarcaneRevenue > 0) {
+        const pricePerTonne = data.sugarcaneRevenue / totalYield
+        updateField('pricePerTonne', parseFloat(pricePerTonne.toFixed(2)))
+      }
     }
   }
 
@@ -1356,6 +1377,16 @@ function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: Su
     if (yieldPerHa && blocArea && blocArea > 0) {
       const totalYield = yieldPerHa * blocArea
       updateField('totalYieldTons', parseFloat(totalYield.toFixed(2)))
+
+      // Update revenue calculations if price per tonne is set
+      if (data.pricePerTonne && data.pricePerTonne > 0) {
+        const totalRevenue = data.pricePerTonne * totalYield
+        updateField('sugarcaneRevenue', parseFloat(totalRevenue.toFixed(2)))
+
+        // Update revenue per hectare
+        const revenuePerHa = totalRevenue / blocArea
+        updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+      }
     }
   }
 
@@ -1378,6 +1409,12 @@ function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: Su
     if (revenuePerHa && blocArea && blocArea > 0) {
       const totalRevenue = revenuePerHa * blocArea
       updateField('sugarcaneRevenue', parseFloat(totalRevenue.toFixed(2)))
+
+      // Update price per tonne if total yield is set
+      if (data.totalYieldTons && data.totalYieldTons > 0) {
+        const pricePerTonne = totalRevenue / data.totalYieldTons
+        updateField('pricePerTonne', parseFloat(pricePerTonne.toFixed(2)))
+      }
     }
   }
 

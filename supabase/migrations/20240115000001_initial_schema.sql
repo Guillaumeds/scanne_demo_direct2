@@ -216,6 +216,148 @@ CREATE TABLE crop_cycles (
 );
 
 -- =====================================================
+-- ACTIVITIES & OPERATIONS
+-- =====================================================
+
+-- Activities table
+CREATE TABLE activities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    phase VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'planned' CHECK (status IN ('planned', 'in-progress', 'completed', 'cancelled')),
+    crop_cycle_id UUID NOT NULL REFERENCES crop_cycles(id) ON DELETE CASCADE,
+    start_date DATE,
+    end_date DATE,
+    actual_date DATE,
+    duration_hours DECIMAL(8,2),
+    estimated_total_cost DECIMAL(12,2) DEFAULT 0,
+    actual_total_cost DECIMAL(12,2) DEFAULT 0,
+    notes TEXT,
+    created_by UUID, -- Will reference users(id) when user management is added
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Activity products junction table
+CREATE TABLE activity_products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity DECIMAL(10,2) NOT NULL,
+    rate_per_hectare DECIMAL(10,2),
+    unit VARCHAR(20),
+    estimated_cost DECIMAL(12,2) DEFAULT 0,
+    actual_cost DECIMAL(12,2) DEFAULT 0,
+    actual_quantity_used DECIMAL(10,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Activity resources junction table
+CREATE TABLE activity_resources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    resource_id UUID NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    hours_planned DECIMAL(8,2),
+    hours_actual DECIMAL(8,2),
+    unit VARCHAR(20),
+    estimated_cost DECIMAL(12,2) DEFAULT 0,
+    actual_cost DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Observations table
+CREATE TABLE observations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'completed', 'reviewed')),
+    crop_cycle_id UUID NOT NULL REFERENCES crop_cycles(id) ON DELETE CASCADE,
+    observation_date DATE NOT NULL,
+    actual_date DATE,
+    number_of_samples INTEGER,
+    number_of_plants INTEGER,
+    observation_data JSONB DEFAULT '{}',
+    notes TEXT,
+    created_by UUID, -- Will reference users(id) when user management is added
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Attachments table
+CREATE TABLE attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    category VARCHAR(100),
+    file_type VARCHAR(50),
+    mime_type VARCHAR(100),
+    extension VARCHAR(10),
+    file_size BIGINT,
+    tags TEXT[],
+    description TEXT,
+    crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE CASCADE,
+    activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
+    observation_id UUID REFERENCES observations(id) ON DELETE CASCADE,
+    storage_path TEXT NOT NULL,
+    url TEXT,
+    thumbnail_url TEXT,
+    uploaded_by UUID, -- Will reference users(id) when user management is added
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_activities_crop_cycle ON activities(crop_cycle_id);
+CREATE INDEX idx_activities_status ON activities(status);
+CREATE INDEX idx_activities_phase ON activities(phase);
+CREATE INDEX idx_activity_products_activity ON activity_products(activity_id);
+CREATE INDEX idx_activity_resources_activity ON activity_resources(activity_id);
+CREATE INDEX idx_observations_crop_cycle ON observations(crop_cycle_id);
+CREATE INDEX idx_observations_category ON observations(category);
+CREATE INDEX idx_observations_date ON observations(observation_date);
+CREATE INDEX idx_attachments_crop_cycle ON attachments(crop_cycle_id);
+CREATE INDEX idx_attachments_activity ON attachments(activity_id);
+CREATE INDEX idx_attachments_observation ON attachments(observation_id);
+
+-- =====================================================
+-- CLIMATE DATA TABLE
+-- =====================================================
+
+-- Climate data for long-term analysis
+CREATE TABLE climate_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    station_id VARCHAR(50) NOT NULL,
+    observation_date DATE NOT NULL,
+    observation_year INTEGER NOT NULL,
+    observation_month INTEGER NOT NULL,
+    observation_day INTEGER NOT NULL,
+    julian_day INTEGER NOT NULL,
+    temperature_min_celsius DECIMAL(5,2),
+    temperature_max_celsius DECIMAL(5,2),
+    solar_radiation_mj_per_m2 DECIMAL(8,2),
+    evapotranspiration_mm DECIMAL(8,2),
+    precipitation_mm DECIMAL(8,2),
+    wind_speed_m_per_s DECIMAL(6,2),
+    vapor_pressure_hpa DECIMAL(8,2),
+    co2_concentration_ppm DECIMAL(8,2),
+    relative_humidity_percent DECIMAL(5,2), -- Calculated from vapor pressure if needed
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    -- Indexes for efficient querying
+    UNIQUE(station_id, observation_date)
+);
+
+-- Indexes for climate data queries
+CREATE INDEX idx_climate_data_date ON climate_data(observation_date);
+CREATE INDEX idx_climate_data_year_month ON climate_data(observation_year, observation_month);
+CREATE INDEX idx_climate_data_station ON climate_data(station_id);
+
+-- =====================================================
 -- CONFIGURATION TABLES
 -- =====================================================
 

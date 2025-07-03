@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { SugarcaneVariety, InterCropPlant, CropVariety, Season, SEASON_FILTERS, SEASON_CATEGORIES, SUGARCANE_VARIETIES, INTERCROP_PLANTS, ALL_VARIETIES } from '@/types/varieties'
+import { useState, useEffect } from 'react'
+import { SugarcaneVariety, InterCropPlant, CropVariety, Season, SEASON_FILTERS, SEASON_CATEGORIES } from '@/types/varieties'
+import { ConfigurationService } from '@/services/configurationService'
 
 interface VarietySelectorProps {
   onSelect: (variety: CropVariety) => void
@@ -15,11 +16,31 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
   const [searchTerm, setSearchTerm] = useState('')
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedVarietyForImage, setSelectedVarietyForImage] = useState<CropVariety | null>(null)
+  const [allVarieties, setAllVarieties] = useState<CropVariety[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load varieties from database
+  useEffect(() => {
+    const loadVarieties = async () => {
+      try {
+        setLoading(true)
+        const varieties = await ConfigurationService.getAllVarietiesForFrontend()
+        setAllVarieties(varieties)
+      } catch (error) {
+        console.error('Error loading varieties:', error)
+        setAllVarieties([]) // Fallback to empty array
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadVarieties()
+  }, [])
 
   // Filter base varieties by type
   const baseVarieties = varietyType === 'all'
-    ? ALL_VARIETIES
-    : ALL_VARIETIES.filter(variety => variety.category === varietyType)
+    ? allVarieties
+    : allVarieties.filter(variety => variety.category === varietyType)
 
   const filteredVarieties = baseVarieties.filter(variety => {
     const matchesFilter = !selectedFilter ||
@@ -90,6 +111,17 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
       return SEASON_FILTERS.filter(filter => filter.id === 'intercrop')
     }
     return SEASON_FILTERS
+  }
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading varieties...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

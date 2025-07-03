@@ -151,16 +151,16 @@ export const ATTACHMENT_CATEGORIES: {
 ]
 
 /**
- * Get file icon based on file type
+ * Get file icon based on file type (Lucide React icon names)
  */
 export function getFileIcon(mimeType: string, extension: string): string {
-  if (mimeType.startsWith('image/')) return '🖼️'
-  if (mimeType === 'application/pdf') return '📄'
-  if (mimeType.includes('spreadsheet') || extension === '.xlsx' || extension === '.csv') return '📊'
-  if (mimeType.includes('document') || extension === '.doc' || extension === '.docx') return '📝'
-  if (mimeType.startsWith('video/')) return '🎥'
-  if (mimeType.startsWith('audio/')) return '🎵'
-  return '📎'
+  if (mimeType.startsWith('image/')) return 'Image'
+  if (mimeType === 'application/pdf') return 'FileText'
+  if (mimeType.includes('spreadsheet') || extension === '.xlsx' || extension === '.csv') return 'BarChart3'
+  if (mimeType.includes('document') || extension === '.doc' || extension === '.docx') return 'FileText'
+  if (mimeType.startsWith('video/')) return 'Video'
+  if (mimeType.startsWith('audio/')) return 'Music'
+  return 'Paperclip'
 }
 
 /**

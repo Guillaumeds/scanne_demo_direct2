@@ -4,6 +4,8 @@ import { BlocObservation } from '../types/observations'
 import { CropCycleService } from './cropCycleService'
 import { ActivityService } from './activityService'
 import { ObservationService } from './observationService'
+import { SupabaseActivityService } from './supabaseActivityService'
+import { SupabaseObservationService } from './supabaseObservationService'
 import { BlocService } from './blocService'
 
 export interface CropCycleMetrics {
@@ -44,16 +46,16 @@ export class CropCycleMetricsService {
     const blocArea = bloc?.area || 1 // Default to 1 ha if area not found
 
     // Get all activities for this cycle
-    const activities = await ActivityService.getActivitiesByCropCycle(cycleId)
-    
+    const activities = await SupabaseActivityService.getActivitiesForCycle(cycleId)
+
     // Get all observations for this cycle
-    const observations = await ObservationService.getObservationsByCropCycle(cycleId)
+    const observations = await SupabaseObservationService.getObservationsForCycle(cycleId)
 
     // Calculate cost metrics
     const costMetrics = this.calculateCostMetrics(activities)
     
     // Calculate yield metrics
-    const yieldMetrics = this.calculateYieldMetrics(observations, blocArea)
+    const yieldMetrics = SupabaseObservationService.extractYieldMetrics(observations)
     
     // Calculate revenue metrics
     const revenueMetrics = this.calculateRevenueMetrics(observations)
