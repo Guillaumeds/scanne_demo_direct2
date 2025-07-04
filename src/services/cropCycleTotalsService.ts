@@ -1,10 +1,18 @@
 /**
- * Crop Cycle Totals Calculation Service
- * Centralized service for calculating and updating crop cycle financial and yield totals
- * Integrates with database operations to ensure totals are always up-to-date
+ * Crop Cycle Totals Service
+ *
+ * ⚠️ DEPRECATED: This service has been refactored to use database functions
+ *
+ * MIGRATION NOTICE:
+ * - calculateCropCycleTotals() is now replaced with database function calls
+ * - Use CropCycleCalculationService.getAuthoritativeTotals() instead
+ * - This ensures data consistency and better performance
+ *
+ * @deprecated Use CropCycleCalculationService instead
  */
 
 import { supabase } from '@/lib/supabase'
+import { CropCycleCalculationService } from './cropCycleCalculationService'
 
 export interface CropCycleTotals {
   estimatedTotalCost: number
@@ -18,167 +26,93 @@ export interface CropCycleTotals {
 }
 
 export class CropCycleTotalsService {
-  
+
   /**
-   * Calculate totals for a crop cycle from its activities and observations
+   * @deprecated Use CropCycleCalculationService.getAuthoritativeTotals() instead
+   * Calculate totals for a crop cycle using database function
    */
   static async calculateCropCycleTotals(cropCycleId: string): Promise<CropCycleTotals> {
+    console.warn('⚠️ DEPRECATED: CropCycleTotalsService.calculateCropCycleTotals() is deprecated. Use CropCycleCalculationService.getAuthoritativeTotals() instead.')
+
     try {
-      // Get all activities for this crop cycle
-      const { data: activities, error: activitiesError } = await supabase
-        .from('activities')
-        .select('estimated_total_cost, actual_total_cost')
-        .eq('crop_cycle_id', cropCycleId)
+      // Use the new database-first calculation service
+      const authoritativeTotals = await CropCycleCalculationService.getAuthoritativeTotals(cropCycleId)
 
-      if (activitiesError) {
-        console.error('Error fetching activities for totals calculation:', activitiesError)
-        throw activitiesError
+      if (!authoritativeTotals) {
+        throw new Error('No calculation results available for crop cycle')
       }
 
-      // Get all observations for this crop cycle
-      const { data: observations, error: observationsError } = await supabase
-        .from('observations')
-        .select('observation_data')
-        .eq('crop_cycle_id', cropCycleId)
-
-      if (observationsError) {
-        console.error('Error fetching observations for totals calculation:', observationsError)
-        throw observationsError
-      }
-
-      // Get crop cycle details for area calculation
-      const { data: cropCycle, error: cropCycleError } = await supabase
-        .from('crop_cycles')
-        .select(`
-          *,
-          blocs(area_hectares)
-        `)
-        .eq('id', cropCycleId)
-        .single()
-
-      if (cropCycleError) {
-        console.error('Error fetching crop cycle for totals calculation:', cropCycleError)
-        throw cropCycleError
-      }
-
-      // Calculate activity totals
-      const estimatedTotalCost = (activities || []).reduce((sum, activity) => 
-        sum + (activity.estimated_total_cost || 0), 0)
-      
-      const actualTotalCost = (activities || []).reduce((sum, activity) => 
-        sum + (activity.actual_total_cost || 0), 0)
-
-      // Calculate observation-based totals (yield and revenue)
-      let sugarcaneYieldTons = 0
-      let intercropYieldTons = 0
-      let sugarcaneRevenue = 0
-      let intercropRevenue = 0
-
-      (observations || []).forEach(observation => {
-        const data = observation.observation_data as any
-        if (data) {
-          // Sugarcane yield (rounded to whole number as specified)
-          if (data.sugarcaneYieldTons) {
-            sugarcaneYieldTons += Math.round(data.sugarcaneYieldTons)
-          }
-          if (data.sugarcaneYieldTonsPerHa && cropCycle.blocs?.area_hectares) {
-            sugarcaneYieldTons += Math.round(data.sugarcaneYieldTonsPerHa * cropCycle.blocs.area_hectares)
-          }
-
-          // Intercrop yield (rounded to whole number as specified)
-          if (data.intercropYieldTons) {
-            intercropYieldTons += Math.round(data.intercropYieldTons)
-          }
-          if (data.intercropYieldTonsPerHa && cropCycle.blocs?.area_hectares) {
-            intercropYieldTons += Math.round(data.intercropYieldTonsPerHa * cropCycle.blocs.area_hectares)
-          }
-
-          // Revenue calculations
-          if (data.sugarcaneRevenue) {
-            sugarcaneRevenue += data.sugarcaneRevenue
-          }
-          if (data.sugarcanePricePerTonne && data.sugarcaneYieldTons) {
-            sugarcaneRevenue += data.sugarcanePricePerTonne * Math.round(data.sugarcaneYieldTons)
-          }
-
-          if (data.intercropRevenue) {
-            intercropRevenue += data.intercropRevenue
-          }
-          if (data.intercropPricePerTonne && data.intercropYieldTons) {
-            intercropRevenue += data.intercropPricePerTonne * Math.round(data.intercropYieldTons)
-          }
-        }
-      })
-
-      // Calculate yield per hectare
-      const areaHectares = cropCycle.blocs?.area_hectares || 1
-      const sugarcaneYieldTonsHa = Math.round(sugarcaneYieldTons / areaHectares)
-
-      // Calculate final totals
-      const totalRevenue = sugarcaneRevenue + intercropRevenue
-      const netProfit = totalRevenue - actualTotalCost
+      // Convert to legacy format for backward compatibility
+      const totalRevenue = authoritativeTotals.totalRevenue
+      const netProfit = totalRevenue - authoritativeTotals.actualTotalCost
       const profitMarginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
       return {
-        estimatedTotalCost,
-        actualTotalCost,
-        sugarcaneYieldTonsHa,
-        sugarcaneRevenue,
-        intercropRevenue,
-        totalRevenue,
-        netProfit,
-        profitMarginPercent: Math.round(profitMarginPercent * 100) / 100 // Round to 2 decimal places
+        estimatedTotalCost: authoritativeTotals.estimatedTotalCost,
+        actualTotalCost: authoritativeTotals.actualTotalCost,
+        sugarcaneYieldTonsHa: authoritativeTotals.sugarcaneYieldTonnesPerHectare,
+        sugarcaneRevenue: totalRevenue, // Database function returns total revenue, not split by type
+        intercropRevenue: 0, // TODO: Database function needs to be updated to split revenue by type
+        totalRevenue: totalRevenue,
+        netProfit: netProfit,
+        profitMarginPercent: Math.round(profitMarginPercent * 100) / 100
       }
 
     } catch (error) {
-      console.error('Error calculating crop cycle totals:', error)
+      console.error('❌ Error in deprecated calculateCropCycleTotals:', error)
       throw error
     }
   }
 
   /**
+   * @deprecated Database functions now handle calculations automatically
    * Update crop cycle totals in database
    */
   static async updateCropCycleTotals(cropCycleId: string, totals: CropCycleTotals): Promise<void> {
+    console.warn('⚠️ DEPRECATED: updateCropCycleTotals() is deprecated. Database functions now calculate totals automatically.')
+
     try {
-      const { error } = await supabase
-        .from('crop_cycles')
-        .update({
-          estimated_total_cost: totals.estimatedTotalCost,
-          actual_total_cost: totals.actualTotalCost,
-          sugarcane_actual_yield_tons_ha: totals.sugarcaneYieldTonsHa,
-          sugarcane_revenue: totals.sugarcaneRevenue,
-          intercrop_revenue: totals.intercropRevenue,
-          total_revenue: totals.totalRevenue,
-          net_profit: totals.netProfit,
-          profit_margin_percent: totals.profitMarginPercent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', cropCycleId)
-
-      if (error) {
-        console.error('Error updating crop cycle totals:', error)
-        throw error
-      }
-
-      console.log(`Updated crop cycle ${cropCycleId} totals:`, totals)
+      // Trigger recalculation using the new service
+      await CropCycleCalculationService.triggerRecalculation(cropCycleId)
+      console.log(`✅ Triggered recalculation for crop cycle ${cropCycleId}`)
     } catch (error) {
-      console.error('Error updating crop cycle totals in database:', error)
+      console.error('❌ Error triggering recalculation:', error)
       throw error
     }
   }
 
   /**
+   * @deprecated Use CropCycleCalculationService.triggerRecalculation() instead
    * Calculate and update crop cycle totals (combined operation)
-   * This is the main method to be called when activities/observations change
    */
   static async recalculateAndUpdateTotals(cropCycleId: string): Promise<CropCycleTotals> {
+    console.warn('⚠️ DEPRECATED: recalculateAndUpdateTotals() is deprecated. Use CropCycleCalculationService.triggerRecalculation() instead.')
+
     try {
-      const totals = await this.calculateCropCycleTotals(cropCycleId)
-      await this.updateCropCycleTotals(cropCycleId, totals)
-      return totals
+      // Use the new service for recalculation
+      const authoritativeTotals = await CropCycleCalculationService.triggerRecalculation(cropCycleId)
+
+      if (!authoritativeTotals) {
+        throw new Error('Recalculation failed - no results returned')
+      }
+
+      // Convert to legacy format for backward compatibility
+      const totalRevenue = authoritativeTotals.totalRevenue
+      const netProfit = totalRevenue - authoritativeTotals.actualTotalCost
+      const profitMarginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+
+      return {
+        estimatedTotalCost: authoritativeTotals.estimatedTotalCost,
+        actualTotalCost: authoritativeTotals.actualTotalCost,
+        sugarcaneYieldTonsHa: authoritativeTotals.sugarcaneYieldTonnesPerHectare,
+        sugarcaneRevenue: totalRevenue,
+        intercropRevenue: 0,
+        totalRevenue: totalRevenue,
+        netProfit: netProfit,
+        profitMarginPercent: Math.round(profitMarginPercent * 100) / 100
+      }
     } catch (error) {
-      console.error('Error recalculating and updating crop cycle totals:', error)
+      console.error('❌ Error in deprecated recalculateAndUpdateTotals:', error)
       throw error
     }
   }

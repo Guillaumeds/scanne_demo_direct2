@@ -714,10 +714,13 @@ export const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
   }
 ]
 
-// Helper functions for activity cost validation
+// Helper functions for activity cost validation (UX ONLY)
+// ⚠️ NOTE: This is for form validation and real-time feedback only
+// Authoritative cost totals are calculated and stored by database functions
 export const calculateActivityCosts = (activity: BlocActivity): {
   totalEstimatedCost: number
   totalActualCost?: number
+  note: 'UX calculation only - database stores authoritative totals'
 } => {
   let totalEstimatedCost = 0
   let totalActualCost = 0
@@ -747,7 +750,8 @@ export const calculateActivityCosts = (activity: BlocActivity): {
 
   return {
     totalEstimatedCost,
-    totalActualCost: hasActualCosts ? totalActualCost : undefined
+    totalActualCost: hasActualCosts ? totalActualCost : undefined,
+    note: 'UX calculation only - database stores authoritative totals'
   }
 }
 

@@ -1,3 +1,14 @@
+/**
+ * ⚠️ PARTIALLY DEPRECATED: CropCycleMetricsService
+ *
+ * MIGRATION NOTICE:
+ * - Revenue calculation methods are deprecated - use database functions instead
+ * - Some methods still needed for data fetching and formatting
+ * - Consider migrating remaining functionality to CropCycleCalculationService
+ *
+ * @deprecated Calculation methods replaced with database functions
+ */
+
 import { CropCycle } from '../types/cropCycles'
 import { BlocActivity } from '../types/activities'
 import { BlocObservation } from '../types/observations'
@@ -154,9 +165,13 @@ export class CropCycleMetricsService {
   }
 
   /**
-   * Calculate revenue metrics from observations
+   * @deprecated Use database functions for authoritative revenue calculations
+   * Calculate revenue metrics from observations (for backward compatibility only)
    */
   private static calculateRevenueMetrics(observations: BlocObservation[]) {
+    console.warn('⚠️ DEPRECATED: calculateRevenueMetrics() performs client-side calculations. Use database functions for authoritative results.')
+
+    // Keep the original logic for backward compatibility, but mark as deprecated
     let totalSugarcaneRevenue = 0
     let totalIntercropRevenue = 0
 
@@ -167,7 +182,7 @@ export class CropCycleMetricsService {
           totalSugarcaneRevenue += data.sugarcaneRevenue
         }
       }
-      
+
       if (observation.category === 'intercrop-yield-quality' && observation.data) {
         const data = observation.data as any
         if (data.intercropRevenue) {
