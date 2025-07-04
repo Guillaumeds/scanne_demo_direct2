@@ -30,11 +30,9 @@ import {
   BlocActivity,
   ActivityPhase,
   ActivityStatus,
-  ActivityTemplate,
-  SUGARCANE_PHASES,
-  ACTIVITY_TEMPLATES,
   calculateActivityCosts
 } from '@/types/activities'
+import { ConfigurationService } from '@/services/configurationService'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
@@ -98,7 +96,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
   }
 
   const getPhaseInfo = (phase: ActivityPhase) => {
-    return SUGARCANE_PHASES.find(p => p.id === phase)
+    return activityPhases.find(p => p.id === phase)
   }
 
   const phaseInfo = getPhaseInfo(activity.phase)
@@ -240,6 +238,11 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
   const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
 
+  // Database config state
+  const [activityPhases, setActivityPhases] = useState<any[]>([])
+  const [activityTemplates, setActivityTemplates] = useState<any[]>([])
+  const [configLoading, setConfigLoading] = useState(true)
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -247,7 +250,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     })
   )
 
-  // Load activities from localStorage (persistent storage)
+  // Load activities from database
   useEffect(() => {
     const loadActivities = async () => {
       if (selectedCycleInfo?.id) {
@@ -265,6 +268,52 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
     loadActivities()
   }, [selectedCycleInfo?.id])
+
+  // Load config data from database
+  useEffect(() => {
+    const loadConfigData = async () => {
+      try {
+        setConfigLoading(true)
+
+        // Load activity phases and templates from database
+        const [phases, templates] = await Promise.all([
+          ConfigurationService.getActivityPhases(),
+          ConfigurationService.getActivityTemplates()
+        ])
+
+        // Transform phases for frontend use
+        const transformedPhases = phases.map(phase => ({
+          id: phase.phase_id,
+          name: phase.name,
+          description: phase.description,
+          color: phase.color,
+          icon: phase.icon
+        }))
+
+        // Transform templates for frontend use
+        const transformedTemplates = templates.map(template => ({
+          id: template.template_id,
+          name: template.name,
+          description: template.description,
+          phase: template.phase,
+          estimatedDuration: template.estimated_duration_hours,
+          resourceType: template.resource_type,
+          estimatedCost: template.estimated_cost
+        }))
+
+        setActivityPhases(transformedPhases)
+        setActivityTemplates(transformedTemplates)
+      } catch (error) {
+        console.error('Error loading config data:', error)
+        setActivityPhases([])
+        setActivityTemplates([])
+      } finally {
+        setConfigLoading(false)
+      }
+    }
+
+    loadConfigData()
+  }, [])
 
   // Load global metrics for the selected cycle
   const loadGlobalMetrics = async () => {
@@ -305,7 +354,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
   const handleStatusChange = async (id: string, status: ActivityStatus) => {
     try {
-      // Update in localStorage and state
+      // Update in database and state
       const updatedActivity = await ActivityService.updateActivity(id, {
         status,
         updatedAt: new Date().toISOString()
@@ -321,7 +370,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const handleDeleteActivity = async (id: string) => {
     if (confirm('Are you sure you want to delete this activity?')) {
       try {
-        // Delete from localStorage and state
+        // Delete from database and state
         await ActivityService.deleteActivity(id)
         setActivities(prev => prev.filter(activity => activity.id !== id))
       } catch (error) {
@@ -347,7 +396,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     }
 
     const newActivity: BlocActivity = {
-      id: Date.now().toString(),
+      id: '', // Let database generate UUID
       name: template.name,
       description: template.description,
       phase: template.phase,
@@ -377,7 +426,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         case 'date':
           return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
         case 'phase':
-          const phaseOrder = SUGARCANE_PHASES.map(p => p.id)
+          const phaseOrder = activityPhases.map(p => p.id)
           return phaseOrder.indexOf(a.phase) - phaseOrder.indexOf(b.phase)
         case 'status':
           const statusOrder = ['planned', 'in-progress', 'completed', 'cancelled']
@@ -418,7 +467,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         case 'date-desc':
           return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         case 'phase':
-          return SUGARCANE_PHASES.findIndex(p => p.id === a.phase) - SUGARCANE_PHASES.findIndex(p => p.id === b.phase)
+          return activityPhases.findIndex(p => p.id === a.phase) - activityPhases.findIndex(p => p.id === b.phase)
         case 'status':
           return a.status.localeCompare(b.status)
         default:
@@ -427,7 +476,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     })
 
   const getPhaseStats = () => {
-    const stats = SUGARCANE_PHASES.map(phase => {
+    const stats = activityPhases.map(phase => {
       const phaseActivities = activities.filter(a => a.phase === phase.id)
       const completed = phaseActivities.filter(a => a.status === 'completed').length
       const total = phaseActivities.length
@@ -719,7 +768,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 <p className="text-gray-600 mb-4">
                   {selectedPhase === 'all'
                     ? 'Start by adding your first activity'
-                    : `No activities in the ${SUGARCANE_PHASES.find(p => p.id === selectedPhase)?.name} phase`
+                    : `No activities in the ${activityPhases.find(p => p.id === selectedPhase)?.name} phase`
                   }
                 </p>
                 <button
@@ -759,18 +808,18 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 cropCycleType: activeCycleInfo?.type || 'plantation'
               }
 
-              // Check if this is truly an existing activity (exists in localStorage)
+              // Check if this is truly an existing activity (exists in database)
               const existingActivity = editingActivity ? await ActivityService.getActivityById(editingActivity.id) : null
 
               console.log('Save logic - editingActivity:', editingActivity?.id, 'existingActivity:', existingActivity?.id)
 
               if (existingActivity && editingActivity) {
-                // Update existing activity in localStorage
+                // Update existing activity in database
                 console.log('Updating existing activity:', editingActivity.id)
                 savedActivity = await ActivityService.updateActivity(editingActivity.id, activityWithCycle)
                 setActivities(prev => prev.map(a => a.id === editingActivity.id ? savedActivity : a))
               } else {
-                // Create new activity in localStorage
+                // Create new activity in database
                 console.log('Creating new activity')
                 savedActivity = await ActivityService.createActivity(activityWithCycle)
                 setActivities(prev => [...prev, savedActivity])
@@ -844,7 +893,7 @@ function AddActivityModal({
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = ACTIVITY_TEMPLATES.find(t => t.id === templateId)
+    const template = activityTemplates.find(t => t.id === templateId)
     if (template) {
       setFormData({
         ...formData,
@@ -991,9 +1040,9 @@ function AddActivityModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">Select a template...</option>
-                  {ACTIVITY_TEMPLATES.map(template => (
+                  {activityTemplates.map(template => (
                     <option key={template.id} value={template.id}>
-                      {SUGARCANE_PHASES.find(p => p.id === template.phase)?.icon} {template.name}
+                      {activityPhases.find(p => p.id === template.phase)?.icon} {template.name}
                     </option>
                   ))}
                 </select>
@@ -1025,7 +1074,7 @@ function AddActivityModal({
                   onChange={(e) => setFormData({ ...formData, phase: e.target.value as ActivityPhase })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  {SUGARCANE_PHASES.map(phase => (
+                  {activityPhases.map(phase => (
                     <option key={phase.id} value={phase.id}>
                       {phase.icon} {phase.name}
                     </option>

@@ -53,7 +53,7 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'category' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc') // Default to earliest to oldest
 
-  // Load attachments from localStorage (persistent storage)
+  // Load attachments from database
   useEffect(() => {
     const loadAttachments = async () => {
       if (selectedCycleInfo?.id) {
@@ -103,7 +103,7 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const handleDeleteAttachment = async (id: string) => {
     if (confirm('Are you sure you want to delete this attachment?')) {
       try {
-        // Delete from localStorage and state
+        // Delete from database and state
         await AttachmentService.deleteAttachment(id)
         setAttachments(prev => prev.filter(attachment => attachment.id !== id))
       } catch (error) {
@@ -392,7 +392,7 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
           onClose={() => setShowUploadModal(false)}
           onUpload={async (newAttachments) => {
             try {
-              // Save attachments to localStorage
+              // Save attachments to database
               const savedAttachments = await Promise.all(
                 newAttachments.map(attachment => AttachmentService.createAttachment(attachment))
               )

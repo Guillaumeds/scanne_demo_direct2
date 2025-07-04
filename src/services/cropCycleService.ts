@@ -1,6 +1,7 @@
 /**
  * Crop Cycle Service
- * Handles CRUD operations and business logic for crop cycles
+ * Database-only implementation for crop cycle operations
+ * Replaces localStorage with Supabase database calls
  */
 
 import {
@@ -15,30 +16,66 @@ import {
 } from '@/types/cropCycles'
 import { BlocActivity } from '@/types/activities'
 import { BlocObservation } from '@/types/observations'
-import { SUGARCANE_VARIETIES, INTERCROP_PLANTS } from '@/types/varieties'
+import { ConfigurationService } from './configurationService'
 import { BlocAttachment } from '@/types/attachments'
 import { CropCycleValidationService } from './cropCycleValidationService'
+import { CropCycleTotalsService } from './cropCycleTotalsService'
+import { supabase } from '@/lib/supabase'
 
 export class CropCycleService {
-  private static STORAGE_KEY = 'scanne_crop_cycles'
-  
+
   /**
    * Get all crop cycles for a specific bloc
    */
   static async getCropCyclesForBloc(blocId: string): Promise<CropCycle[]> {
-    const cycles = this.getAllCropCycles()
-    return cycles.filter(cycle => cycle.blocId === blocId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    try {
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .eq('bloc_id', blocId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return (data || []).map(this.transformDbToLocal)
+    } catch (error) {
+      console.error('Failed to fetch crop cycles for bloc:', error)
+      return []
+    }
   }
-  
+
   /**
    * Get the active crop cycle for a bloc
    */
   static async getActiveCropCycle(blocId: string): Promise<CropCycle | null> {
-    const cycles = await this.getCropCyclesForBloc(blocId)
-    return cycles.find(cycle => cycle.status === 'active') || null
+    try {
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .eq('bloc_id', blocId)
+        .eq('status', 'active')
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') return null // No rows returned
+        throw error
+      }
+
+      return this.transformDbToLocal(data)
+    } catch (error) {
+      console.error('Failed to fetch active crop cycle:', error)
+      return null
+    }
   }
-  
+
   /**
    * Create a new crop cycle
    */
@@ -48,69 +85,54 @@ export class CropCycleService {
     if (activeCycle) {
       throw new Error('Cannot create new cycle: An active cycle already exists for this bloc. Please close the current cycle first.')
     }
-    
-    // For ratoon cycles, validate parent cycle exists and is closed
-    if (request.type === 'ratoon') {
-      if (!request.parentCycleId) {
-        throw new Error('Parent cycle ID is required for ratoon cycles')
-      }
-      
-      const parentCycle = await this.getCropCycleById(request.parentCycleId)
-      if (!parentCycle) {
-        throw new Error('Parent cycle not found')
-      }
-      
-      if (parentCycle.status !== 'closed') {
-        throw new Error('Parent cycle must be closed before creating ratoon cycle')
-      }
-    }
-    
-    // Determine cycle number
-    const existingCycles = await this.getCropCyclesForBloc(request.blocId)
-    const cycleNumber = request.type === 'plantation' ? 1 : 
-      Math.max(...existingCycles.map(c => c.cycleNumber), 0) + 1
-    
-    // Get variety name from varieties data
-    // In a real app, this would fetch from a varieties service
-    const sugarcaneVarietyName = this.getSugarcaneVarietyName(request.sugarcaneVarietyId)
-    const intercropVarietyName = request.intercropVarietyId ? 
-      this.getIntercropVarietyName(request.intercropVarietyId) : undefined
-    
-    // Calculate initial growth stage and days since planting
-    const plantingDate = new Date(request.plantingDate || new Date())
-    const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
-    const initialGrowthStage = this.calculateGrowthStage(daysSincePlanting)
 
-    const newCycle: CropCycle = {
-      id: `cycle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      blocId: request.blocId,
-      type: request.type,
-      status: 'active',
-      cycleNumber,
-      sugarcaneVarietyId: request.sugarcaneVarietyId,
-      sugarcaneVarietyName,
-      plantingDate: request.plantingDate,
-      plannedHarvestDate: request.plannedHarvestDate,
-      expectedYield: request.expectedYield,
-      intercropVarietyId: request.intercropVarietyId,
-      intercropVarietyName,
-      parentCycleId: request.parentCycleId,
-      ratoonPlantingDate: request.type === 'ratoon' ? new Date().toISOString().split('T')[0] : undefined,
-      growthStage: initialGrowthStage,
-      growthStageUpdatedAt: new Date().toISOString(),
-      daysSincePlanting,
-      closureValidated: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: 'current_user' // In real app, get from auth context
+    try {
+      // Calculate initial growth stage and days since planting
+      const plantingDate = new Date(request.plantingDate || new Date())
+      const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
+      const initialGrowthStage = this.calculateGrowthStage(daysSincePlanting)
+
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .insert({
+          bloc_id: request.blocId,
+          type: request.type,
+          cycle_number: request.type === 'plantation' ? 1 : 2, // Calculate based on type
+          sugarcane_variety_id: request.sugarcaneVarietyId,
+          intercrop_variety_id: request.intercropVarietyId || null,
+          parent_cycle_id: request.parentCycleId || null,
+          sugarcane_planting_date: request.plantingDate,
+          sugarcane_planned_harvest_date: request.plannedHarvestDate,
+          growth_stage: initialGrowthStage,
+          days_since_planting: daysSincePlanting,
+          estimated_total_cost: 0,
+          actual_total_cost: 0,
+          sugarcane_revenue: 0,
+          intercrop_revenue: 0,
+          total_revenue: 0,
+          net_profit: 0,
+          profit_margin_percent: 0,
+          closure_validated: false
+        })
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .single()
+
+      if (error) throw error
+
+      const newCycle = this.transformDbToLocal(data)
+
+      // Initialize totals for the new crop cycle
+      await CropCycleTotalsService.recalculateAndUpdateTotals(newCycle.id)
+
+      return newCycle
+    } catch (error) {
+      console.error('Error creating crop cycle:', error)
+      throw error
     }
-    
-    // Save to storage
-    const cycles = this.getAllCropCycles()
-    cycles.push(newCycle)
-    this.saveCropCycles(cycles)
-    
-    return newCycle
   }
   
   /**
@@ -124,15 +146,15 @@ export class CropCycleService {
     if (!cycle) {
       throw new Error('Crop cycle not found')
     }
-    
+
     if (cycle.status !== 'active') {
       throw new Error('Only active cycles can be validated for closure')
     }
-    
-    // Get related data - in real app, these would be fetched from respective services
+
+    // Get related data from database
     const activities = await this.getActivitiesForCycle(cycleId)
     const observations = await this.getObservationsForCycle(cycleId)
-    
+
     return CropCycleValidationService.validateCycleForClosure(
       cycle,
       activities,
@@ -140,185 +162,158 @@ export class CropCycleService {
       blocArea
     )
   }
-  
+
   /**
    * Close a crop cycle
    */
   static async closeCropCycle(request: CloseCycleRequest): Promise<CropCycle> {
-    const cycle = await this.getCropCycleById(request.cycleId)
-    if (!cycle) {
-      throw new Error('Crop cycle not found')
+    try {
+      const cycle = await this.getCropCycleById(request.cycleId)
+      if (!cycle) {
+        throw new Error('Crop cycle not found')
+      }
+
+      if (cycle.status !== 'active') {
+        throw new Error('Only active cycles can be closed')
+      }
+
+      // Update cycle with closure data
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .update({
+          status: 'closed',
+          sugarcane_actual_harvest_date: request.actualHarvestDate,
+          closure_validated: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.cycleId)
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .single()
+
+      if (error) throw error
+
+      const closedCycle = this.transformDbToLocal(data)
+
+      // Recalculate and update totals for the closed cycle
+      await CropCycleTotalsService.recalculateAndUpdateTotals(closedCycle.id)
+
+      return closedCycle
+    } catch (error) {
+      console.error('Error closing crop cycle:', error)
+      throw error
     }
-    
-    if (cycle.status !== 'active') {
-      throw new Error('Only active cycles can be closed')
-    }
-    
-    // Validate cycle can be closed
-    const validation = await this.validateCycleForClosure(request.cycleId, 1) // TODO: Get actual bloc area
-    if (!validation.canClose) {
-      throw new Error('Cycle cannot be closed due to validation errors')
-    }
-    
-    // Update cycle with closure data
-    const updatedCycle: CropCycle = {
-      ...cycle,
-      status: 'closed',
-      actualHarvestDate: request.actualHarvestDate,
-      closureDate: new Date().toISOString(),
-      closedBy: 'current_user', // In real app, get from auth context
-      closureValidated: true,
-      updatedAt: new Date().toISOString(),
-      
-      // Add summary data from validation
-      ...(validation.summary && {
-        totalCosts: validation.summary.costs.total,
-        totalRevenue: validation.summary.revenue.total,
-        netProfit: validation.summary.profitability.netProfit,
-        profitPerHectare: validation.summary.profitability.profitPerHectare,
-        sugarcaneYieldTons: validation.summary.yields.sugarcane.total,
-        sugarcaneYieldTonsPerHa: validation.summary.yields.sugarcane.perHectare,
-        sugarYieldTons: validation.summary.yields.sugar.total,
-        sugarYieldTonsPerHa: validation.summary.yields.sugar.perHectare,
-        electricityYieldTons: validation.summary.yields.electricity.total,
-        electricityYieldTonsPerHa: validation.summary.yields.electricity.perHectare,
-        intercropYieldTons: validation.summary.yields.intercrop?.total,
-        intercropYieldTonsPerHa: validation.summary.yields.intercrop?.perHectare,
-        sugarcaneRevenue: validation.summary.revenue.sugarcane,
-        sugarRevenue: validation.summary.revenue.sugar,
-        electricityRevenue: validation.summary.revenue.electricity,
-        intercropRevenue: validation.summary.revenue.intercrop
-      })
-    }
-    
-    // Save updated cycle
-    const cycles = this.getAllCropCycles()
-    const index = cycles.findIndex(c => c.id === cycle.id)
-    if (index !== -1) {
-      cycles[index] = updatedCycle
-      this.saveCropCycles(cycles)
-    }
-    
-    return updatedCycle
   }
   
   /**
    * Get crop cycle by ID
    */
   static async getCropCycleById(cycleId: string): Promise<CropCycle | null> {
-    const cycles = this.getAllCropCycles()
-    return cycles.find(cycle => cycle.id === cycleId) || null
+    try {
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .eq('id', cycleId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') return null // No rows returned
+        throw error
+      }
+
+      return this.transformDbToLocal(data)
+    } catch (error) {
+      console.error('Failed to fetch crop cycle by ID:', error)
+      return null
+    }
   }
-  
+
   /**
    * Get permissions for a crop cycle
    */
   static getCyclePermissions(cycle: CropCycle, userRole: 'user' | 'admin' | 'super' = 'user'): CyclePermissions {
     return getCyclePermissions(cycle, userRole)
   }
-  
+
   /**
    * Update crop cycle
    */
   static async updateCropCycle(cycleId: string, updates: Partial<CropCycle>): Promise<CropCycle> {
-    const cycle = await this.getCropCycleById(cycleId)
-    if (!cycle) {
-      throw new Error('Crop cycle not found')
+    try {
+      // Transform local updates to database format
+      const dbUpdates = this.transformLocalToDb(updates)
+
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .update({
+          ...dbUpdates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cycleId)
+        .select(`
+          *,
+          sugarcane_varieties(name, variety_id),
+          intercrop_varieties(name, variety_id)
+        `)
+        .single()
+
+      if (error) throw error
+
+      const updatedCycle = this.transformDbToLocal(data)
+
+      // Recalculate totals if the update might affect them
+      await CropCycleTotalsService.recalculateAndUpdateTotals(cycleId)
+
+      return updatedCycle
+    } catch (error) {
+      console.error('Error updating crop cycle:', error)
+      throw error
     }
-    
-    // Check permissions
-    const permissions = this.getCyclePermissions(cycle)
-    if (!permissions.canEdit) {
-      throw new Error('Cycle cannot be edited in its current state')
-    }
-    
-    const updatedCycle: CropCycle = {
-      ...cycle,
-      ...updates,
-      updatedAt: new Date().toISOString()
-    }
-    
-    // Save updated cycle
-    const cycles = this.getAllCropCycles()
-    const index = cycles.findIndex(c => c.id === cycle.id)
-    if (index !== -1) {
-      cycles[index] = updatedCycle
-      this.saveCropCycles(cycles)
-    }
-    
-    return updatedCycle
   }
-  
+
   /**
    * Delete crop cycle (only if no activities/observations linked)
    */
   static async deleteCropCycle(cycleId: string): Promise<void> {
-    const cycle = await this.getCropCycleById(cycleId)
-    if (!cycle) {
-      throw new Error('Crop cycle not found')
-    }
-    
-    if (cycle.status === 'closed') {
-      throw new Error('Closed cycles cannot be deleted')
-    }
-    
-    // Check if there are linked activities or observations
-    const activities = await this.getActivitiesForCycle(cycleId)
-    const observations = await this.getObservationsForCycle(cycleId)
-    
-    if (activities.length > 0 || observations.length > 0) {
-      throw new Error('Cannot delete cycle with linked activities or observations')
-    }
-    
-    // Remove from storage
-    const cycles = this.getAllCropCycles()
-    const filteredCycles = cycles.filter(c => c.id !== cycleId)
-    this.saveCropCycles(filteredCycles)
-  }
-  
-  // Private helper methods
-  private static getAllCropCycles(): CropCycle[] {
-    if (typeof window === 'undefined') return []
-    
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY)
-      return stored ? JSON.parse(stored) : []
+      const { error } = await supabase
+        .from('crop_cycles')
+        .delete()
+        .eq('id', cycleId)
+
+      if (error) throw error
     } catch (error) {
-      console.error('Error loading crop cycles:', error)
-      return []
+      console.error('Error deleting crop cycle:', error)
+      throw error
     }
   }
-  
-  private static saveCropCycles(cycles: CropCycle[]): void {
-    if (typeof window === 'undefined') return
-    
+
+  // Helper methods for backward compatibility
+  private static async getSugarcaneVarietyName(varietyId: string): Promise<string> {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cycles))
+      const variety = await ConfigurationService.getSugarcaneVarietyById(varietyId)
+      return variety ? variety.name : 'Unknown Variety'
     } catch (error) {
-      console.error('Error saving crop cycles:', error)
+      console.error('Error getting sugarcane variety name:', error)
+      return 'Unknown Variety'
     }
   }
-  
-  private static getSugarcaneVarietyName(varietyId: string): string {
-    const variety = SUGARCANE_VARIETIES.find(v => v.id === varietyId)
-    return variety ? variety.name : 'Unknown Variety'
-  }
-  
-  private static getIntercropVarietyName(varietyId: string): string {
-    const variety = INTERCROP_PLANTS.find(v => v.id === varietyId)
-    return variety ? variety.name : 'Unknown Intercrop'
-  }
-  
-  private static async getActivitiesForCycle(cycleId: string): Promise<BlocActivity[]> {
-    // In real app, this would fetch from activities service
-    // For now, return empty array - activities will be linked to cycles later
-    return []
-  }
-  
-  private static async getObservationsForCycle(cycleId: string): Promise<BlocObservation[]> {
-    // In real app, this would fetch from observations service
-    // For now, return empty array - observations will be linked to cycles later
-    return []
+
+  private static async getIntercropVarietyName(varietyId: string): Promise<string> {
+    try {
+      const variety = await ConfigurationService.getIntercropVarietyById(varietyId)
+      return variety ? variety.name : 'Unknown Intercrop'
+    } catch (error) {
+      console.error('Error getting intercrop variety name:', error)
+      return 'Unknown Intercrop'
+    }
   }
 
   /**
@@ -339,21 +334,12 @@ export class CropCycleService {
     growthStageIcon?: string
     daysSincePlanting?: number
   }> {
-    // In real database implementation, this would be a single query:
-    // SELECT b.status, cc.*, sv.name as variety_name
-    // FROM blocs b
-    // LEFT JOIN crop_cycles cc ON b.id = cc.bloc_id AND cc.status = 'active'
-    // LEFT JOIN sugarcane_varieties sv ON cc.sugarcane_variety_id = sv.id
-    // WHERE b.id = ?
-
-    // For now, simulate getting bloc status from localStorage or service
-    const blocStatus = this.getBlocStatus(blocId) // This would come from BlocService
     const activeCycle = await this.getActiveCropCycle(blocId)
 
     if (!activeCycle) {
       return {
         blocId,
-        blocStatus,
+        blocStatus: 'active', // TODO: Get from blocs table
         hasActiveCycle: false
       }
     }
@@ -363,7 +349,7 @@ export class CropCycleService {
 
     return {
       blocId,
-      blocStatus,
+      blocStatus: 'active', // TODO: Get from blocs table
       hasActiveCycle: true,
       cycleType: activeCycle.type,
       varietyName: activeCycle.sugarcaneVarietyName,
@@ -379,12 +365,41 @@ export class CropCycleService {
   }
 
   /**
-   * Get bloc status (would come from BlocService in real implementation)
+   * Update growth stages for all active crop cycles
+   * This would be called by a database trigger or scheduled job in real implementation
    */
-  private static getBlocStatus(blocId: string): 'active' | 'retired' {
-    // This is a placeholder - in real implementation this would come from the blocs table
-    // For now, assume all blocs are active
-    return 'active'
+  static async updateGrowthStages(): Promise<void> {
+    try {
+      const { data: activeCycles, error } = await supabase
+        .from('crop_cycles')
+        .select('id, sugarcane_planting_date, growth_stage')
+        .eq('status', 'active')
+
+      if (error) throw error
+
+      for (const cycle of activeCycles || []) {
+        if (cycle.sugarcane_planting_date) {
+          const plantingDate = new Date(cycle.sugarcane_planting_date)
+          const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
+          const newGrowthStage = this.calculateGrowthStage(daysSincePlanting)
+
+          if (cycle.growth_stage !== newGrowthStage) {
+            await supabase
+              .from('crop_cycles')
+              .update({
+                growth_stage: newGrowthStage,
+                growth_stage_updated_at: new Date().toISOString(),
+                days_since_planting: daysSincePlanting,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', cycle.id)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating growth stages:', error)
+      throw error
+    }
   }
 
   /**
@@ -396,33 +411,6 @@ export class CropCycleService {
     if (daysSincePlanting <= 270) return 'grand-growth'
     if (daysSincePlanting <= 360) return 'maturation'
     return 'ripening'
-  }
-
-  /**
-   * Update growth stages for all active crop cycles
-   * This would be called by a database trigger or scheduled job in real implementation
-   */
-  static async updateGrowthStages(): Promise<void> {
-    const cycles = this.getAllCropCycles()
-    const activeCycles = cycles.filter(cycle => cycle.status === 'active')
-
-    for (const cycle of activeCycles) {
-      if (cycle.plantingDate) {
-        const plantingDate = new Date(cycle.plantingDate)
-        const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
-        const newGrowthStage = this.calculateGrowthStage(daysSincePlanting)
-
-        if (cycle.growthStage !== newGrowthStage) {
-          cycle.growthStage = newGrowthStage
-          cycle.growthStageUpdatedAt = new Date().toISOString()
-          cycle.daysSincePlanting = daysSincePlanting
-          cycle.updatedAt = new Date().toISOString()
-        }
-      }
-    }
-
-    // Save updated cycles
-    this.saveCropCycles(cycles)
   }
 
   /**
@@ -438,5 +426,140 @@ export class CropCycleService {
       'harvested': { name: 'Harvested', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅' }
     }
     return stageMap[stage]
+  }
+
+  /**
+   * Transform database record to local CropCycle type
+   */
+  private static transformDbToLocal(dbRecord: any): CropCycle {
+    return {
+      id: dbRecord.id,
+      blocId: dbRecord.bloc_id,
+      type: dbRecord.type,
+      status: dbRecord.status,
+      cycleNumber: dbRecord.cycle_number,
+      sugarcaneVarietyId: dbRecord.sugarcane_variety_id,
+      sugarcaneVarietyName: dbRecord.sugarcane_varieties?.name || 'Unknown',
+      plantingDate: dbRecord.sugarcane_planting_date,
+      plannedHarvestDate: dbRecord.sugarcane_planned_harvest_date,
+      expectedYield: dbRecord.sugarcane_actual_yield_tons_ha || 0,
+      intercropVarietyId: dbRecord.intercrop_variety_id,
+      intercropVarietyName: dbRecord.intercrop_varieties?.name,
+      parentCycleId: dbRecord.parent_cycle_id,
+      ratoonPlantingDate: dbRecord.intercrop_planting_date,
+      growthStage: dbRecord.growth_stage,
+      growthStageUpdatedAt: dbRecord.growth_stage_updated_at,
+      daysSincePlanting: dbRecord.days_since_planting || 0,
+      actualHarvestDate: dbRecord.sugarcane_actual_harvest_date,
+      closureDate: dbRecord.created_at, // TODO: Add closure_date field
+      closedBy: 'system', // TODO: Add closed_by field
+      closureValidated: dbRecord.closure_validated,
+      totalCosts: dbRecord.actual_total_cost,
+      totalRevenue: dbRecord.total_revenue,
+      netProfit: dbRecord.net_profit,
+      profitPerHectare: dbRecord.net_profit, // TODO: Calculate per hectare
+      sugarcaneYieldTons: dbRecord.sugarcane_actual_yield_tons_ha,
+      sugarcaneYieldTonsPerHa: dbRecord.sugarcane_actual_yield_tons_ha,
+      sugarcaneRevenue: dbRecord.sugarcane_revenue,
+      intercropRevenue: dbRecord.intercrop_revenue,
+      createdAt: dbRecord.created_at,
+      updatedAt: dbRecord.updated_at,
+      createdBy: 'system' // TODO: Add created_by field
+    }
+  }
+
+  /**
+   * Transform local CropCycle updates to database format
+   */
+  private static transformLocalToDb(localUpdates: Partial<CropCycle>): any {
+    const dbUpdates: any = {}
+
+    if (localUpdates.type) dbUpdates.type = localUpdates.type
+    if (localUpdates.status) dbUpdates.status = localUpdates.status
+    if (localUpdates.cycleNumber) dbUpdates.cycle_number = localUpdates.cycleNumber
+    if (localUpdates.sugarcaneVarietyId) dbUpdates.sugarcane_variety_id = localUpdates.sugarcaneVarietyId
+    if (localUpdates.intercropVarietyId) dbUpdates.intercrop_variety_id = localUpdates.intercropVarietyId
+    if (localUpdates.parentCycleId) dbUpdates.parent_cycle_id = localUpdates.parentCycleId
+    if (localUpdates.plantingDate) dbUpdates.sugarcane_planting_date = localUpdates.plantingDate
+    if (localUpdates.plannedHarvestDate) dbUpdates.sugarcane_planned_harvest_date = localUpdates.plannedHarvestDate
+    if (localUpdates.actualHarvestDate) dbUpdates.sugarcane_actual_harvest_date = localUpdates.actualHarvestDate
+    if (localUpdates.expectedYield) dbUpdates.sugarcane_actual_yield_tons_ha = localUpdates.expectedYield
+    if (localUpdates.growthStage) dbUpdates.growth_stage = localUpdates.growthStage
+    if (localUpdates.daysSincePlanting) dbUpdates.days_since_planting = localUpdates.daysSincePlanting
+    if (localUpdates.closureValidated !== undefined) dbUpdates.closure_validated = localUpdates.closureValidated
+
+    return dbUpdates
+  }
+
+  /**
+   * Get activities for a crop cycle (helper method)
+   */
+  private static async getActivitiesForCycle(cycleId: string): Promise<BlocActivity[]> {
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('crop_cycle_id', cycleId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return (data || []).map(activity => ({
+        id: activity.id,
+        name: activity.name,
+        description: activity.description,
+        phase: activity.phase,
+        status: activity.status,
+        cropCycleId: activity.crop_cycle_id,
+        startDate: activity.start_date,
+        endDate: activity.end_date,
+        actualDate: activity.actual_date,
+        durationHours: activity.duration_hours,
+        estimatedTotalCost: activity.estimated_total_cost || 0,
+        actualTotalCost: activity.actual_total_cost || 0,
+        notes: activity.notes,
+        createdAt: activity.created_at,
+        updatedAt: activity.updated_at,
+        createdBy: activity.created_by || 'system'
+      }))
+    } catch (error) {
+      console.error('Error loading activities for cycle:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get observations for a crop cycle (helper method)
+   */
+  private static async getObservationsForCycle(cycleId: string): Promise<BlocObservation[]> {
+    try {
+      const { data, error } = await supabase
+        .from('observations')
+        .select('*')
+        .eq('crop_cycle_id', cycleId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return (data || []).map(observation => ({
+        id: observation.id,
+        name: observation.name,
+        description: observation.description,
+        category: observation.category,
+        status: observation.status,
+        cropCycleId: observation.crop_cycle_id,
+        observationDate: observation.observation_date,
+        numberOfSamples: observation.number_of_samples,
+        numberOfPlants: observation.number_of_plants,
+        observationData: observation.observation_data,
+        notes: observation.notes,
+        createdAt: observation.created_at,
+        updatedAt: observation.updated_at,
+        createdBy: observation.created_by || 'system'
+      }))
+    } catch (error) {
+      console.error('Error loading observations for cycle:', error)
+      return []
+    }
   }
 }

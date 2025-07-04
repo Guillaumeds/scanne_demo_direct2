@@ -14,10 +14,10 @@ import {
   WeedObservationData,
   SugarcaneYieldQualityData,
   IntercropYieldQualityData,
-  OBSERVATION_CATEGORIES
 } from '@/types/observations'
-import { BlocAttachment, AttachmentCategory } from '@/types/bloc'
+import { BlocAttachment, AttachmentCategory } from '@/types/attachments'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { ConfigurationService } from '@/services/configurationService'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
 // Measurement guidelines for each observation category
@@ -175,8 +175,35 @@ export default function ObservationForm({
   const activeCycleInfo = getActiveCycleInfo()
 
   const selectedCategory = category || observation?.category || 'soil'
-  const categoryInfo = OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)
+  const [observationCategories, setObservationCategories] = useState<any[]>([])
+  const [configLoading, setConfigLoading] = useState(true)
   const [showInfoModal, setShowInfoModal] = useState(false)
+
+  // Load observation categories from database
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setConfigLoading(true)
+        const config = await ConfigurationService.getAllConfiguration()
+        setObservationCategories(config.observationCategories.map(cat => ({
+          id: cat.category_id,
+          name: cat.name,
+          description: cat.description,
+          color: cat.color,
+          icon: cat.icon
+        })))
+      } catch (error) {
+        console.error('Error loading observation categories:', error)
+        setObservationCategories([])
+      } finally {
+        setConfigLoading(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
+
+  const categoryInfo = observationCategories.find(c => c.id === selectedCategory)
 
   const [formData, setFormData] = useState({
     name: observation?.name || categoryInfo?.name || '',

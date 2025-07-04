@@ -78,8 +78,7 @@ INSERT INTO intercrop_varieties (variety_id, name, scientific_name, benefits, pl
 ('potato-spunta', 'Potato Spunta', 'Solanum tuberosum', ARRAY['Soil improvement', 'Additional income', 'Pest control'], 'May-June', 'August-September', 'Popular potato variety suitable for intercropping with sugarcane', 'apple', true),
 ('bean-common', 'Common Bean', 'Phaseolus vulgaris', ARRAY['Nitrogen fixation', 'Soil improvement', 'Food security'], 'April-May', 'July-August', 'Nitrogen-fixing legume that improves soil fertility', 'leaf', true),
 ('onion-red', 'Red Onion', 'Allium cepa', ARRAY['Pest deterrent', 'Market value', 'Space utilization'], 'March-April', 'June-July', 'High-value crop with natural pest deterrent properties', 'circle', true),
-('maize-hybrid', 'Hybrid Maize', 'Zea mays', ARRAY['Quick return', 'Food security', 'Biomass'], 'November-December', 'March-April', 'Fast-growing cereal crop for quick returns', 'wheat', true),
-('none', 'None', '', ARRAY[]::text[], '', '', 'No intercrop planted', 'x', true);
+('maize-hybrid', 'Hybrid Maize', 'Zea mays', ARRAY['Quick return', 'Food security', 'Biomass'], 'November-December', 'March-April', 'Fast-growing cereal crop for quick returns', 'wheat', true);
 
 -- =====================================================
 -- PRODUCTS (Fertilizers, Pesticides, etc.)

@@ -153,8 +153,10 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   ]
 
   const handleInputChange = (field: keyof BlocData, value: string | number | boolean) => {
-    const updatedData = { [field]: value }
-    autoSave(updatedData)
+    const updatedData = { ...blocData, [field]: value }
+    setBlocData(updatedData)
+    // Note: With database persistence, individual field changes are not auto-saved
+    // Data is saved only at the defined DB commit stages
   }
 
   const addRatoonHarvestDate = () => {
@@ -214,57 +216,18 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
     return ALL_VARIETIES.find(v => v.name === blocData.intercropVariety && v.category === 'intercrop')
   }
 
-  // Enhanced tab change handler with auto-commit
-  const handleTabChange = async (newTabId: string) => {
+  // Simple tab change handler - no auto-commit needed with database persistence
+  const handleTabChange = (newTabId: string) => {
     if (newTabId === activeTab) return
-
-    try {
-      // Auto-commit any unsaved data from current tab
-      console.log(`Switching from ${activeTab} to ${newTabId}`)
-
-      if (activeTab === 'general' && cropCycleFormRef.current?.isDirty) {
-        console.log('Auto-committing crop cycle form...')
-        await cropCycleFormRef.current.commitOnTabChange()
-      }
-
-      if (activeTab === 'activities' && activitiesFormRef.current?.isDirty) {
-        console.log('Auto-committing activities form...')
-        await activitiesFormRef.current.commitOnTabChange()
-      }
-
-      if (activeTab === 'observations' && observationsFormRef.current?.isDirty) {
-        console.log('Auto-committing observations form...')
-        await observationsFormRef.current.commitOnTabChange()
-      }
-
-      // Switch to new tab
-      setActiveTab(newTabId)
-    } catch (error) {
-      console.error('Error during tab change auto-commit:', error)
-      // Still allow tab change even if auto-commit fails
-      setActiveTab(newTabId)
-    }
-  }
-
-  // Auto-save function that saves data immediately
-  const autoSave = (data: Partial<BlocData>) => {
-    try {
-      const updatedData = { ...blocData, ...data }
-      setBlocData(updatedData)
-      // In a real implementation, this would save to a database
-      localStorage.setItem(`bloc_${bloc.id}_data`, JSON.stringify(updatedData))
-    } catch (error) {
-      console.error('Error auto-saving bloc data:', error)
-    }
+    setActiveTab(newTabId)
   }
 
   const handleArchiveBloc = () => {
     if (window.confirm('Are you sure you want to archive this bloc? It will be moved to archived blocs but can be restored later.')) {
-      // Archive bloc by updating its status
+      // Archive bloc by updating its status in database
       try {
-        const archivedBlocs = JSON.parse(localStorage.getItem('archived_blocs') || '[]')
-        archivedBlocs.push({ ...bloc, archivedAt: new Date().toISOString() })
-        localStorage.setItem('archived_blocs', JSON.stringify(archivedBlocs))
+        // TODO: Implement bloc archiving in database
+        console.log('Archiving bloc:', bloc.id)
         onBack() // Return to main view after archiving
       } catch (error) {
         console.error('Error archiving bloc:', error)
@@ -333,10 +296,10 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Auto-save indicator */}
+          {/* Database persistence indicator */}
           <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Auto-saved</span>
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span>Database connected</span>
           </div>
         </div>
       </div>

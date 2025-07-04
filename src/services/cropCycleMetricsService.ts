@@ -4,8 +4,6 @@ import { BlocObservation } from '../types/observations'
 import { CropCycleService } from './cropCycleService'
 import { ActivityService } from './activityService'
 import { ObservationService } from './observationService'
-import { SupabaseActivityService } from './supabaseActivityService'
-import { SupabaseObservationService } from './supabaseObservationService'
 import { BlocService } from './blocService'
 
 export interface CropCycleMetrics {
@@ -46,16 +44,16 @@ export class CropCycleMetricsService {
     const blocArea = bloc?.area || 1 // Default to 1 ha if area not found
 
     // Get all activities for this cycle
-    const activities = await SupabaseActivityService.getActivitiesForCycle(cycleId)
+    const activities = await ActivityService.getActivitiesForCycle(cycleId)
 
     // Get all observations for this cycle
-    const observations = await SupabaseObservationService.getObservationsForCycle(cycleId)
+    const observations = await ObservationService.getObservationsForCycle(cycleId)
 
     // Calculate cost metrics
     const costMetrics = this.calculateCostMetrics(activities)
-    
+
     // Calculate yield metrics
-    const yieldMetrics = SupabaseObservationService.extractYieldMetrics(observations)
+    const yieldMetrics = this.extractYieldMetrics(observations)
     
     // Calculate revenue metrics
     const revenueMetrics = this.calculateRevenueMetrics(observations)
@@ -254,6 +252,49 @@ export class CropCycleMetricsService {
   }
 
   /**
+   * Extract yield metrics from observations
+   */
+  private static extractYieldMetrics(observations: BlocObservation[]): {
+    sugarcaneYieldTonsHa: number
+    intercropYieldTonsHa: number
+    totalSugarcaneYield: number
+    totalIntercropYield: number
+  } {
+    let sugarcaneYieldTonsHa = 0
+    let intercropYieldTonsHa = 0
+    let totalSugarcaneYield = 0
+    let totalIntercropYield = 0
+
+    observations.forEach(observation => {
+      const data = observation.observationData as any
+      if (data) {
+        // Sugarcane yield (rounded to whole number as specified)
+        if (data.sugarcaneYieldTons) {
+          totalSugarcaneYield += Math.round(data.sugarcaneYieldTons)
+        }
+        if (data.sugarcaneYieldTonsPerHa) {
+          sugarcaneYieldTonsHa += Math.round(data.sugarcaneYieldTonsPerHa)
+        }
+
+        // Intercrop yield (rounded to whole number as specified)
+        if (data.intercropYieldTons) {
+          totalIntercropYield += Math.round(data.intercropYieldTons)
+        }
+        if (data.intercropYieldTonsPerHa) {
+          intercropYieldTonsHa += Math.round(data.intercropYieldTonsPerHa)
+        }
+      }
+    })
+
+    return {
+      sugarcaneYieldTonsHa,
+      intercropYieldTonsHa,
+      totalSugarcaneYield,
+      totalIntercropYield
+    }
+  }
+
+  /**
    * Get formatted metrics for display
    */
   static async getFormattedMetrics(cycleId: string): Promise<{
@@ -263,7 +304,7 @@ export class CropCycleMetricsService {
     profit: { total: string, perHa: string, margin: string }
   }> {
     const metrics = await this.calculateCycleMetrics(cycleId)
-    
+
     return {
       costs: {
         estimated: `MUR ${metrics.totalEstimatedCosts.toLocaleString()}`,

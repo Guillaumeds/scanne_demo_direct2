@@ -239,7 +239,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     })
   )
 
-  // Load observations from localStorage (persistent storage)
+  // Load observations from database
   useEffect(() => {
     const loadObservations = async () => {
       if (selectedCycleInfo?.id) {
@@ -278,7 +278,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
 
   const handleStatusChange = async (id: string, status: ObservationStatus) => {
     try {
-      // Update in localStorage and state
+      // Update in database and state
       const updatedObservation = await ObservationService.updateObservation(id, {
         status,
         updatedAt: new Date().toISOString()
@@ -294,7 +294,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   const handleDeleteObservation = async (id: string) => {
     if (confirm('Are you sure you want to delete this observation?')) {
       try {
-        // Delete from localStorage and state
+        // Delete from database and state
         await ObservationService.deleteObservation(id)
         setObservations(prev => prev.filter(observation => observation.id !== id))
       } catch (error) {
@@ -640,11 +640,11 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
               let savedObservation: BlocObservation
 
               if (editingObservation) {
-                // Update existing observation in localStorage
+                // Update existing observation in database
                 savedObservation = await ObservationService.updateObservation(editingObservation.id, observation)
                 setObservations(prev => prev.map(o => o.id === editingObservation.id ? savedObservation : o))
               } else {
-                // Create new observation in localStorage
+                // Create new observation in database
                 savedObservation = await ObservationService.createObservation(observation)
                 setObservations(prev => [...prev, savedObservation])
               }

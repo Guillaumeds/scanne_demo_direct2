@@ -40,6 +40,35 @@ export interface ActivityCategory {
   icon: string
   color: string
   active: boolean
+  sort_order?: number
+}
+
+export interface ActivityTemplate {
+  id: string
+  template_id: string
+  name: string
+  description: string
+  phase: string
+  estimated_duration_hours: number
+  resource_type: string
+  estimated_cost: number
+  typical_products?: any[]
+  icon: string
+  color: string
+  active: boolean
+  sort_order?: number
+}
+
+export interface ActivityPhase {
+  id: string
+  phase_id: string
+  name: string
+  description: string
+  color: string
+  icon: string
+  duration_description: string
+  sort_order?: number
+  active: boolean
 }
 
 export interface ObservationCategory {
@@ -411,10 +440,62 @@ export class ConfigurationService {
    */
   static async getAllVarietiesForFrontend(): Promise<any[]> {
     const config = await this.getAllConfiguration()
-    
+
     const sugarcaneVarieties = config.sugarcaneVarieties.map(v => this.transformSugarcaneVariety(v))
     const intercropVarieties = config.intercropVarieties.map(v => this.transformIntercropVariety(v))
-    
+
     return [...sugarcaneVarieties, ...intercropVarieties]
+  }
+
+  /**
+   * Get activity templates from database
+   */
+  static async getActivityTemplates(): Promise<ActivityTemplate[]> {
+    const { data, error } = await supabase
+      .from('activity_templates')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+
+    if (error) {
+      console.error('Error loading activity templates:', error)
+      throw new Error(`Failed to load activity templates: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
+   * Get activity phases from database
+   */
+  static async getActivityPhases(): Promise<ActivityPhase[]> {
+    const { data, error } = await supabase
+      .from('activity_phases')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+
+    if (error) {
+      console.error('Error loading activity phases:', error)
+      throw new Error(`Failed to load activity phases: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
+   * Get activity template by ID
+   */
+  static async getActivityTemplateById(templateId: string): Promise<ActivityTemplate | null> {
+    const templates = await this.getActivityTemplates()
+    return templates.find(t => t.template_id === templateId) || null
+  }
+
+  /**
+   * Get activity phase by ID
+   */
+  static async getActivityPhaseById(phaseId: string): Promise<ActivityPhase | null> {
+    const phases = await this.getActivityPhases()
+    return phases.find(p => p.phase_id === phaseId) || null
   }
 }

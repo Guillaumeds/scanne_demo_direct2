@@ -2,14 +2,14 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/cropCycles'
-import { SugarcaneVariety, InterCropPlant, CropVariety, SUGARCANE_VARIETIES, INTERCROP_PLANTS } from '@/types/varieties'
+import { CropVariety } from '@/types/varieties'
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
 import { CropCycleService } from '@/services/cropCycleService'
 import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
+import { ConfigurationService } from '@/services/configurationService'
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
 import CycleClosureModal from './CycleClosureModal'
-import { useFormWithAutoCommit, FormCommitRef } from '@/hooks/useFormWithAutoCommit'
 import { FormSaveStatus } from './UnsavedChangesIndicator'
 import { Trash2, Archive, AlertTriangle } from 'lucide-react'
 
@@ -26,7 +26,7 @@ interface CropCycleGeneralInfoProps {
   onSave: (data: any) => void
 }
 
-const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps>(
+const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   ({ bloc, onSave }, ref) => {
     // Use crop cycle context
     const { createCycle } = useCropCycle()
@@ -59,52 +59,33 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
     const [isDeleting, setIsDeleting] = useState(false)
     const [isRetiring, setIsRetiring] = useState(false)
 
-    // Enhanced form state with auto-commit
-    const {
-      formData: newCycleData,
-      updateData: setNewCycleData,
-      save: saveForm,
-      commitOnTabChange,
-      isDirty,
-      isSaving,
-      lastSaved
-    } = useFormWithAutoCommit(
-      {
-        sugarcaneVarietyId: '',
-        sugarcaneVarietyName: '',
-        intercropVarietyId: 'none',
-        intercropVarietyName: 'None',
-        plantingDate: '',
-        plannedHarvestDate: '',
-        expectedYield: '' as string | number
-      },
-      async (data) => {
-        // Only auto-save if form has minimum required data
-        if (data.sugarcaneVarietyId && data.plannedHarvestDate) {
-          console.log('Auto-saving crop cycle form data...')
-          // Could save as draft here if needed
-        }
-      },
-      {
-        commitOnTabChange: true,
-        resetOnSave: false, // Don't reset after save to preserve data
-        validateBeforeSave: (data) => {
-          // Basic validation for auto-save
-          return !!(data.sugarcaneVarietyId && data.plannedHarvestDate)
-        }
-      }
-    )
+    // Simple form state for new cycle creation (no auto-commit)
+    const [newCycleData, setNewCycleData] = useState({
+      sugarcaneVarietyId: '',
+      sugarcaneVarietyName: '',
+      intercropVarietyId: 'none',
+      intercropVarietyName: 'None',
+      plantingDate: '',
+      plannedHarvestDate: '',
+      expectedYield: '' as string | number
+    })
 
-    // Expose form methods to parent component
+    // Database config state
+    const [sugarcaneVarieties, setSugarcaneVarieties] = useState<any[]>([])
+    const [intercropVarieties, setIntercropVarieties] = useState<any[]>([])
+    const [configLoading, setConfigLoading] = useState(true)
+
+    // Expose simple interface to parent component (no auto-commit needed)
     useImperativeHandle(ref, () => ({
-      commitOnTabChange,
-      isDirty,
-      save: saveForm
+      isDirty: false, // No auto-commit, so no dirty state tracking needed
+      save: () => Promise.resolve() // No auto-save needed
     }))
 
   useEffect(() => {
     // Load existing crop cycles for this bloc
     loadCropCycles()
+    // Load config data from database
+    loadConfigData()
   }, [bloc.id])
 
   // Load metrics for all cycles
@@ -159,6 +140,47 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
       console.error('Error loading crop cycles:', error)
       setCropCycles([])
       setActiveCycle(null)
+    }
+  }
+
+  const loadConfigData = async () => {
+    try {
+      setConfigLoading(true)
+      const config = await ConfigurationService.getAllConfiguration()
+
+      // Transform database varieties to frontend format
+      const transformedSugarcane = config.sugarcaneVarieties.map(v => ({
+        id: v.variety_id,
+        name: v.name,
+        category: 'sugarcane',
+        harvestStart: v.harvest_start_month,
+        harvestEnd: v.harvest_end_month,
+        seasons: v.seasons,
+        soilTypes: v.soil_types,
+        description: v.description,
+        characteristics: v.characteristics
+      }))
+
+      const transformedIntercrop = config.intercropVarieties.map(v => ({
+        id: v.variety_id,
+        name: v.name,
+        scientificName: v.scientific_name,
+        category: 'intercrop',
+        benefits: v.benefits,
+        plantingTime: v.planting_time,
+        harvestTime: v.harvest_time,
+        description: v.description
+      }))
+
+      setSugarcaneVarieties(transformedSugarcane)
+      setIntercropVarieties(transformedIntercrop)
+    } catch (error) {
+      console.error('Error loading config data:', error)
+      // Fallback to empty arrays
+      setSugarcaneVarieties([])
+      setIntercropVarieties([])
+    } finally {
+      setConfigLoading(false)
     }
   }
 
@@ -301,53 +323,49 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
   }
 
   const handleSugarcaneVarietySelect = (variety: CropVariety) => {
-    const sugarcaneVariety = variety as SugarcaneVariety
-
     if (showEditCycle) {
       // Update edit form data
       setEditCycleData(prev => ({
         ...prev,
-        sugarcaneVarietyId: sugarcaneVariety.id,
-        sugarcaneVarietyName: sugarcaneVariety.name
+        sugarcaneVarietyId: variety.id,
+        sugarcaneVarietyName: variety.name
       }))
     } else {
       // Update new cycle data
       setNewCycleData(prev => ({
         ...prev,
-        sugarcaneVarietyId: sugarcaneVariety.id,
-        sugarcaneVarietyName: sugarcaneVariety.name
+        sugarcaneVarietyId: variety.id,
+        sugarcaneVarietyName: variety.name
       }))
     }
     setShowSugarcaneSelector(false)
   }
 
   const handleIntercropVarietySelect = (variety: CropVariety) => {
-    const intercropVariety = variety as InterCropPlant
-
     if (showEditCycle) {
       // Update edit form data
       setEditCycleData(prev => ({
         ...prev,
-        intercropVarietyId: intercropVariety.id,
-        intercropVarietyName: intercropVariety.name
+        intercropVarietyId: variety.id,
+        intercropVarietyName: variety.name
       }))
     } else {
       // Update new cycle data
       setNewCycleData(prev => ({
         ...prev,
-        intercropVarietyId: intercropVariety.id,
-        intercropVarietyName: intercropVariety.name
+        intercropVarietyId: variety.id,
+        intercropVarietyName: variety.name
       }))
     }
     setShowIntercropSelector(false)
   }
 
   const getSelectedSugarcaneVariety = () => {
-    return SUGARCANE_VARIETIES.find(v => v.id === newCycleData.sugarcaneVarietyId)
+    return sugarcaneVarieties.find(v => v.id === newCycleData.sugarcaneVarietyId)
   }
 
   const getSelectedIntercropVariety = () => {
-    return INTERCROP_PLANTS.find(v => v.id === newCycleData.intercropVarietyId)
+    return intercropVarieties.find(v => v.id === newCycleData.intercropVarietyId)
   }
 
   const canCreateRatoonCycle = () => {
@@ -642,7 +660,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                 <input
                   type="date"
                   value={newCycleData.plantingDate}
-                  onChange={(e) => setNewCycleData({ plantingDate: e.target.value })}
+                  onChange={(e) => setNewCycleData(prev => ({ ...prev, plantingDate: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
@@ -656,7 +674,7 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
               <input
                 type="date"
                 value={newCycleData.plannedHarvestDate}
-                onChange={(e) => setNewCycleData({ plannedHarvestDate: e.target.value })}
+                onChange={(e) => setNewCycleData(prev => ({ ...prev, plannedHarvestDate: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -671,21 +689,16 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                 min="0.1"
                 step="0.1"
                 value={newCycleData.expectedYield}
-                onChange={(e) => setNewCycleData({
+                onChange={(e) => setNewCycleData(prev => ({
+                  ...prev,
                   expectedYield: e.target.value === '' ? '' : parseFloat(e.target.value) || ''
-                })}
+                }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="e.g., 85.5"
               />
             </div>
 
-            {/* Form Save Status */}
-            <FormSaveStatus
-              isDirty={isDirty}
-              isSaving={isSaving}
-              lastSaved={lastSaved}
-              className="mb-4"
-            />
+            {/* Form Save Status - Removed since no auto-save */}
 
             {/* Action Buttons */}
             <div className="flex space-x-3">
@@ -693,19 +706,19 @@ const CropCycleGeneralInfo = forwardRef<FormCommitRef, CropCycleGeneralInfoProps
                 <button
                   type="button"
                   onClick={handleCreatePlantationCycle}
-                  disabled={isSaving}
+                  disabled={isCreatingCycle}
                   className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  {isSaving ? 'Creating...' : 'Create Plantation Cycle'}
+                  {isCreatingCycle ? 'Creating...' : 'Create Plantation Cycle'}
                 </button>
               ) : canCreateRatoonCycle() ? (
                 <button
                   type="button"
                   onClick={handleCreateRatoonCycle}
-                  disabled={isSaving}
+                  disabled={isCreatingCycle}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  {isSaving ? 'Creating...' : 'Create Ratoon Cycle'}
+                  {isCreatingCycle ? 'Creating...' : 'Create Ratoon Cycle'}
                 </button>
               ) : (
                 <div className="flex-1 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-center">
