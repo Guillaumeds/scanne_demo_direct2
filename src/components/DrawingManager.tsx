@@ -17,7 +17,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[] // Fields this area overlaps with
 }
 
 interface DrawingManagerProps {
@@ -1479,7 +1478,6 @@ export default function DrawingManager({
     // Create drawn area object
     const coordinates = drawingPointsRef.current.map(latlng => [latlng.lng, latlng.lat] as [number, number])
     const area = calculateArea(coordinates)
-    const overlappingFields = findOverlappingFields(finalPolygon)
 
     // Update total drawn area
     setTotalDrawnArea(prev => prev + area)
@@ -1488,8 +1486,7 @@ export default function DrawingManager({
       id: L.stamp(finalPolygon).toString(),
       type: 'polygon',
       coordinates,
-      area,
-      fieldIds: overlappingFields
+      area
     }
 
     // Calculate dimensions for the completed polygon
@@ -1683,14 +1680,12 @@ export default function DrawingManager({
       const latlngs = polygon.getLatLngs()[0] as L.LatLng[]
       const coordinates = latlngs.map(latlng => [latlng.lng, latlng.lat] as [number, number])
       const area = calculateArea(coordinates)
-      const overlappingFields = findOverlappingFields(polygon)
 
       const updatedArea: DrawnArea = {
         id: L.stamp(polygon).toString(),
         type: 'polygon',
         coordinates,
-        area,
-        fieldIds: overlappingFields
+        area
       }
 
       onAreaUpdated?.(updatedArea)
@@ -1868,102 +1863,7 @@ export default function DrawingManager({
     return { avgWidth, avgLength }
   }
 
-  const findOverlappingFields = (drawnLayer: L.Polygon | L.Rectangle): string[] => {
-    const overlapping: string[] = []
-    const drawnLatLngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
-
-    fieldPolygons.forEach((polygon, fieldId) => {
-      const fieldLatLngs = polygon.getLatLngs()[0] as L.LatLng[]
-
-      // Calculate the intersection area between drawn shape and field
-      const intersectionArea = calculatePolygonIntersectionArea(drawnLatLngs, fieldLatLngs)
-
-      // Only consider it overlapping if there's significant area coverage
-      // Minimum threshold: at least 100 square meters (0.01 hectares)
-      const MINIMUM_OVERLAP_AREA_HECTARES = 0.01
-
-      if (intersectionArea >= MINIMUM_OVERLAP_AREA_HECTARES) {
-        overlapping.push(fieldId)
-      }
-    })
-
-    return overlapping
-  }
-
-  // Calculate intersection area between two polygons using Sutherland-Hodgman clipping
-  const calculatePolygonIntersectionArea = (poly1: L.LatLng[], poly2: L.LatLng[]): number => {
-    // Convert to coordinate arrays for easier processing
-    const coords1 = poly1.map(p => [p.lng, p.lat] as [number, number])
-    const coords2 = poly2.map(p => [p.lng, p.lat] as [number, number])
-
-    // Use a simplified approach: check if drawn polygon significantly overlaps field
-    // by testing multiple sample points within the drawn polygon
-    const drawnBounds = getBounds(coords1)
-    const fieldBounds = getBounds(coords2)
-
-    // Quick bounds check first
-    if (!boundsIntersect(drawnBounds, fieldBounds)) {
-      return 0
-    }
-
-    // Sample points within the drawn polygon and check how many are inside the field
-    const samplePoints = generateSamplePoints(coords1, 20) // 20 sample points
-    let pointsInField = 0
-
-    for (const point of samplePoints) {
-      if (isPointInPolygon(L.latLng(point[1], point[0]), poly2)) {
-        pointsInField++
-      }
-    }
-
-    // Estimate overlap area based on sample point ratio
-    const overlapRatio = pointsInField / samplePoints.length
-    const drawnArea = calculateArea(coords1)
-
-    return drawnArea * overlapRatio
-  }
-
-  // Helper function to get bounds of coordinate array
-  const getBounds = (coords: [number, number][]) => {
-    const lngs = coords.map(c => c[0])
-    const lats = coords.map(c => c[1])
-    return {
-      minLng: Math.min(...lngs),
-      maxLng: Math.max(...lngs),
-      minLat: Math.min(...lats),
-      maxLat: Math.max(...lats)
-    }
-  }
-
-  // Helper function to check if bounds intersect
-  const boundsIntersect = (bounds1: any, bounds2: any): boolean => {
-    return !(bounds1.maxLng < bounds2.minLng ||
-             bounds1.minLng > bounds2.maxLng ||
-             bounds1.maxLat < bounds2.minLat ||
-             bounds1.minLat > bounds2.maxLat)
-  }
-
-  // Generate sample points within a polygon for area estimation
-  const generateSamplePoints = (coords: [number, number][], numPoints: number): [number, number][] => {
-    const bounds = getBounds(coords)
-    const points: [number, number][] = []
-
-    // Generate random points within bounding box and filter to those inside polygon
-    let attempts = 0
-    const maxAttempts = numPoints * 10 // Prevent infinite loop
-
-    while (points.length < numPoints && attempts < maxAttempts) {
-      const lng = bounds.minLng + Math.random() * (bounds.maxLng - bounds.minLng)
-      const lat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat)
-
-      if (isPointInPolygon(L.latLng(lat, lng), coords.map(c => L.latLng(c[1], c[0])))) {
-        points.push([lng, lat])
-      }
-      attempts++
-    }
-
-    return points
-  }
+  // Field overlap logic removed - blocs no longer need field association
 
   // This component doesn't render anything visible
   return (

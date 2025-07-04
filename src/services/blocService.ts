@@ -12,7 +12,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
 }
 
 // Interface for creating a new bloc
@@ -21,7 +20,6 @@ interface CreateBlocRequest {
   description?: string
   coordinates: [number, number][]
   area_hectares: number
-  field_id: string
 }
 
 export class BlocService {
@@ -53,26 +51,33 @@ export class BlocService {
         totalCoords: drawnArea.coordinates.length
       })
       
-      // Generate a proper UUID for the bloc (let database generate it)
-      const { data, error } = await supabase.rpc('insert_bloc_with_geometry', {
-        bloc_name: `Bloc ${drawnArea.id}`, // Use the drawn area ID for the name
-        bloc_description: `Bloc created from map drawing`,
-        polygon_wkt: polygonWKT,
-        bloc_area_hectares: drawnArea.area
-        // Remove field assignment - will be handled by database job later
-        // bloc_id will default to NULL and database will generate UUID
-      })
+      // Save bloc directly to database without field association
+      console.log('💾 Saving bloc to database without field association')
+      console.log('🔧 Using direct table insert')
+
+      // Insert bloc without field_id (column has been removed)
+      const { data, error } = await supabase
+        .from('blocs')
+        .insert({
+          name: `Bloc ${drawnArea.id}`,
+          description: `Bloc created from map drawing`,
+          coordinates: polygonWKT, // PostGIS will handle the SRID
+          area_hectares: drawnArea.area,
+          status: 'active'
+        } as any) // Type assertion to bypass outdated TypeScript types
+        .select()
+        .single()
       
       if (error) {
         console.error('Error saving bloc:', error)
         throw error
       }
 
-      if (!data || data.length === 0) {
+      if (!data) {
         throw new Error('No data returned from bloc insertion')
       }
 
-      return data[0] // RPC function returns an array, get the first item
+      return data // .single() returns the object directly
     } catch (error) {
       console.error('Failed to save drawn area as bloc:', error)
       throw error
@@ -247,8 +252,7 @@ export class BlocService {
       id: bloc.id,
       type: 'polygon',
       coordinates: coordinates,
-      area: Number(bloc.area_hectares),
-      fieldIds: [bloc.field_id]
+      area: Number(bloc.area_hectares)
     }
   }
 }
