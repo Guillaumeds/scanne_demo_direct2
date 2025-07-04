@@ -5,7 +5,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
 }
 
 interface DrawnAreasListProps {
@@ -87,21 +86,7 @@ export default function DrawnAreasList({
                 <span className="font-medium">{area.coordinates.length}</span>
               </div>
 
-              {area.fieldIds.length > 0 && (
-                <div>
-                  <span className="text-gray-500">Overlaps fields:</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {area.fieldIds.map(fieldId => (
-                      <span
-                        key={fieldId}
-                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                      >
-                        {fieldId}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Field overlap display removed - blocs are now independent of fields */}
             </div>
 
 

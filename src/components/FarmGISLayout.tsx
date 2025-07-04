@@ -19,7 +19,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
 }
 
 export default function FarmGISLayout() {
@@ -135,7 +134,7 @@ export default function FarmGISLayout() {
     setDrawnAreas(prev => [...prev, area])
 
     // Show success message
-    console.log(`✅ ${area.type} drawn: ${area.area.toFixed(2)} ha, overlaps ${area.fieldIds.length} fields`)
+    console.log(`✅ ${area.type} drawn: ${area.area.toFixed(2)} ha`)
   }
 
   const handleAreaDelete = (areaId: string) => {

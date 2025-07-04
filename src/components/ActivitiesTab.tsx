@@ -45,7 +45,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
   isHarvested?: boolean
   ratoonHarvestDates?: {
     ratoonNumber: number

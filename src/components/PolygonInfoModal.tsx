@@ -5,7 +5,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
 }
 
 interface PolygonInfoModalProps {
@@ -70,22 +69,7 @@ export default function PolygonInfoModal({
             </div>
           </div>
 
-          {/* Overlapping Fields */}
-          {polygon.fieldIds.length > 0 && (
-            <div className="bg-green-50 rounded-lg p-3">
-              <h3 className="font-semibold text-green-800 mb-2">
-                Overlapping Fields ({polygon.fieldIds.length})
-              </h3>
-              <div className="space-y-1">
-                {polygon.fieldIds.map(fieldId => (
-                  <div key={fieldId} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{getFieldName(fieldId)}</span>
-                    <span className="text-green-700 font-medium">{fieldId}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Field overlap display removed - blocs are now independent of fields */}
 
           {/* Coordinates Preview */}
           <div className="bg-gray-50 rounded-lg p-3">
