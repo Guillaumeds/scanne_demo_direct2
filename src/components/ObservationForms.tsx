@@ -18,6 +18,7 @@ import {
 import { BlocAttachment, AttachmentCategory } from '@/types/attachments'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { ConfigurationService } from '@/services/configurationService'
+import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
 // Measurement guidelines for each observation category
@@ -1379,52 +1380,82 @@ function IntercropYieldFields({ data, updateField }: { data: any, updateField: (
 // Sugarcane Yield Quality Fields (MANDATORY)
 function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: SugarcaneYieldQualityData, updateField: (field: string, value: any) => void, blocArea?: number }) {
 
-  // Auto-calculate yield per hectare when total yield changes
+  // 📱 UX ONLY: Auto-calculate yield per hectare when total yield changes
+  // This provides immediate feedback but database stores authoritative totals
   const handleTotalYieldChange = (value: string) => {
     const totalYield = value ? parseFloat(value) : undefined
     updateField('totalYieldTons', totalYield)
 
     if (totalYield && blocArea && blocArea > 0) {
+      // Use the new calculation service for consistency
+      const feedback = CropCycleCalculationService.calculateFormFeedback({
+        totalYield,
+        areaHectares: blocArea,
+        totalRevenue: data.sugarcaneRevenue
+      })
+
+      // Update calculated fields with UX feedback
+      if (feedback.pricePerTonne) {
+        updateField('pricePerTonne', feedback.pricePerTonne)
+      }
+
+      // Direct calculation for yield per hectare
       const yieldPerHa = totalYield / blocArea
       updateField('yieldPerHectare', parseFloat(yieldPerHa.toFixed(2)))
-
-      // Update price per tonne if total revenue is set
-      if (data.sugarcaneRevenue && data.sugarcaneRevenue > 0) {
-        const pricePerTonne = data.sugarcaneRevenue / totalYield
-        updateField('pricePerTonne', parseFloat(pricePerTonne.toFixed(2)))
-      }
     }
   }
 
-  // Auto-calculate total yield when yield per hectare changes
+  // 📱 UX ONLY: Auto-calculate total yield when yield per hectare changes
+  // This provides immediate feedback but database stores authoritative totals
   const handleYieldPerHaChange = (value: string) => {
     const yieldPerHa = value ? parseFloat(value) : undefined
     updateField('yieldPerHectare', yieldPerHa)
 
     if (yieldPerHa && blocArea && blocArea > 0) {
-      const totalYield = yieldPerHa * blocArea
-      updateField('totalYieldTons', parseFloat(totalYield.toFixed(2)))
+      // Use the new calculation service for consistency
+      const feedback = CropCycleCalculationService.calculateFormFeedback({
+        yieldPerHectare: yieldPerHa,
+        areaHectares: blocArea,
+        pricePerTonne: data.pricePerTonne
+      })
 
-      // Update revenue calculations if price per tonne is set
-      if (data.pricePerTonne && data.pricePerTonne > 0) {
-        const totalRevenue = data.pricePerTonne * totalYield
-        updateField('sugarcaneRevenue', parseFloat(totalRevenue.toFixed(2)))
+      // Update calculated fields with UX feedback
+      if (feedback.totalYield) {
+        updateField('totalYieldTons', feedback.totalYield)
+      }
 
-        // Update revenue per hectare
-        const revenuePerHa = totalRevenue / blocArea
-        updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+      if (feedback.totalRevenue) {
+        updateField('sugarcaneRevenue', feedback.totalRevenue)
+      }
+
+      if (feedback.revenuePerHectare) {
+        updateField('revenuePerHa', feedback.revenuePerHectare)
       }
     }
   }
 
-  // Auto-calculate revenue per hectare when total revenue changes
+  // 📱 UX ONLY: Auto-calculate revenue per hectare when total revenue changes
+  // This provides immediate feedback but database stores authoritative totals
   const handleTotalRevenueChange = (value: string) => {
     const totalRevenue = value ? parseFloat(value) : undefined
     updateField('sugarcaneRevenue', totalRevenue)
 
     if (totalRevenue && blocArea && blocArea > 0) {
-      const revenuePerHa = totalRevenue / blocArea
-      updateField('revenuePerHa', parseFloat(revenuePerHa.toFixed(2)))
+      // Use the new calculation service for consistency
+      const feedback = CropCycleCalculationService.calculateFormFeedback({
+        totalRevenue,
+        areaHectares: blocArea,
+        totalYield: data.totalYieldTons
+      })
+
+      // Update calculated fields with UX feedback
+      if (feedback.revenuePerHectare) {
+        updateField('revenuePerHa', feedback.revenuePerHectare)
+      }
+
+      if (feedback.pricePerTonne) {
+        updateField('pricePerTonne', feedback.pricePerTonne)
+      }
     }
   }
 
@@ -1484,6 +1515,17 @@ function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: Su
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="text-sm font-semibold text-blue-800 mb-3">Required for Cycle Closure</h4>
         <p className="text-xs text-blue-700 mb-3">These fields must be completed before the crop cycle can be closed.</p>
+
+        {/* 📱 UX Calculation Notice */}
+        <div className="bg-green-50 border border-green-200 rounded-md p-2 mb-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-green-600">🧮</span>
+            <span className="text-xs text-green-800 font-medium">Smart Calculations</span>
+          </div>
+          <p className="text-xs text-green-700 mt-1">
+            Values auto-calculate as you type for immediate feedback. Database stores final authoritative totals when saved.
+          </p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Total Yield (tons) *</label>
