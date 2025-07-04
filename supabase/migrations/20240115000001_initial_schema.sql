@@ -59,15 +59,14 @@ CREATE TABLE fields (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Blocs table
+-- Blocs table (field_id removed - blocs are independent of fields)
 CREATE TABLE blocs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    coordinates POLYGON NOT NULL,
+    coordinates GEOMETRY(POLYGON, 4326) NOT NULL,
     area_hectares DECIMAL(10,4) NOT NULL,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'retired')),
-    field_id UUID NOT NULL REFERENCES fields(id) ON DELETE CASCADE,
     created_date DATE DEFAULT CURRENT_DATE,
     retired_date DATE,
     intersecting_fields JSONB DEFAULT '{}',
@@ -419,3 +418,210 @@ CREATE TABLE field_analytics_history (
     analytics_snapshot JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- =====================================================
+-- DATABASE FUNCTIONS
+-- =====================================================
+
+-- Function to insert bloc with geometry (without field_id requirement)
+CREATE OR REPLACE FUNCTION insert_bloc_with_geometry(
+  bloc_name VARCHAR(255),
+  bloc_description TEXT,
+  polygon_wkt TEXT,
+  bloc_area_hectares DECIMAL(10,4),
+  bloc_status VARCHAR(20) DEFAULT 'active',
+  bloc_id UUID DEFAULT NULL
+)
+RETURNS TABLE(
+  id UUID,
+  name VARCHAR(255),
+  description TEXT,
+  coordinates GEOMETRY(POLYGON, 4326),
+  area_hectares DECIMAL(10,4),
+  status VARCHAR(20),
+  created_date DATE,
+  retired_date DATE,
+  intersecting_fields JSONB,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  INSERT INTO blocs (
+    id,
+    name,
+    description,
+    coordinates,
+    area_hectares,
+    status,
+    created_date,
+    retired_date,
+    intersecting_fields,
+    metadata,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    COALESCE(bloc_id, gen_random_uuid()),
+    bloc_name,
+    bloc_description,
+    ST_SetSRID(ST_GeomFromText(polygon_wkt), 4326)::GEOMETRY(POLYGON, 4326),
+    bloc_area_hectares,
+    bloc_status,
+    CURRENT_DATE,
+    NULL,
+    '{}'::JSONB,
+    '{}'::JSONB,
+    NOW(),
+    NOW()
+  )
+  RETURNING
+    blocs.id,
+    blocs.name,
+    blocs.description,
+    blocs.coordinates,
+    blocs.area_hectares,
+    blocs.status,
+    blocs.created_date,
+    blocs.retired_date,
+    blocs.intersecting_fields,
+    blocs.metadata,
+    blocs.created_at,
+    blocs.updated_at;
+END;
+$$;
+
+-- Function to get blocs with WKT coordinates (without field_id)
+CREATE OR REPLACE FUNCTION get_blocs_with_wkt()
+RETURNS TABLE(
+    id UUID,
+    name VARCHAR(255),
+    description TEXT,
+    coordinates_wkt TEXT,
+    area_hectares DECIMAL(10,4),
+    status VARCHAR(20),
+    created_date DATE,
+    retired_date DATE,
+    intersecting_fields JSONB,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        b.id,
+        b.name,
+        b.description,
+        ST_AsText(b.coordinates) as coordinates_wkt,
+        b.area_hectares,
+        b.status,
+        b.created_date,
+        b.retired_date,
+        b.intersecting_fields,
+        b.metadata,
+        b.created_at,
+        b.updated_at
+    FROM blocs b
+    WHERE b.status = 'active'
+    ORDER BY b.created_at DESC;
+END;
+$$;
+
+-- Function to calculate crop cycle totals
+CREATE OR REPLACE FUNCTION calculate_crop_cycle_totals(cycle_id UUID)
+RETURNS TABLE(
+    estimated_total_cost DECIMAL(12,2),
+    actual_total_cost DECIMAL(12,2),
+    sugarcane_yield_tonnes_per_hectare DECIMAL(8,2),
+    intercrop_yield_tonnes_per_hectare DECIMAL(8,2),
+    total_revenue DECIMAL(12,2),
+    profit_per_hectare DECIMAL(12,2)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    cycle_area DECIMAL(10,4);
+BEGIN
+    -- Get the cycle area (sum of all blocs in the cycle)
+    SELECT COALESCE(SUM(b.area_hectares), 0) INTO cycle_area
+    FROM crop_cycles cc
+    LEFT JOIN blocs b ON b.id = ANY(cc.bloc_ids)
+    WHERE cc.id = cycle_id;
+
+    -- If no area, return zeros
+    IF cycle_area = 0 THEN
+        RETURN QUERY SELECT 0::DECIMAL(12,2), 0::DECIMAL(12,2), 0::DECIMAL(8,2), 0::DECIMAL(8,2), 0::DECIMAL(12,2), 0::DECIMAL(12,2);
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    WITH activity_totals AS (
+        SELECT
+            COALESCE(SUM(a.estimated_total_cost), 0) as est_cost,
+            COALESCE(SUM(a.actual_total_cost), 0) as act_cost
+        FROM activities a
+        WHERE a.crop_cycle_id = cycle_id
+    ),
+    observation_totals AS (
+        SELECT
+            COALESCE(SUM(o.sugarcane_yield_tonnes), 0) as sugarcane_yield,
+            COALESCE(SUM(o.intercrop_yield_tonnes), 0) as intercrop_yield,
+            COALESCE(SUM(o.total_revenue), 0) as revenue
+        FROM observations o
+        WHERE o.crop_cycle_id = cycle_id
+        AND o.category = 'sugarcane-yield-quality'
+    )
+    SELECT
+        at.est_cost,
+        at.act_cost,
+        (ot.sugarcane_yield / cycle_area)::DECIMAL(8,2),
+        (ot.intercrop_yield / cycle_area)::DECIMAL(8,2),
+        ot.revenue,
+        ((ot.revenue - at.act_cost) / cycle_area)::DECIMAL(12,2)
+    FROM activity_totals at, observation_totals ot;
+END;
+$$;
+
+-- =====================================================
+-- INDEXES FOR PERFORMANCE
+-- =====================================================
+
+-- Spatial indexes for geometry columns
+CREATE INDEX IF NOT EXISTS idx_farms_boundary ON farms USING GIST (farm_boundary);
+CREATE INDEX IF NOT EXISTS idx_farms_center ON farms USING GIST (center_location);
+CREATE INDEX IF NOT EXISTS idx_fields_coordinates ON fields USING GIST (coordinates);
+CREATE INDEX IF NOT EXISTS idx_blocs_coordinates ON blocs USING GIST (coordinates);
+
+-- Regular indexes for foreign keys and common queries
+CREATE INDEX IF NOT EXISTS idx_farms_company_id ON farms (company_id);
+CREATE INDEX IF NOT EXISTS idx_fields_farm_id ON fields (farm_id);
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_bloc_id ON crop_cycles (bloc_id);
+CREATE INDEX IF NOT EXISTS idx_activities_crop_cycle_id ON activities (crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_observations_crop_cycle_id ON observations (crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_crop_cycle_id ON attachments (crop_cycle_id);
+
+-- Indexes for status and date filtering
+CREATE INDEX IF NOT EXISTS idx_blocs_status ON blocs (status);
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_status ON crop_cycles (status);
+CREATE INDEX IF NOT EXISTS idx_activities_status ON activities (status);
+CREATE INDEX IF NOT EXISTS idx_observations_status ON observations (status);
+
+-- Indexes for configuration tables
+CREATE INDEX IF NOT EXISTS idx_sugarcane_varieties_active ON sugarcane_varieties (active);
+CREATE INDEX IF NOT EXISTS idx_intercrop_varieties_active ON intercrop_varieties (active);
+CREATE INDEX IF NOT EXISTS idx_activity_categories_active ON activity_categories (active);
+CREATE INDEX IF NOT EXISTS idx_observation_categories_active ON observation_categories (active);
+
+-- Unique constraints for business identifiers
+CREATE UNIQUE INDEX IF NOT EXISTS idx_farms_unique_name_per_company ON farms (company_id, name) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fields_unique_id_per_farm ON fields (farm_id, field_id) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sugarcane_varieties_unique_id ON sugarcane_varieties (variety_id) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_intercrop_varieties_unique_id ON intercrop_varieties (variety_id) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_categories_unique_id ON activity_categories (category_id) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_observation_categories_unique_id ON observation_categories (category_id) WHERE active = true;
