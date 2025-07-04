@@ -19,7 +19,7 @@ import { BlocObservation } from '@/types/observations'
 import { ConfigurationService } from './configurationService'
 import { BlocAttachment } from '@/types/attachments'
 import { CropCycleValidationService } from './cropCycleValidationService'
-import { CropCycleTotalsService } from './cropCycleTotalsService'
+import { CropCycleCalculationService } from './cropCycleCalculationService'
 import { supabase } from '@/lib/supabase'
 
 export class CropCycleService {
@@ -125,8 +125,8 @@ export class CropCycleService {
 
       const newCycle = this.transformDbToLocal(data)
 
-      // Initialize totals for the new crop cycle
-      await CropCycleTotalsService.recalculateAndUpdateTotals(newCycle.id)
+      // Initialize totals for the new crop cycle using database function
+      await CropCycleCalculationService.triggerRecalculation(newCycle.id)
 
       return newCycle
     } catch (error) {
@@ -198,8 +198,8 @@ export class CropCycleService {
 
       const closedCycle = this.transformDbToLocal(data)
 
-      // Recalculate and update totals for the closed cycle
-      await CropCycleTotalsService.recalculateAndUpdateTotals(closedCycle.id)
+      // Recalculate and update totals for the closed cycle using database function
+      await CropCycleCalculationService.triggerRecalculation(closedCycle.id)
 
       return closedCycle
     } catch (error) {
@@ -268,8 +268,8 @@ export class CropCycleService {
 
       const updatedCycle = this.transformDbToLocal(data)
 
-      // Recalculate totals if the update might affect them
-      await CropCycleTotalsService.recalculateAndUpdateTotals(cycleId)
+      // Recalculate totals if the update might affect them using database function
+      await CropCycleCalculationService.triggerRecalculation(cycleId)
 
       return updatedCycle
     } catch (error) {

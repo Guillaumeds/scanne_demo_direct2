@@ -5,7 +5,7 @@ import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/c
 import { CropVariety } from '@/types/varieties'
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
 import { CropCycleService } from '@/services/cropCycleService'
-import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
+import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import { ConfigurationService } from '@/services/configurationService'
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
@@ -94,8 +94,37 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
     for (const cycle of cropCycles) {
       try {
-        const metrics = await CropCycleMetricsService.getFormattedMetrics(cycle.id)
-        metricsData[cycle.id] = metrics
+        // Use new database-first calculation service
+        const totals = await CropCycleCalculationService.getAuthoritativeTotals(cycle.id)
+
+        if (totals) {
+          // Convert to display format
+          const netProfit = totals.totalRevenue - totals.actualTotalCost
+          const profitMargin = totals.totalRevenue > 0 ? (netProfit / totals.totalRevenue) * 100 : 0
+
+          metricsData[cycle.id] = {
+            costs: {
+              estimated: `$${totals.estimatedTotalCost.toLocaleString()}`,
+              actual: `$${totals.actualTotalCost.toLocaleString()}`
+            },
+            yield: {
+              sugarcane: `${totals.sugarcaneYieldTonnesPerHectare.toFixed(1)} t/ha`,
+              intercrop: `${totals.intercropYieldTonnesPerHectare.toFixed(1)} t/ha`
+            },
+            revenue: {
+              total: `$${totals.totalRevenue.toLocaleString()}`,
+              sugarcane: `$${totals.totalRevenue.toLocaleString()}`, // TODO: Split by type in database
+              intercrop: 'N/A'
+            },
+            profit: {
+              total: `$${netProfit.toLocaleString()}`,
+              perHa: `$${totals.profitPerHectare.toLocaleString()}`,
+              margin: `${profitMargin.toFixed(1)}%`
+            }
+          }
+        } else {
+          throw new Error('No calculation results available')
+        }
       } catch (error) {
         console.error(`Failed to load metrics for cycle ${cycle.id}:`, error)
         metricsData[cycle.id] = {

@@ -5,7 +5,7 @@
  */
 
 import { BlocAttachment } from '@/types/attachments'
-import { CropCycleTotalsService } from './cropCycleTotalsService'
+import { CropCycleCalculationService } from './cropCycleCalculationService'
 import { supabase } from '@/lib/supabase'
 
 export class AttachmentService {
@@ -131,9 +131,9 @@ export class AttachmentService {
 
       const newAttachment = this.transformDbToLocal(data)
 
-      // Recalculate crop cycle totals if attachment affects totals (rare case)
+      // Recalculate crop cycle totals if attachment affects totals (rare case) using database function
       if (attachment.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(attachment.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(attachment.cropCycleId)
       }
 
       return newAttachment
@@ -165,9 +165,9 @@ export class AttachmentService {
 
       const updatedAttachment = this.transformDbToLocal(data)
 
-      // Recalculate crop cycle totals if attachment affects totals (rare case)
+      // Recalculate crop cycle totals if attachment affects totals (rare case) using database function
       if (updatedAttachment.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(updatedAttachment.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(updatedAttachment.cropCycleId)
       }
 
       return updatedAttachment
@@ -202,9 +202,9 @@ export class AttachmentService {
 
       if (error) throw error
 
-      // Recalculate crop cycle totals after deletion (rare case)
+      // Recalculate crop cycle totals after deletion (rare case) using database function
       if (cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(cropCycleId)
       }
     } catch (error) {
       console.error('Error deleting attachment:', error)

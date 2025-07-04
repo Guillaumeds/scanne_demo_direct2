@@ -36,7 +36,7 @@ import { ConfigurationService } from '@/services/configurationService'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
-import { CropCycleMetricsService } from '@/services/cropCycleMetricsService'
+import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import CropCycleSelector from './CropCycleSelector'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
@@ -322,11 +322,17 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     }
 
     try {
-      const metrics = await CropCycleMetricsService.calculateCycleMetrics(selectedCycleInfo.id)
-      setGlobalMetrics({
-        totalEstimatedCosts: metrics.totalEstimatedCosts,
-        totalActualCosts: metrics.totalActualCosts
-      })
+      // Use new database-first calculation service
+      const totals = await CropCycleCalculationService.getAuthoritativeTotals(selectedCycleInfo.id)
+
+      if (totals) {
+        setGlobalMetrics({
+          totalEstimatedCosts: totals.estimatedTotalCost,
+          totalActualCosts: totals.actualTotalCost
+        })
+      } else {
+        setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
+      }
     } catch (error) {
       console.error('Failed to load global metrics:', error)
       setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })

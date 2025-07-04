@@ -15,8 +15,7 @@ import {
   AppError,
   retry
 } from '@/types/utils'
-import { CropCycleMetricsService } from './cropCycleMetricsService'
-import { CropCycleTotalsService } from './cropCycleTotalsService'
+import { CropCycleCalculationService } from './cropCycleCalculationService'
 import { supabase } from '@/lib/supabase'
 
 export class ActivityService {
@@ -102,9 +101,9 @@ export class ActivityService {
 
       const newActivity = this.transformDbToLocal(activityData)
 
-      // Recalculate and update crop cycle totals
+      // Recalculate and update crop cycle totals using database function
       if (activity.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(activity.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(activity.cropCycleId)
       }
 
       return newActivity
@@ -136,9 +135,9 @@ export class ActivityService {
 
       const updatedActivity = this.transformDbToLocal(data)
 
-      // Recalculate and update crop cycle totals
+      // Recalculate and update crop cycle totals using database function
       if (updatedActivity.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(updatedActivity.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(updatedActivity.cropCycleId)
       }
 
       return updatedActivity
@@ -165,9 +164,9 @@ export class ActivityService {
 
       if (error) throw error
 
-      // Recalculate crop cycle totals after deletion
+      // Recalculate crop cycle totals after deletion using database function
       if (cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(cropCycleId)
       }
     } catch (error) {
       console.error('Error deleting activity:', error)

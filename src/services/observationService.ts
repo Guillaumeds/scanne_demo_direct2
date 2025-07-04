@@ -5,8 +5,7 @@
  */
 
 import { BlocObservation } from '@/types/observations'
-import { CropCycleMetricsService } from './cropCycleMetricsService'
-import { CropCycleTotalsService } from './cropCycleTotalsService'
+import { CropCycleCalculationService } from './cropCycleCalculationService'
 import { supabase } from '@/lib/supabase'
 
 export class ObservationService {
@@ -83,9 +82,9 @@ export class ObservationService {
 
       const newObservation = this.transformDbToLocal(observationData)
 
-      // Recalculate and update crop cycle totals
+      // Recalculate and update crop cycle totals using database function
       if (observation.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(observation.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(observation.cropCycleId)
       }
 
       return newObservation
@@ -117,9 +116,9 @@ export class ObservationService {
 
       const updatedObservation = this.transformDbToLocal(data)
 
-      // Recalculate and update crop cycle totals
+      // Recalculate and update crop cycle totals using database function
       if (updatedObservation.cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(updatedObservation.cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(updatedObservation.cropCycleId)
       }
 
       return updatedObservation
@@ -146,9 +145,9 @@ export class ObservationService {
 
       if (error) throw error
 
-      // Recalculate crop cycle totals after deletion
+      // Recalculate crop cycle totals after deletion using database function
       if (cropCycleId) {
-        await CropCycleTotalsService.recalculateAndUpdateTotals(cropCycleId)
+        await CropCycleCalculationService.triggerRecalculation(cropCycleId)
       }
     } catch (error) {
       console.error('Error deleting observation:', error)
