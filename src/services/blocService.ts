@@ -64,7 +64,7 @@ export class BlocService {
           coordinates: polygonWKT, // PostGIS will handle the SRID
           area_hectares: drawnArea.area,
           status: 'active'
-        } as any) // Type assertion to bypass outdated TypeScript types
+        })
         .select()
         .single()
       

@@ -620,7 +620,7 @@ CREATE INDEX IF NOT EXISTS idx_observation_categories_active ON observation_cate
 
 -- Unique constraints for business identifiers
 CREATE UNIQUE INDEX IF NOT EXISTS idx_farms_unique_name_per_company ON farms (company_id, name) WHERE active = true;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fields_unique_id_per_farm ON fields (farm_id, field_id) WHERE active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fields_unique_id_per_farm ON fields (farm_id, field_id) WHERE status = 'active';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sugarcane_varieties_unique_id ON sugarcane_varieties (variety_id) WHERE active = true;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_intercrop_varieties_unique_id ON intercrop_varieties (variety_id) WHERE active = true;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_categories_unique_id ON activity_categories (category_id) WHERE active = true;
