@@ -1,0 +1,40 @@
+product_id,name,category,category_enum,description,unit,recommended_rate_per_ha,cost_per_unit,brand,composition,icon,image_url,information_url,specifications,safety_datasheet_url,active
+npk-13-13-20,13-13-20+2MgO,Compound and NPK Fertilizers,compound-npk,,kg,250,45,,,,,,,{},true
+npk-13-8-24,13:8:24,Compound and NPK Fertilizers,compound-npk,,kg,250,42,,,,,,,{},true
+npk-12-8-20,12:8:20,Compound and NPK Fertilizers,compound-npk,,kg,250,40,,,,,,,{},true
+npk-12-12-17,12:12:17,Compound and NPK Fertilizers,compound-npk,,kg,250,38,,,,,,,{},true
+npk-19-19-19,19:19:19,Compound and NPK Fertilizers,compound-npk,,kg,200,50,,,,,,,{},true
+npk-20-20-20,20:20:20,Compound and NPK Fertilizers,compound-npk,,kg,200,52,,,,,,,{},true
+npk-8-10-40,8:10:40,Compound and NPK Fertilizers,compound-npk,,kg,300,48,,,,,,,{},true
+npk-11-8-6,11-8-6 (Co-Vert),Compound and NPK Fertilizers,compound-npk,,kg,300,35,,,,,,,{},true
+npk-nitrate-blends,Nitrate Based NPK Blends,Compound and NPK Fertilizers,compound-npk,,kg,250,55,,,,,,,{},true
+azophoska,Azophoska (13-13-20+2 micro),Compound and NPK Fertilizers,compound-npk,,kg,250,48,,,,,,,{},true
+bluefficient,Bluefficient Fertilizer (10-10-20+2MgO+micro),Compound and NPK Fertilizers,compound-npk,,kg,250,50,,,,,,,{},true
+fairway-master,Fairway Master,Compound and NPK Fertilizers,compound-npk,,kg,200,60,,,,,,,{},true
+icl-sierrablen,ICL Sierrablen Plus Granular Fertiliser,Compound and NPK Fertilizers,compound-npk,,kg,200,65,,,,,,,{},true
+ammonium-sulphate-crystal,Ammonium Sulphate 21% (Crystal),Nitrogen Fertilizers,nitrogen,,kg,150,25,,,,,,,{},true
+ammonium-sulphate-granular,Ammonium Sulphate 21% (Granular),Nitrogen Fertilizers,nitrogen,,kg,150,27,,,,,,,{},true
+urea-46,Urea (46% N Granular),Nitrogen Fertilizers,nitrogen,,kg,130,30,,,,,,,{},true
+nano-urea-plus,NANO Urea Plus (Kalol),Nitrogen Fertilizers,nitrogen,,L,2,120,,,,,,,{},true
+nano-dap,NANO DAP,Nitrogen Fertilizers,nitrogen,,L,2,125,,,,,,,{},true
+map,Monoammonium Phosphate (MAP),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,100,55,,,,,,,{},true
+mkp,Mono Potassium Phosphate (MKP 0-52-34),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,50,85,,,,,,,{},true
+potassium-nitrate,Potassium Nitrate,Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,75,90,,,,,,,{},true
+potassium-sulphate,Potassium Sulphate (SOP 0-0-50+46SO3),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,100,80,,,,,,,{},true
+nova-calcium-nitrate,Nova Calcium Nitrate (15.5-0-0+26.5CaO),Calcium and Magnesium Fertilizers,calcium-magnesium,,kg,100,45,,,,,,,{},true
+nova-mag-s,Nova Mag-S (Magnesium Sulphate 0-0-0+16MgO+32SO3),Calcium and Magnesium Fertilizers,calcium-magnesium,,kg,50,40,,,,,,,{},true
+micro-kanieltra,Micro elements (Kanieltra),Micronutrient and Specialty Fertilizers,micronutrient,,kg,5,150,,,,,,,{},true
+unikey-11-40-10,Unikey Nano Professional 11-40-10+2.5MgO+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,2,180,,,,,,,{},true
+unikey-15-5-40,Unikey Nano Professional 15-5-40+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,2,175,,,,,,,{},true
+unikey-20-20-20,Unikey Nano Professional 20-20-20+2MgO+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,2,185,,,,,,,{},true
+hydro-pack-1,Hydro Pack No. 1,Micronutrient and Specialty Fertilizers,micronutrient,,kg,1,200,,,,,,,{},true
+hydro-pack-2,Hydro Pack No. 2,Micronutrient and Specialty Fertilizers,micronutrient,,kg,1,200,,,,,,,{},true
+hydro-pack-3,Hydro Pack No. 3,Micronutrient and Specialty Fertilizers,micronutrient,,kg,1,200,,,,,,,{},true
+organic-all-purpose,All-purpose Organic Fertiliser,Organic and Bio Fertilizers,organic-bio,,kg,500,20,,,,,,,{},true
+bat-guano,Bat Guano Fertilizer,Organic and Bio Fertilizers,organic-bio,,kg,200,35,,,,,,,{},true
+seabird-guano,Seabird Guano,Organic and Bio Fertilizers,organic-bio,,kg,200,40,,,,,,,{},true
+seaweed-powder,Fresh Seaweed and Sargassum (Powder),Organic and Bio Fertilizers,organic-bio,,kg,100,25,,,,,,,{},true
+seaweed-liquid,Fresh Seaweed and Sargassum (Liquid),Organic and Bio Fertilizers,organic-bio,,L,10,30,,,,,,,{},true
+organic-mineral-liquid,Organic Mineral Liquid Fertilizers (Made in Moris),Organic and Bio Fertilizers,organic-bio,,L,5,45,,,,,,,{},true
+phostrogen,Phostrogen (800g),Other Fertilizer Products,other,,pack,1,85,,,,,,,{},true
+agroleaf-power,Agroleaf Power,Other Fertilizer Products,other,,kg,2,120,,,,,,,{},true

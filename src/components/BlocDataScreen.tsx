@@ -288,7 +288,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
           <div>
             <h1 className="text-xl font-bold text-gray-900">Bloc {bloc.id}</h1>
             <p className="text-sm text-gray-600">
-              Area: {bloc.area.toFixed(2)} ha • Fields: {bloc.fieldIds.length} parcelles
+              Area: {bloc.area.toFixed(2)} ha
             </p>
 
           </div>

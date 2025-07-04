@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ActivityPhase } from '@/types/activities'
-import { ConfigurationService } from '@/services/configurationService'
+import { ActivityPhase, SUGARCANE_PHASES, ACTIVITY_TEMPLATES } from '@/types/activities'
 
 interface ActivitySelectorProps {
   onSelect: (activity: any) => void
@@ -13,55 +12,9 @@ interface ActivitySelectorProps {
 export default function ActivitySelector({ onSelect, onClose, selectedPhase = 'all' }: ActivitySelectorProps) {
   const [currentPhase, setCurrentPhase] = useState<ActivityPhase | 'all'>(selectedPhase)
   const [searchTerm, setSearchTerm] = useState('')
-  const [activityPhases, setActivityPhases] = useState<any[]>([])
-  const [activityTemplates, setActivityTemplates] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Load config data from database
-  useEffect(() => {
-    const loadConfigData = async () => {
-      try {
-        setLoading(true)
-
-        // Load activity phases and templates from database
-        const [phases, templates] = await Promise.all([
-          ConfigurationService.getActivityPhases(),
-          ConfigurationService.getActivityTemplates()
-        ])
-
-        // Transform phases for frontend use
-        const transformedPhases = phases.map(phase => ({
-          id: phase.phase_id,
-          name: phase.name,
-          description: phase.description,
-          color: phase.color,
-          icon: phase.icon
-        }))
-
-        // Transform templates for frontend use
-        const transformedTemplates = templates.map(template => ({
-          id: template.template_id,
-          name: template.name,
-          description: template.description,
-          phase: template.phase,
-          estimatedDuration: template.estimated_duration_hours,
-          resourceType: template.resource_type,
-          estimatedCost: template.estimated_cost
-        }))
-
-        setActivityPhases(transformedPhases)
-        setActivityTemplates(transformedTemplates)
-      } catch (error) {
-        console.error('Error loading config data:', error)
-        setActivityPhases([])
-        setActivityTemplates([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadConfigData()
-  }, [])
+  const [activityPhases] = useState(SUGARCANE_PHASES)
+  const [activityTemplates] = useState(ACTIVITY_TEMPLATES)
+  const [loading] = useState(false)
 
   // Filter activities based on selected phase and search term
   const filteredActivities = activityTemplates.filter(activity => {

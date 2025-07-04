@@ -20,9 +20,9 @@
 
 **Status**: ✅ **CORRECT - This is the authoritative source**
 
-### **2. ❌ CropCycleTotalsService (DUPLICATE - REMOVE)**
-**Location**: `src/services/cropCycleTotalsService.ts`
-**Method**: `calculateCropCycleTotals(cropCycleId: string)`
+### **2. ✅ CropCycleTotalsService (REMOVED)**
+**Location**: ~~`src/services/cropCycleTotalsService.ts`~~ **DELETED**
+**Method**: ~~`calculateCropCycleTotals(cropCycleId: string)`~~ **REMOVED**
 
 **Duplicate calculations**:
 ```typescript
@@ -54,9 +54,9 @@ const profitMarginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 
 
 **Action**: ❌ **REMOVE - Replace with database function calls**
 
-### **3. ❌ CropCycleMetricsService (DUPLICATE - REMOVE)**
-**Location**: `src/services/cropCycleMetricsService.ts`
-**Method**: `calculateRevenueMetrics(observations: BlocObservation[])`
+### **3. ✅ CropCycleMetricsService (REMOVED)**
+**Location**: ~~`src/services/cropCycleMetricsService.ts`~~ **DELETED**
+**Method**: ~~`calculateRevenueMetrics(observations: BlocObservation[])`~~ **REMOVED**
 
 **Duplicate calculations**:
 ```typescript

@@ -1,501 +1,310 @@
+/**
+ * Configuration Service
+ * Handles fetching and caching of configuration data from database
+ * NO FALLBACK - Always use real database data or show errors
+ */
+
 import { supabase } from '@/lib/supabase'
+import { 
+  SugarcaneVariety, 
+  InterCropPlant, 
+  CropVariety 
+} from '@/types/varieties'
+import { Product } from '@/types/products'
+import { Resource } from '@/types/resources'
+import { 
+  transformAndValidate,
+  transformDbVarieties 
+} from './dataAdapters'
 
-// Database types
-export interface SugarcaneVariety {
-  id: string
-  variety_id: string
-  name: string
-  category: string
-  harvest_start_month: string
-  harvest_end_month: string
-  seasons: string[]
-  soil_types: string[]
-  sugar_content_percent: number
-  characteristics: any
-  description: string
-  icon: string
-  information_leaflet_url?: string
-  active: boolean
-}
-
-export interface IntercropVariety {
-  id: string
-  variety_id: string
-  name: string
-  scientific_name: string
-  benefits: string[]
-  planting_time: string
-  harvest_time: string
-  description: string
-  icon: string
-  image_url?: string
-  active: boolean
-}
-
-export interface ActivityCategory {
-  id: string
-  category_id: string
-  name: string
-  description: string
-  icon: string
-  color: string
-  active: boolean
-  sort_order?: number
-}
-
-export interface ActivityTemplate {
-  id: string
-  template_id: string
-  name: string
-  description: string
-  phase: string
-  estimated_duration_hours: number
-  resource_type: string
-  estimated_cost: number
-  typical_products?: any[]
-  icon: string
-  color: string
-  active: boolean
-  sort_order?: number
-}
-
-export interface ActivityPhase {
-  id: string
-  phase_id: string
-  name: string
-  description: string
-  color: string
-  icon: string
-  duration_description: string
-  sort_order?: number
-  active: boolean
-}
-
-export interface ObservationCategory {
-  id: string
-  category_id: string
-  name: string
-  description: string
-  icon: string
-  color: string
-  active: boolean
-}
-
-export interface AttachmentCategory {
-  id: string
-  category_id: string
-  name: string
-  description: string
-  icon: string
-  color: string
-  active: boolean
-}
-
-export interface Product {
-  id: string
-  product_id: string
-  name: string
-  category: string
-  description: string
-  unit: string
-  recommended_rate_per_ha: number
-  cost_per_unit: number
-  brand: string
-  composition: string
-  icon: string
-  active: boolean
-}
-
-export interface Resource {
-  id: string
-  resource_id: string
-  name: string
-  category: string
-  description: string
-  unit: string
-  cost_per_hour: number
-  cost_per_unit: number
-  skill_level: string
-  overtime_multiplier: number
-  icon: string
-  active: boolean
-}
-
-export interface ConfigurationData {
-  sugarcaneVarieties: SugarcaneVariety[]
-  intercropVarieties: IntercropVariety[]
-  activityCategories: ActivityCategory[]
-  observationCategories: ObservationCategory[]
-  attachmentCategories: AttachmentCategory[]
-  products: Product[]
-  resources: Resource[]
-}
-
+/**
+ * Configuration Service Class
+ * Provides methods to fetch configuration data from database
+ */
 export class ConfigurationService {
-  private static cache: ConfigurationData | null = null
-  private static cacheTimestamp: number = 0
-  private static readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
+  
   /**
-   * Get all configuration data with caching
+   * Fetch all sugarcane varieties from database
+   * @throws Error if database query fails or data is invalid
    */
-  static async getAllConfiguration(): Promise<ConfigurationData> {
-    const now = Date.now()
-    
-    // Return cached data if still valid
-    if (this.cache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
-      return this.cache
-    }
-
+  static async getSugarcaneVarieties(): Promise<SugarcaneVariety[]> {
     try {
-      console.log('Loading configuration data from database...')
+      const { data, error } = await supabase
+        .from('sugarcane_varieties')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-      // Load all configuration data in parallel
-      const [
-        sugarcaneVarieties,
-        intercropVarieties,
-        activityCategories,
-        observationCategories,
-        attachmentCategories,
-        products,
-        resources
-      ] = await Promise.all([
-        this.getSugarcaneVarieties(),
-        this.getIntercropVarieties(),
-        this.getActivityCategories(),
-        this.getObservationCategories(),
-        this.getAttachmentCategories(),
-        this.getProducts(),
-        this.getResources()
-      ])
-
-      this.cache = {
-        sugarcaneVarieties,
-        intercropVarieties,
-        activityCategories,
-        observationCategories,
-        attachmentCategories,
-        products,
-        resources
+      if (error) {
+        throw new Error(`Failed to fetch sugarcane varieties: ${error.message}`)
       }
-      this.cacheTimestamp = now
 
-      console.log('Configuration data loaded successfully')
-      return this.cache
+      if (!data || data.length === 0) {
+        console.warn('No sugarcane varieties found in database - returning empty array')
+        return []
+      }
+
+      return transformAndValidate.sugarcaneVarieties(data)
     } catch (error) {
-      console.error('Error loading configuration data:', error)
+      console.error('ConfigurationService.getSugarcaneVarieties error:', error)
       throw error
     }
   }
 
   /**
-   * Get sugarcane varieties
+   * Fetch all intercrop varieties from database
+   * @throws Error if database query fails or data is invalid
    */
-  static async getSugarcaneVarieties(): Promise<SugarcaneVariety[]> {
-    const { data, error } = await supabase
-      .from('sugarcane_varieties')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true })
+  static async getIntercropVarieties(): Promise<InterCropPlant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('intercrop_varieties')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-    if (error) {
-      console.error('Error loading sugarcane varieties:', error)
-      throw new Error(`Failed to load sugarcane varieties: ${error.message}`)
+      if (error) {
+        throw new Error(`Failed to fetch intercrop varieties: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No intercrop varieties found in database - returning empty array')
+        return []
+      }
+
+      return transformAndValidate.intercropVarieties(data)
+    } catch (error) {
+      console.error('ConfigurationService.getIntercropVarieties error:', error)
+      throw error
     }
-
-    return data || []
   }
 
   /**
-   * Get intercrop varieties
+   * Fetch all varieties (sugarcane + intercrop) from database
+   * @throws Error if database query fails or data is invalid
    */
-  static async getIntercropVarieties(): Promise<IntercropVariety[]> {
-    const { data, error } = await supabase
-      .from('intercrop_varieties')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true })
+  static async getAllVarieties(): Promise<CropVariety[]> {
+    try {
+      // Fetch both types in parallel
+      const [sugarcaneResult, intercropResult] = await Promise.all([
+        supabase
+          .from('sugarcane_varieties')
+          .select('*')
+          .eq('active', true)
+          .order('name'),
+        supabase
+          .from('intercrop_varieties')
+          .select('*')
+          .eq('active', true)
+          .order('name')
+      ])
 
-    if (error) {
-      console.error('Error loading intercrop varieties:', error)
-      throw new Error(`Failed to load intercrop varieties: ${error.message}`)
+      if (sugarcaneResult.error) {
+        throw new Error(`Failed to fetch sugarcane varieties: ${sugarcaneResult.error.message}`)
+      }
+
+      if (intercropResult.error) {
+        throw new Error(`Failed to fetch intercrop varieties: ${intercropResult.error.message}`)
+      }
+
+      const sugarcaneData = sugarcaneResult.data || []
+      const intercropData = intercropResult.data || []
+
+      if (sugarcaneData.length === 0 && intercropData.length === 0) {
+        throw new Error('No varieties found in database')
+      }
+
+      return transformDbVarieties(sugarcaneData, intercropData)
+    } catch (error) {
+      console.error('ConfigurationService.getAllVarieties error:', error)
+      throw error
     }
-
-    return data || []
   }
 
   /**
-   * Get activity categories
-   */
-  static async getActivityCategories(): Promise<ActivityCategory[]> {
-    const { data, error } = await supabase
-      .from('activity_categories')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Error loading activity categories:', error)
-      throw new Error(`Failed to load activity categories: ${error.message}`)
-    }
-
-    return data || []
-  }
-
-  /**
-   * Get observation categories
-   */
-  static async getObservationCategories(): Promise<ObservationCategory[]> {
-    const { data, error } = await supabase
-      .from('observation_categories')
-      .select('*')
-      .eq('active', true)
-      .order('name')
-
-    if (error) {
-      console.error('Error loading observation categories:', error)
-      throw new Error(`Failed to load observation categories: ${error.message}`)
-    }
-
-    return data || []
-  }
-
-  /**
-   * Get attachment categories
-   */
-  static async getAttachmentCategories(): Promise<AttachmentCategory[]> {
-    const { data, error } = await supabase
-      .from('attachment_categories')
-      .select('*')
-      .eq('active', true)
-      .order('name')
-
-    if (error) {
-      console.error('Error loading attachment categories:', error)
-      throw new Error(`Failed to load attachment categories: ${error.message}`)
-    }
-
-    return data || []
-  }
-
-  /**
-   * Get products
+   * Fetch all products from database
+   * @throws Error if database query fails or data is invalid
    */
   static async getProducts(): Promise<Product[]> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .order('category', { ascending: true })
-      .order('name', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-    if (error) {
-      console.error('Error loading products:', error)
-      throw new Error(`Failed to load products: ${error.message}`)
+      if (error) {
+        throw new Error(`Failed to fetch products: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No products found in database - returning empty array')
+        return []
+      }
+
+      return transformAndValidate.products(data)
+    } catch (error) {
+      console.error('ConfigurationService.getProducts error:', error)
+      throw error
     }
-
-    return data || []
   }
 
   /**
-   * Get resources
+   * Fetch all resources from database
+   * @throws Error if database query fails or data is invalid
    */
   static async getResources(): Promise<Resource[]> {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .eq('active', true)
-      .order('category', { ascending: true })
-      .order('name', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-    if (error) {
-      console.error('Error loading resources:', error)
-      throw new Error(`Failed to load resources: ${error.message}`)
-    }
+      if (error) {
+        throw new Error(`Failed to fetch resources: ${error.message}`)
+      }
 
-    return data || []
-  }
+      if (!data || data.length === 0) {
+        console.warn('No resources found in database - returning empty array')
+        return []
+      }
 
-  /**
-   * Get products by category
-   */
-  static async getProductsByCategory(category: string): Promise<Product[]> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .eq('category', category)
-      .order('name')
-
-    if (error) {
-      console.error('Error loading products by category:', error)
-      throw new Error(`Failed to load products: ${error.message}`)
-    }
-
-    return data || []
-  }
-
-  /**
-   * Get resources by category
-   */
-  static async getResourcesByCategory(category: string): Promise<Resource[]> {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .eq('active', true)
-      .eq('category', category)
-      .order('name')
-
-    if (error) {
-      console.error('Error loading resources by category:', error)
-      throw new Error(`Failed to load resources: ${error.message}`)
-    }
-
-    return data || []
-  }
-
-  /**
-   * Clear cache (useful for testing or when data is updated)
-   */
-  static clearCache(): void {
-    this.cache = null
-    this.cacheTimestamp = 0
-    console.log('Configuration cache cleared')
-  }
-
-  /**
-   * Get sugarcane variety by ID
-   */
-  static async getSugarcaneVarietyById(varietyId: string): Promise<SugarcaneVariety | null> {
-    const varieties = await this.getSugarcaneVarieties()
-    return varieties.find(v => v.variety_id === varietyId) || null
-  }
-
-  /**
-   * Get intercrop variety by ID
-   */
-  static async getIntercropVarietyById(varietyId: string): Promise<IntercropVariety | null> {
-    const varieties = await this.getIntercropVarieties()
-    return varieties.find(v => v.variety_id === varietyId) || null
-  }
-
-  /**
-   * Get activity category by ID
-   */
-  static async getActivityCategoryById(categoryId: string): Promise<ActivityCategory | null> {
-    const categories = await this.getActivityCategories()
-    return categories.find(c => c.category_id === categoryId) || null
-  }
-
-  /**
-   * Get observation category by ID
-   */
-  static async getObservationCategoryById(categoryId: string): Promise<ObservationCategory | null> {
-    const categories = await this.getObservationCategories()
-    return categories.find(c => c.category_id === categoryId) || null
-  }
-
-  /**
-   * Transform database sugarcane variety to frontend format
-   */
-  static transformSugarcaneVariety(dbVariety: SugarcaneVariety): any {
-    return {
-      id: dbVariety.variety_id,
-      name: dbVariety.name,
-      category: 'sugarcane',
-      harvestStart: dbVariety.harvest_start_month,
-      harvestEnd: dbVariety.harvest_end_month,
-      seasons: dbVariety.seasons || [],
-      soilTypes: dbVariety.soil_types || [],
-      sugarContent: dbVariety.sugar_content_percent,
-      characteristics: dbVariety.characteristics,
-      description: dbVariety.description,
-      icon: dbVariety.icon
+      return transformAndValidate.resources(data)
+    } catch (error) {
+      console.error('ConfigurationService.getResources error:', error)
+      throw error
     }
   }
 
   /**
-   * Transform database intercrop variety to frontend format
+   * Get variety by ID (searches both sugarcane and intercrop)
+   * @param id Variety ID to search for
+   * @throws Error if database query fails or variety not found
    */
-  static transformIntercropVariety(dbVariety: IntercropVariety): any {
-    return {
-      id: dbVariety.variety_id,
-      name: dbVariety.name,
-      scientificName: dbVariety.scientific_name,
-      category: 'intercrop',
-      benefits: dbVariety.benefits || [],
-      plantingTime: dbVariety.planting_time,
-      harvestTime: dbVariety.harvest_time,
-      description: dbVariety.description,
-      icon: dbVariety.icon,
-      image: dbVariety.image_url
+  static async getVarietyById(id: string): Promise<CropVariety> {
+    try {
+      // Try sugarcane first
+      const { data: sugarcaneData, error: sugarcaneError } = await supabase
+        .from('sugarcane_varieties')
+        .select('*')
+        .eq('variety_id', id)
+        .eq('active', true)
+        .single()
+
+      if (!sugarcaneError && sugarcaneData) {
+        return transformAndValidate.sugarcaneVarieties([sugarcaneData])[0]
+      }
+
+      // Try intercrop
+      const { data: intercropData, error: intercropError } = await supabase
+        .from('intercrop_varieties')
+        .select('*')
+        .eq('variety_id', id)
+        .eq('active', true)
+        .single()
+
+      if (!intercropError && intercropData) {
+        return transformAndValidate.intercropVarieties([intercropData])[0]
+      }
+
+      throw new Error(`Variety with ID '${id}' not found in database`)
+    } catch (error) {
+      console.error('ConfigurationService.getVarietyById error:', error)
+      throw error
     }
   }
 
   /**
-   * Get all varieties in frontend format
+   * Get product by ID
+   * @param id Product ID to search for
+   * @throws Error if database query fails or product not found
    */
-  static async getAllVarietiesForFrontend(): Promise<any[]> {
-    const config = await this.getAllConfiguration()
+  static async getProductById(id: string): Promise<Product> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('product_id', id)
+        .eq('active', true)
+        .single()
 
-    const sugarcaneVarieties = config.sugarcaneVarieties.map(v => this.transformSugarcaneVariety(v))
-    const intercropVarieties = config.intercropVarieties.map(v => this.transformIntercropVariety(v))
+      if (error) {
+        throw new Error(`Failed to fetch product '${id}': ${error.message}`)
+      }
 
-    return [...sugarcaneVarieties, ...intercropVarieties]
-  }
+      if (!data) {
+        throw new Error(`Product with ID '${id}' not found in database`)
+      }
 
-  /**
-   * Get activity templates from database
-   */
-  static async getActivityTemplates(): Promise<ActivityTemplate[]> {
-    const { data, error } = await supabase
-      .from('activity_templates')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
-
-    if (error) {
-      console.error('Error loading activity templates:', error)
-      throw new Error(`Failed to load activity templates: ${error.message}`)
+      return transformAndValidate.products([data])[0]
+    } catch (error) {
+      console.error('ConfigurationService.getProductById error:', error)
+      throw error
     }
-
-    return data || []
   }
 
   /**
-   * Get activity phases from database
+   * Get resource by ID
+   * @param id Resource ID to search for
+   * @throws Error if database query fails or resource not found
    */
-  static async getActivityPhases(): Promise<ActivityPhase[]> {
-    const { data, error } = await supabase
-      .from('activity_phases')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
+  static async getResourceById(id: string): Promise<Resource> {
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('resource_id', id)
+        .eq('active', true)
+        .single()
 
-    if (error) {
-      console.error('Error loading activity phases:', error)
-      throw new Error(`Failed to load activity phases: ${error.message}`)
+      if (error) {
+        throw new Error(`Failed to fetch resource '${id}': ${error.message}`)
+      }
+
+      if (!data) {
+        throw new Error(`Resource with ID '${id}' not found in database`)
+      }
+
+      return transformAndValidate.resources([data])[0]
+    } catch (error) {
+      console.error('ConfigurationService.getResourceById error:', error)
+      throw error
     }
-
-    return data || []
   }
 
   /**
-   * Get activity template by ID
+   * Health check - verify database connectivity and data availability
+   * @throws Error if database is not accessible or missing critical data
    */
-  static async getActivityTemplateById(templateId: string): Promise<ActivityTemplate | null> {
-    const templates = await this.getActivityTemplates()
-    return templates.find(t => t.template_id === templateId) || null
-  }
+  static async healthCheck(): Promise<{ status: 'healthy' | 'error', message: string }> {
+    try {
+      const [varieties, products, resources] = await Promise.all([
+        this.getAllVarieties(),
+        this.getProducts(),
+        this.getResources()
+      ])
 
-  /**
-   * Get activity phase by ID
-   */
-  static async getActivityPhaseById(phaseId: string): Promise<ActivityPhase | null> {
-    const phases = await this.getActivityPhases()
-    return phases.find(p => p.phase_id === phaseId) || null
+      const varietyCount = varieties.length
+      const productCount = products.length
+      const resourceCount = resources.length
+
+      if (varietyCount === 0 || productCount === 0 || resourceCount === 0) {
+        return {
+          status: 'error',
+          message: `Missing configuration data: ${varietyCount} varieties, ${productCount} products, ${resourceCount} resources`
+        }
+      }
+
+      return {
+        status: 'healthy',
+        message: `Configuration data loaded: ${varietyCount} varieties, ${productCount} products, ${resourceCount} resources`
+      }
+    } catch (error) {
+      return {
+        status: 'error',
+        message: `Database health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
   }
 }

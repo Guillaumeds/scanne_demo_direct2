@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Product, ProductCategory, PRODUCT_CATEGORIES, PRODUCTS } from '@/types/products'
+import { Product, ProductCategory, PRODUCT_CATEGORIES } from '@/types/products'
+import { useProducts } from '@/hooks/useLocalStorageData'
 
 interface ProductSelectorProps {
   onSelect: (product: Product, quantity: number, rate: number, actualCost?: number) => void
@@ -27,7 +28,10 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
   const [actualCost, setActualCost] = useState<number>(0)
   const [isUpdatingFromRate, setIsUpdatingFromRate] = useState(false)
 
-  const filteredProducts = PRODUCTS.filter(product => {
+  // Use localStorage for products data
+  const { data: products, loading, error } = useProducts()
+
+  const filteredProducts = (products || []).filter(product => {
     const matchesCategory = !selectedCategory || product.category === selectedCategory
     const matchesSearch = !searchTerm ||
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,8 +41,8 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
 
   // Pre-populate fields when editing existing product
   useEffect(() => {
-    if (existingProduct) {
-      const product = PRODUCTS.find(p => p.id === existingProduct.productId)
+    if (existingProduct && products.length > 0) {
+      const product = products.find(p => p.id === existingProduct.productId)
       if (product) {
         setSelectedProduct(product)
         setQuantity(existingProduct.quantity)
@@ -46,7 +50,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
         setActualCost(existingProduct.actualCost || existingProduct.estimatedCost)
       }
     }
-  }, [existingProduct])
+  }, [existingProduct, products])
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product)
@@ -128,13 +132,13 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                   <span className="text-lg">🌟</span>
                   <div>
                     <div className="font-medium">All Categories</div>
-                    <div className="text-xs text-gray-500">{PRODUCTS.length} products</div>
+                    <div className="text-xs text-gray-500">{products.length} products</div>
                   </div>
                 </div>
               </button>
 
               {PRODUCT_CATEGORIES.map(category => {
-                const productCount = PRODUCTS.filter(p => p.category === category.id).length
+                const productCount = products.filter(p => p.category === category.id).length
                 return (
                   <button
                     key={category.id}
@@ -162,8 +166,51 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
           {/* Products Grid */}
           <div className="flex-1 p-6 overflow-y-auto">
             {!selectedProduct ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProducts.map(product => {
+              <>
+                {/* Loading State */}
+                {loading && (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading products...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {error && !loading && (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center max-w-md">
+                      <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
+                      <p className="text-gray-600 mb-4">{error.message}</p>
+                      <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Reload Page
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Products Grid */}
+                {!loading && !error && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredProducts.length === 0 ? (
+                      <div className="col-span-full text-center py-12">
+                        <div className="text-gray-400 text-6xl mb-4">📦</div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Products Found</h3>
+                        <p className="text-gray-600">
+                          {searchTerm || selectedCategory
+                            ? 'Try adjusting your search or category filter.'
+                            : 'No products are available in the database.'
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      filteredProducts.map(product => {
                   const category = PRODUCT_CATEGORIES.find(c => c.id === product.category)
                   return (
                     <div
@@ -203,10 +250,13 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                           </svg>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                        </div>
+                      )
+                    })
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               /* Product Configuration */
               <div className="max-w-2xl mx-auto">
@@ -260,9 +310,10 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                         type="number"
                         min="0"
                         step="0.1"
-                        value={rate}
+                        value={rate === 0 ? '' : rate}
                         onChange={(e) => handleRateChange(parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="0"
                       />
                     </div>
 
@@ -274,9 +325,10 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                         type="number"
                         min="0"
                         step="0.1"
-                        value={quantity}
+                        value={quantity === 0 ? '' : quantity}
                         onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="0"
                       />
                     </div>
 

@@ -100,6 +100,11 @@ export class CropCycleCalculationService {
   /**
    * 📱 UX ONLY: Calculate form values for real-time feedback
    * These calculations are for immediate user feedback and are never stored
+   *
+   * 🎯 PRECISION HANDLING:
+   * - Matches HTML input step values for consistent UX
+   * - Prevents rounding discrepancies between calculation and display
+   * - Uses appropriate decimal places for each field type
    */
   static calculateFormFeedback(params: {
     yieldPerHectare?: number
@@ -107,32 +112,48 @@ export class CropCycleCalculationService {
     pricePerTonne?: number
     totalRevenue?: number
     areaHectares?: number
+    fieldPrecision?: {
+      yield?: number      // Default: 1 decimal (matches step="0.1")
+      revenue?: number    // Default: 2 decimals (currency)
+      price?: number      // Default: 2 decimals (currency)
+    }
   }): FormCalculationResult {
-    const { yieldPerHectare, totalYield, pricePerTonne, totalRevenue, areaHectares } = params
-    
+    const { yieldPerHectare, totalYield, pricePerTonne, totalRevenue, areaHectares, fieldPrecision = {} } = params
+
+    // Default precision settings to match HTML input step values
+    const precision = {
+      yield: fieldPrecision.yield ?? 1,     // step="0.1" → 1 decimal
+      revenue: fieldPrecision.revenue ?? 2, // currency → 2 decimals
+      price: fieldPrecision.price ?? 2      // currency → 2 decimals
+    }
+
     const result: FormCalculationResult = {
       isTemporary: true,
       note: 'This is a temporary calculation for UX feedback only. Authoritative results come from database.'
     }
 
-    // Calculate total yield from per-hectare yield
+    // Calculate total yield from per-hectare yield (match field precision)
     if (yieldPerHectare && areaHectares && areaHectares > 0) {
-      result.totalYield = Number((yieldPerHectare * areaHectares).toFixed(2))
+      const calculated = yieldPerHectare * areaHectares
+      result.totalYield = Number(calculated.toFixed(precision.yield))
     }
 
-    // Calculate revenue from yield and price
+    // Calculate revenue from yield and price (currency precision)
     if (result.totalYield && pricePerTonne && pricePerTonne > 0) {
-      result.totalRevenue = Number((result.totalYield * pricePerTonne).toFixed(2))
+      const calculated = result.totalYield * pricePerTonne
+      result.totalRevenue = Number(calculated.toFixed(precision.revenue))
     }
 
-    // Calculate price per tonne from revenue and yield
+    // Calculate price per tonne from revenue and yield (currency precision)
     if (totalRevenue && totalYield && totalYield > 0) {
-      result.pricePerTonne = Number((totalRevenue / totalYield).toFixed(2))
+      const calculated = totalRevenue / totalYield
+      result.pricePerTonne = Number(calculated.toFixed(precision.price))
     }
 
-    // Calculate revenue per hectare
+    // Calculate revenue per hectare (currency precision)
     if (result.totalRevenue && areaHectares && areaHectares > 0) {
-      result.revenuePerHectare = Number((result.totalRevenue / areaHectares).toFixed(2))
+      const calculated = result.totalRevenue / areaHectares
+      result.revenuePerHectare = Number(calculated.toFixed(precision.revenue))
     }
 
     return result

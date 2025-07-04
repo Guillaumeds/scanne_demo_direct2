@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { SugarcaneVariety, InterCropPlant, CropVariety, Season, SEASON_FILTERS, SEASON_CATEGORIES } from '@/types/varieties'
-import { ConfigurationService } from '@/services/configurationService'
+import { useAllVarieties } from '@/hooks/useLocalStorageData'
 
 interface VarietySelectorProps {
   onSelect: (variety: CropVariety) => void
@@ -16,31 +16,14 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
   const [searchTerm, setSearchTerm] = useState('')
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedVarietyForImage, setSelectedVarietyForImage] = useState<CropVariety | null>(null)
-  const [allVarieties, setAllVarieties] = useState<CropVariety[]>([])
-  const [loading, setLoading] = useState(true)
 
-  // Load varieties from database
-  useEffect(() => {
-    const loadVarieties = async () => {
-      try {
-        setLoading(true)
-        const varieties = await ConfigurationService.getAllVarietiesForFrontend()
-        setAllVarieties(varieties)
-      } catch (error) {
-        console.error('Error loading varieties:', error)
-        setAllVarieties([]) // Fallback to empty array
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadVarieties()
-  }, [])
+  // Use localStorage for varieties data
+  const { data: allVarieties, loading, error } = useAllVarieties()
 
   // Filter base varieties by type
   const baseVarieties = varietyType === 'all'
-    ? allVarieties
-    : allVarieties.filter(variety => variety.category === varietyType)
+    ? (allVarieties || [])
+    : (allVarieties || []).filter(variety => variety.category === varietyType)
 
   const filteredVarieties = baseVarieties.filter(variety => {
     const matchesFilter = !selectedFilter ||
@@ -119,6 +102,24 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
         <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading varieties...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Varieties</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Close
+          </button>
         </div>
       </div>
     )
@@ -240,8 +241,50 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
 
           {/* Varieties Grid */}
           <div className="flex-1 p-6 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-24">
-              {filteredVarieties.map(variety => {
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading varieties...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center max-w-md">
+                  <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Varieties</h3>
+                  <p className="text-gray-600 mb-4">{error.message}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Reload Page
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Varieties Grid */}
+            {!loading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-24">
+                {filteredVarieties.length === 0 ? (
+                  <div className="col-span-full text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">🌱</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Varieties Found</h3>
+                    <p className="text-gray-600">
+                      {searchTerm || selectedFilter
+                        ? 'Try adjusting your search or filter.'
+                        : 'No varieties are available in the database.'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  filteredVarieties.map(variety => {
                 const tags = getSeasonTags(variety)
                 const isSelected = selectedVariety === variety.id
 
@@ -378,10 +421,12 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
                         </svg>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                    </div>
+                  )
+                })
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

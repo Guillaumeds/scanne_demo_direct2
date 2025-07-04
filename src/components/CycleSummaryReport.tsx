@@ -19,12 +19,10 @@ export default function CycleSummaryReport({
   const [activeTab, setActiveTab] = useState<'overview' | 'financial' | 'production' | 'quality'>('overview')
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
+    return `Rs ${amount.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount)
+    })}`
   }
 
   const formatNumber = (num: number, decimals: number = 2) => {

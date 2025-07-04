@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Layers, Sprout, Shield } from 'lucide-react'
+import { Sprout, Shield } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
@@ -61,15 +61,6 @@ export default function Home() {
                 <Sprout className="w-4 h-4" />
                 <span className="text-sm font-medium">Agriculture Management</span>
               </div>
-
-              {/* Admin Panel */}
-              <a
-                href="/admin"
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
-              >
-                <Layers className="w-4 h-4" />
-                <span className="text-sm font-medium">Admin Panel</span>
-              </a>
 
               {/* HSE Management Module */}
               <a

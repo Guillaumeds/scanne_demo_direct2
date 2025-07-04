@@ -72,41 +72,66 @@ export class ActivityService {
   }
 
   /**
-   * Create a new activity
+   * Create a new activity using atomic database function
    */
   static async createActivity(activity: BlocActivity): Promise<BlocActivity> {
     try {
-      // Insert the main activity record
-      const { data: activityData, error: activityError } = await supabase
-        .from('activities')
-        .insert({
-          name: activity.name,
-          description: activity.description,
-          phase: activity.phase,
-          status: 'planned',
-          crop_cycle_id: activity.cropCycleId,
-          start_date: activity.startDate,
-          end_date: activity.endDate,
-          estimated_total_cost: activity.estimatedTotalCost || 0,
-          actual_total_cost: 0,
-          notes: activity.notes
-        })
-        .select()
-        .single()
+      console.log('💾 Creating activity with atomic transaction:', activity.name)
 
-      if (activityError) {
-        console.error('Error creating activity:', activityError)
-        throw new Error(`Failed to create activity: ${activityError.message}`)
+      // Prepare activity data
+      const activityData = {
+        crop_cycle_id: activity.cropCycleId,
+        name: activity.name,
+        description: activity.description,
+        phase: activity.phase,
+        status: activity.status || 'planned',
+        start_date: activity.startDate,
+        end_date: activity.endDate,
+        duration: activity.duration,
+        notes: activity.notes
       }
 
-      const newActivity = this.transformDbToLocal(activityData)
+      // Prepare products and resources
+      const products = (activity.products || []).map(product => ({
+        product_id: product.productId,
+        product_name: product.productName,
+        quantity: product.quantity,
+        rate: product.rate,
+        unit: product.unit,
+        estimated_cost: product.estimatedCost || 0,
+        actual_cost: product.actualCost || null
+      }))
 
-      // Recalculate and update crop cycle totals using database function
-      if (activity.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(activity.cropCycleId)
+      const resources = (activity.resources || []).map(resource => ({
+        resource_id: resource.resourceId,
+        resource_name: resource.resourceName,
+        hours: resource.hours,
+        cost_per_hour: resource.costPerHour,
+        estimated_cost: resource.estimatedCost || 0,
+        actual_cost: resource.actualCost || null
+      }))
+
+      // Call atomic database function
+      const { data, error } = await supabase.rpc('save_activity_with_totals', {
+        p_activity_data: activityData,
+        p_products: products,
+        p_resources: resources
+      })
+
+      if (error) {
+        console.error('Error creating activity:', error)
+        throw new Error(`Failed to create activity: ${error.message}`)
       }
 
-      return newActivity
+      if (!data || data.length === 0) {
+        throw new Error('No data returned from activity creation')
+      }
+
+      const result = data[0]
+      console.log('✅ Activity created with totals:', result)
+
+      // Return the created activity (fetch fresh data)
+      return await this.getActivityById(result.activity_id)
     } catch (error) {
       console.error('Error creating activity:', error)
       throw error
@@ -114,33 +139,67 @@ export class ActivityService {
   }
   
   /**
-   * Update an existing activity
+   * Update an existing activity using atomic database function
    */
   static async updateActivity(activityId: string, updates: Partial<BlocActivity>): Promise<BlocActivity> {
     try {
-      // Transform local updates to database format
-      const dbUpdates = this.transformLocalToDb(updates)
+      console.log('💾 Updating activity with atomic transaction:', activityId)
 
-      const { data, error } = await supabase
-        .from('activities')
-        .update({
-          ...dbUpdates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', activityId)
-        .select()
-        .single()
+      // Get existing activity to merge with updates
+      const existingActivity = await this.getActivityById(activityId)
+      const mergedActivity = { ...existingActivity, ...updates }
 
-      if (error) throw error
-
-      const updatedActivity = this.transformDbToLocal(data)
-
-      // Recalculate and update crop cycle totals using database function
-      if (updatedActivity.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(updatedActivity.cropCycleId)
+      // Prepare activity data with ID for update
+      const activityData = {
+        id: activityId,
+        crop_cycle_id: mergedActivity.cropCycleId,
+        name: mergedActivity.name,
+        description: mergedActivity.description,
+        phase: mergedActivity.phase,
+        status: mergedActivity.status,
+        start_date: mergedActivity.startDate,
+        end_date: mergedActivity.endDate,
+        duration: mergedActivity.duration,
+        notes: mergedActivity.notes
       }
 
-      return updatedActivity
+      // Prepare products and resources
+      const products = (mergedActivity.products || []).map(product => ({
+        product_id: product.productId,
+        product_name: product.productName,
+        quantity: product.quantity,
+        rate: product.rate,
+        unit: product.unit,
+        estimated_cost: product.estimatedCost || 0,
+        actual_cost: product.actualCost || null
+      }))
+
+      const resources = (mergedActivity.resources || []).map(resource => ({
+        resource_id: resource.resourceId,
+        resource_name: resource.resourceName,
+        hours: resource.hours,
+        cost_per_hour: resource.costPerHour,
+        estimated_cost: resource.estimatedCost || 0,
+        actual_cost: resource.actualCost || null
+      }))
+
+      // Call atomic database function
+      const { data, error } = await supabase.rpc('save_activity_with_totals', {
+        p_activity_data: activityData,
+        p_products: products,
+        p_resources: resources
+      })
+
+      if (error) {
+        console.error('Error updating activity:', error)
+        throw new Error(`Failed to update activity: ${error.message}`)
+      }
+
+      const result = data[0]
+      console.log('✅ Activity updated with totals:', result)
+
+      // Return the updated activity (fetch fresh data)
+      return await this.getActivityById(activityId)
     } catch (error) {
       console.error('Error updating activity:', error)
       throw error
@@ -148,26 +207,28 @@ export class ActivityService {
   }
 
   /**
-   * Delete an activity
+   * Delete an activity using atomic database function
    */
   static async deleteActivity(activityId: string): Promise<void> {
     try {
-      // Get activity to find crop cycle ID before deletion
-      const activity = await this.getActivityById(activityId)
-      const cropCycleId = activity?.cropCycleId
+      console.log('💾 Deleting activity with atomic transaction:', activityId)
 
-      // Delete activity from database
-      const { error } = await supabase
-        .from('activities')
-        .delete()
-        .eq('id', activityId)
+      // Call atomic database function
+      const { data, error } = await supabase.rpc('delete_activity_with_totals', {
+        p_activity_id: activityId
+      })
 
-      if (error) throw error
-
-      // Recalculate crop cycle totals after deletion using database function
-      if (cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(cropCycleId)
+      if (error) {
+        console.error('Error deleting activity:', error)
+        throw new Error(`Failed to delete activity: ${error.message}`)
       }
+
+      if (!data || data.length === 0 || !data[0].success) {
+        throw new Error('Activity not found or deletion failed')
+      }
+
+      const result = data[0]
+      console.log('✅ Activity deleted with totals updated:', result)
     } catch (error) {
       console.error('Error deleting activity:', error)
       throw error
@@ -208,6 +269,82 @@ export class ActivityService {
     } else {
       return this.createActivity(activity)
     }
+  }
+
+  /**
+   * Calculate estimated cost from products and resources
+   */
+  private static calculateEstimatedCost(activity: BlocActivity): number {
+    const productCosts = (activity.products || []).reduce((sum, product) => {
+      return sum + (product.estimatedCost || 0)
+    }, 0)
+
+    const resourceCosts = (activity.resources || []).reduce((sum, resource) => {
+      return sum + (resource.estimatedCost || 0)
+    }, 0)
+
+    return Math.round((productCosts + resourceCosts) * 100) / 100 // Round to 2 decimals
+  }
+
+  /**
+   * Save activity products to database
+   */
+  private static async saveActivityProducts(activityId: string, products: any[]): Promise<void> {
+    if (!products || products.length === 0) return
+
+    // Delete existing products
+    await supabase
+      .from('activity_products')
+      .delete()
+      .eq('activity_id', activityId)
+
+    // Insert new products
+    const productData = products.map(product => ({
+      activity_id: activityId,
+      product_id: product.productId,
+      product_name: product.productName,
+      quantity: product.quantity,
+      rate: product.rate,
+      unit: product.unit,
+      estimated_cost: product.estimatedCost || 0,
+      actual_cost: product.actualCost || null
+    }))
+
+    const { error } = await supabase
+      .from('activity_products')
+      .insert(productData)
+
+    if (error) throw error
+  }
+
+  /**
+   * Save activity resources to database
+   */
+  private static async saveActivityResources(activityId: string, resources: any[]): Promise<void> {
+    if (!resources || resources.length === 0) return
+
+    // Delete existing resources
+    await supabase
+      .from('activity_resources')
+      .delete()
+      .eq('activity_id', activityId)
+
+    // Insert new resources
+    const resourceData = resources.map(resource => ({
+      activity_id: activityId,
+      resource_id: resource.resourceId,
+      resource_name: resource.resourceName,
+      hours: resource.hours,
+      cost_per_hour: resource.costPerHour,
+      estimated_cost: resource.estimatedCost || 0,
+      actual_cost: resource.actualCost || null
+    }))
+
+    const { error } = await supabase
+      .from('activity_resources')
+      .insert(resourceData)
+
+    if (error) throw error
   }
 
   /**

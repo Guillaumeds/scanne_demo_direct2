@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Resource, ResourceCategory, RESOURCE_CATEGORIES, RESOURCES } from '@/types/resources'
+import { Resource, ResourceCategory, RESOURCE_CATEGORIES } from '@/types/resources'
+import { useResources } from '@/hooks/useLocalStorageData'
 
 interface ResourceSelectorProps {
   onSelect: (resource: Resource, hours: number, actualCost?: number) => void
@@ -24,7 +25,10 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
   const [hours, setHours] = useState<number>(0)
   const [actualCost, setActualCost] = useState<number>(0)
 
-  const filteredResources = RESOURCES.filter(resource => {
+  // Use localStorage for resources data
+  const { data: resources, loading, error } = useResources()
+
+  const filteredResources = (resources || []).filter(resource => {
     const matchesCategory = !selectedCategory || resource.category === selectedCategory
     const matchesSearch = !searchTerm ||
       resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -34,15 +38,15 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
 
   // Pre-populate fields when editing existing resource
   useEffect(() => {
-    if (existingResource) {
-      const resource = RESOURCES.find(r => r.id === existingResource.resourceId)
+    if (existingResource && resources.length > 0) {
+      const resource = resources.find(r => r.id === existingResource.resourceId)
       if (resource) {
         setSelectedResource(resource)
         setHours(existingResource.hours)
         setActualCost(existingResource.actualCost || existingResource.estimatedCost)
       }
     }
-  }, [existingResource])
+  }, [existingResource, resources])
 
   const handleResourceSelect = (resource: Resource) => {
     setSelectedResource(resource)
@@ -107,13 +111,13 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
                   <span className="text-lg">🌟</span>
                   <div>
                     <div className="font-medium">All Categories</div>
-                    <div className="text-xs text-gray-500">{RESOURCES.length} resources</div>
+                    <div className="text-xs text-gray-500">{resources.length} resources</div>
                   </div>
                 </div>
               </button>
 
               {RESOURCE_CATEGORIES.map(category => {
-                const resourceCount = RESOURCES.filter(r => r.category === category.id).length
+                const resourceCount = resources.filter(r => r.category === category.id).length
                 return (
                   <button
                     key={category.id}
@@ -141,8 +145,51 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
           {/* Resources Grid */}
           <div className="flex-1 p-6 overflow-y-auto">
             {!selectedResource ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredResources.map(resource => {
+              <>
+                {/* Loading State */}
+                {loading && (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading resources...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {error && !loading && (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center max-w-md">
+                      <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Resources</h3>
+                      <p className="text-gray-600 mb-4">{error.message}</p>
+                      <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Reload Page
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resources Grid */}
+                {!loading && !error && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredResources.length === 0 ? (
+                      <div className="col-span-full text-center py-12">
+                        <div className="text-gray-400 text-6xl mb-4">🔧</div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Resources Found</h3>
+                        <p className="text-gray-600">
+                          {searchTerm || selectedCategory
+                            ? 'Try adjusting your search or category filter.'
+                            : 'No resources are available in the database.'
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      filteredResources.map(resource => {
                   const category = RESOURCE_CATEGORIES.find(c => c.id === resource.category)
                   return (
                     <div
@@ -194,10 +241,13 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
                           </svg>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      </div>
+                    )
+                  })
+                  )}
+                </div>
+              )}
+            </>
             ) : (
               /* Resource Configuration */
               <div className="max-w-2xl mx-auto">

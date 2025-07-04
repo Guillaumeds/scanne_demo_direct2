@@ -16,7 +16,7 @@ import {
 } from '@/types/cropCycles'
 import { BlocActivity } from '@/types/activities'
 import { BlocObservation } from '@/types/observations'
-import { ConfigurationService } from './configurationService'
+// ❌ REMOVED: Hardcoded varieties import - now using ConfigurationService
 import { BlocAttachment } from '@/types/attachments'
 import { CropCycleValidationService } from './cropCycleValidationService'
 import { CropCycleCalculationService } from './cropCycleCalculationService'
@@ -41,7 +41,7 @@ export class CropCycleService {
 
       if (error) throw error
 
-      return (data || []).map(this.transformDbToLocal)
+      return await Promise.all((data || []).map(record => this.transformDbToLocal(record)))
     } catch (error) {
       console.error('Failed to fetch crop cycles for bloc:', error)
       return []
@@ -69,7 +69,7 @@ export class CropCycleService {
         throw error
       }
 
-      return this.transformDbToLocal(data)
+      return await this.transformDbToLocal(data)
     } catch (error) {
       console.error('Failed to fetch active crop cycle:', error)
       return null
@@ -92,14 +92,19 @@ export class CropCycleService {
       const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
       const initialGrowthStage = this.calculateGrowthStage(daysSincePlanting)
 
+      // Note: The frontend should now pass UUIDs directly from cached variety data
+      // This eliminates the need for database lookups during crop cycle creation
+      const sugarcaneVarietyUuid = request.sugarcaneVarietyId === 'none' ? null : request.sugarcaneVarietyId
+      const intercropVarietyUuid = request.intercropVarietyId === 'none' ? null : request.intercropVarietyId
+
       const { data, error } = await supabase
         .from('crop_cycles')
         .insert({
           bloc_id: request.blocId,
           type: request.type,
           cycle_number: request.type === 'plantation' ? 1 : 2, // Calculate based on type
-          sugarcane_variety_id: request.sugarcaneVarietyId,
-          intercrop_variety_id: request.intercropVarietyId || null,
+          sugarcane_variety_id: sugarcaneVarietyUuid,
+          intercrop_variety_id: intercropVarietyUuid,
           parent_cycle_id: request.parentCycleId || null,
           sugarcane_planting_date: request.plantingDate,
           sugarcane_planned_harvest_date: request.plannedHarvestDate,
@@ -114,16 +119,12 @@ export class CropCycleService {
           profit_margin_percent: 0,
           closure_validated: false
         })
-        .select(`
-          *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
-        `)
+        .select('*')
         .single()
 
       if (error) throw error
 
-      const newCycle = this.transformDbToLocal(data)
+      const newCycle = await this.transformDbToLocal(data)
 
       // Initialize totals for the new crop cycle using database function
       await CropCycleCalculationService.triggerRecalculation(newCycle.id)
@@ -187,16 +188,12 @@ export class CropCycleService {
           updated_at: new Date().toISOString()
         })
         .eq('id', request.cycleId)
-        .select(`
-          *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
-        `)
+        .select('*')
         .single()
 
       if (error) throw error
 
-      const closedCycle = this.transformDbToLocal(data)
+      const closedCycle = await this.transformDbToLocal(data)
 
       // Recalculate and update totals for the closed cycle using database function
       await CropCycleCalculationService.triggerRecalculation(closedCycle.id)
@@ -215,11 +212,7 @@ export class CropCycleService {
     try {
       const { data, error } = await supabase
         .from('crop_cycles')
-        .select(`
-          *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
-        `)
+        .select('*')
         .eq('id', cycleId)
         .single()
 
@@ -228,7 +221,7 @@ export class CropCycleService {
         throw error
       }
 
-      return this.transformDbToLocal(data)
+      return await this.transformDbToLocal(data)
     } catch (error) {
       console.error('Failed to fetch crop cycle by ID:', error)
       return null
@@ -257,18 +250,14 @@ export class CropCycleService {
           updated_at: new Date().toISOString()
         })
         .eq('id', cycleId)
-        .select(`
-          *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
-        `)
+        .select('*')
         .single()
 
       if (error) throw error
 
-      const updatedCycle = this.transformDbToLocal(data)
+      const updatedCycle = await this.transformDbToLocal(data)
 
-      // Recalculate totals if the update might affect them using database function
+      // Recalculate totals if the update might affect them
       await CropCycleCalculationService.triggerRecalculation(cycleId)
 
       return updatedCycle
@@ -295,26 +284,8 @@ export class CropCycleService {
     }
   }
 
-  // Helper methods for backward compatibility
-  private static async getSugarcaneVarietyName(varietyId: string): Promise<string> {
-    try {
-      const variety = await ConfigurationService.getSugarcaneVarietyById(varietyId)
-      return variety ? variety.name : 'Unknown Variety'
-    } catch (error) {
-      console.error('Error getting sugarcane variety name:', error)
-      return 'Unknown Variety'
-    }
-  }
-
-  private static async getIntercropVarietyName(varietyId: string): Promise<string> {
-    try {
-      const variety = await ConfigurationService.getIntercropVarietyById(varietyId)
-      return variety ? variety.name : 'Unknown Intercrop'
-    } catch (error) {
-      console.error('Error getting intercrop variety name:', error)
-      return 'Unknown Intercrop'
-    }
-  }
+  // ❌ REMOVED: Helper methods using hardcoded arrays
+  // These are no longer needed since we fetch variety names directly from database joins
 
   /**
    * Get bloc summary with active crop cycle data for bloc cards
@@ -430,8 +401,44 @@ export class CropCycleService {
 
   /**
    * Transform database record to local CropCycle type
+   * Now fetches variety names separately to avoid PostgREST join issues
    */
-  private static transformDbToLocal(dbRecord: any): CropCycle {
+  private static async transformDbToLocal(dbRecord: any): Promise<CropCycle> {
+    // Fetch variety names separately to avoid PostgREST relationship issues
+    let sugarcaneVarietyName = 'Unknown'
+    let intercropVarietyName: string | undefined
+
+    try {
+      // Fetch sugarcane variety name if ID exists
+      if (dbRecord.sugarcane_variety_id) {
+        const { data: sugarcaneVariety } = await supabase
+          .from('sugarcane_varieties')
+          .select('name, variety_id')
+          .eq('id', dbRecord.sugarcane_variety_id)
+          .single()
+
+        if (sugarcaneVariety) {
+          sugarcaneVarietyName = sugarcaneVariety.name
+        }
+      }
+
+      // Fetch intercrop variety name if ID exists
+      if (dbRecord.intercrop_variety_id) {
+        const { data: intercropVariety } = await supabase
+          .from('intercrop_varieties')
+          .select('name, variety_id')
+          .eq('id', dbRecord.intercrop_variety_id)
+          .single()
+
+        if (intercropVariety) {
+          intercropVarietyName = intercropVariety.name
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch variety names:', error)
+      // Continue with default values
+    }
+
     return {
       id: dbRecord.id,
       blocId: dbRecord.bloc_id,
@@ -439,12 +446,12 @@ export class CropCycleService {
       status: dbRecord.status,
       cycleNumber: dbRecord.cycle_number,
       sugarcaneVarietyId: dbRecord.sugarcane_variety_id,
-      sugarcaneVarietyName: dbRecord.sugarcane_varieties?.name || 'Unknown',
+      sugarcaneVarietyName,
       plantingDate: dbRecord.sugarcane_planting_date,
       plannedHarvestDate: dbRecord.sugarcane_planned_harvest_date,
       expectedYield: dbRecord.sugarcane_actual_yield_tons_ha || 0,
       intercropVarietyId: dbRecord.intercrop_variety_id,
-      intercropVarietyName: dbRecord.intercrop_varieties?.name,
+      intercropVarietyName,
       parentCycleId: dbRecord.parent_cycle_id,
       ratoonPlantingDate: dbRecord.intercrop_planting_date,
       growthStage: dbRecord.growth_stage,

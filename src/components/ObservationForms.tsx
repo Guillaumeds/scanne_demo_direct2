@@ -14,10 +14,10 @@ import {
   WeedObservationData,
   SugarcaneYieldQualityData,
   IntercropYieldQualityData,
+  OBSERVATION_CATEGORIES,
 } from '@/types/observations'
 import { BlocAttachment, AttachmentCategory } from '@/types/attachments'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
-import { ConfigurationService } from '@/services/configurationService'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
@@ -176,35 +176,9 @@ export default function ObservationForm({
   const activeCycleInfo = getActiveCycleInfo()
 
   const selectedCategory = category || observation?.category || 'soil'
-  const [observationCategories, setObservationCategories] = useState<any[]>([])
-  const [configLoading, setConfigLoading] = useState(true)
   const [showInfoModal, setShowInfoModal] = useState(false)
 
-  // Load observation categories from database
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setConfigLoading(true)
-        const config = await ConfigurationService.getAllConfiguration()
-        setObservationCategories(config.observationCategories.map(cat => ({
-          id: cat.category_id,
-          name: cat.name,
-          description: cat.description,
-          color: cat.color,
-          icon: cat.icon
-        })))
-      } catch (error) {
-        console.error('Error loading observation categories:', error)
-        setObservationCategories([])
-      } finally {
-        setConfigLoading(false)
-      }
-    }
-
-    loadCategories()
-  }, [])
-
-  const categoryInfo = observationCategories.find(c => c.id === selectedCategory)
+  const categoryInfo = OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)
 
   const [formData, setFormData] = useState({
     name: observation?.name || categoryInfo?.name || '',
@@ -1412,14 +1386,19 @@ function SugarcaneYieldQualityFields({ data, updateField, blocArea }: { data: Su
     updateField('yieldPerHectare', yieldPerHa)
 
     if (yieldPerHa && blocArea && blocArea > 0) {
-      // Use the new calculation service for consistency
+      // Use precision settings that match HTML input step values
       const feedback = CropCycleCalculationService.calculateFormFeedback({
         yieldPerHectare: yieldPerHa,
         areaHectares: blocArea,
-        pricePerTonne: data.pricePerTonne
+        pricePerTonne: data.pricePerTonne,
+        fieldPrecision: {
+          yield: 1,    // Matches step="0.1" in HTML input
+          revenue: 2,  // Currency precision
+          price: 2     // Currency precision
+        }
       })
 
-      // Update calculated fields with UX feedback
+      // Update calculated fields with precision-matched values
       if (feedback.totalYield) {
         updateField('totalYieldTons', feedback.totalYield)
       }

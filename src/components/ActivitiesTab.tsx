@@ -30,9 +30,11 @@ import {
   BlocActivity,
   ActivityPhase,
   ActivityStatus,
-  calculateActivityCosts
+  ActivityTemplate,
+  calculateActivityCosts,
+  SUGARCANE_PHASES,
+  ACTIVITY_TEMPLATES
 } from '@/types/activities'
-import { ConfigurationService } from '@/services/configurationService'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
@@ -58,11 +60,12 @@ interface ActivitiesTabProps {
 }
 
 // Sortable Activity Item Component
-function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange }: {
+function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange, activityPhases }: {
   activity: BlocActivity
   onEdit: (activity: BlocActivity) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: ActivityStatus) => void
+  activityPhases: any[]
 }) {
   const {
     attributes,
@@ -268,50 +271,12 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     loadActivities()
   }, [selectedCycleInfo?.id])
 
-  // Load config data from database
+  // Load config data from hardcoded arrays
   useEffect(() => {
-    const loadConfigData = async () => {
-      try {
-        setConfigLoading(true)
-
-        // Load activity phases and templates from database
-        const [phases, templates] = await Promise.all([
-          ConfigurationService.getActivityPhases(),
-          ConfigurationService.getActivityTemplates()
-        ])
-
-        // Transform phases for frontend use
-        const transformedPhases = phases.map(phase => ({
-          id: phase.phase_id,
-          name: phase.name,
-          description: phase.description,
-          color: phase.color,
-          icon: phase.icon
-        }))
-
-        // Transform templates for frontend use
-        const transformedTemplates = templates.map(template => ({
-          id: template.template_id,
-          name: template.name,
-          description: template.description,
-          phase: template.phase,
-          estimatedDuration: template.estimated_duration_hours,
-          resourceType: template.resource_type,
-          estimatedCost: template.estimated_cost
-        }))
-
-        setActivityPhases(transformedPhases)
-        setActivityTemplates(transformedTemplates)
-      } catch (error) {
-        console.error('Error loading config data:', error)
-        setActivityPhases([])
-        setActivityTemplates([])
-      } finally {
-        setConfigLoading(false)
-      }
-    }
-
-    loadConfigData()
+    setConfigLoading(true)
+    setActivityPhases(SUGARCANE_PHASES)
+    setActivityTemplates(ACTIVITY_TEMPLATES)
+    setConfigLoading(false)
   }, [])
 
   // Load global metrics for the selected cycle
@@ -761,6 +726,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                     onEdit={handleEditActivity}
                     onDelete={handleDeleteActivity}
                     onStatusChange={handleStatusChange}
+                    activityPhases={activityPhases}
                   />
                 ))}
               </SortableContext>
@@ -898,7 +864,7 @@ function AddActivityModal({
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = activityTemplates.find(t => t.id === templateId)
+    const template = ACTIVITY_TEMPLATES.find(t => t.id === templateId)
     if (template) {
       setFormData({
         ...formData,
@@ -1045,9 +1011,9 @@ function AddActivityModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">Select a template...</option>
-                  {activityTemplates.map(template => (
+                  {ACTIVITY_TEMPLATES.map(template => (
                     <option key={template.id} value={template.id}>
-                      {activityPhases.find(p => p.id === template.phase)?.icon} {template.name}
+                      {SUGARCANE_PHASES.find(p => p.id === template.phase)?.icon} {template.name}
                     </option>
                   ))}
                 </select>
@@ -1079,7 +1045,7 @@ function AddActivityModal({
                   onChange={(e) => setFormData({ ...formData, phase: e.target.value as ActivityPhase })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  {activityPhases.map(phase => (
+                  {SUGARCANE_PHASES.map(phase => (
                     <option key={phase.id} value={phase.id}>
                       {phase.icon} {phase.name}
                     </option>

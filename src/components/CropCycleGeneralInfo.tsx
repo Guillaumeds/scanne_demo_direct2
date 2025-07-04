@@ -3,10 +3,11 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/cropCycles'
 import { CropVariety } from '@/types/varieties'
+import { useSugarcaneVarieties, useIntercropVarieties } from '@/hooks/useLocalStorageData'
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
 import { CropCycleService } from '@/services/cropCycleService'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
-import { ConfigurationService } from '@/services/configurationService'
+
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
 import CycleClosureModal from './CycleClosureModal'
@@ -18,7 +19,6 @@ interface DrawnArea {
   type: string
   coordinates: [number, number][]
   area: number
-  fieldIds: string[]
 }
 
 interface CropCycleGeneralInfoProps {
@@ -50,6 +50,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     const [closureValidation, setClosureValidation] = useState<CycleClosureValidation | null>(null)
     const [validationErrors, setValidationErrors] = useState<string[]>([])
     const [isValidating, setIsValidating] = useState(false)
+    const [isCreatingCycle, setIsCreatingCycle] = useState(false)
 
     // Delete/Retire confirmation states
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -70,10 +71,10 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       expectedYield: '' as string | number
     })
 
-    // Database config state
-    const [sugarcaneVarieties, setSugarcaneVarieties] = useState<any[]>([])
-    const [intercropVarieties, setIntercropVarieties] = useState<any[]>([])
-    const [configLoading, setConfigLoading] = useState(true)
+    // Use localStorage for varieties data
+    const { data: sugarcaneVarieties, loading: sugarcaneLoading } = useSugarcaneVarieties()
+    const { data: intercropVarieties, loading: intercropLoading } = useIntercropVarieties()
+    const configLoading = sugarcaneLoading || intercropLoading
 
     // Expose simple interface to parent component (no auto-commit needed)
     useImperativeHandle(ref, () => ({
@@ -84,8 +85,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   useEffect(() => {
     // Load existing crop cycles for this bloc
     loadCropCycles()
-    // Load config data from database
-    loadConfigData()
+    // Config data is now loaded via localStorage hooks
   }, [bloc.id])
 
   // Load metrics for all cycles
@@ -94,7 +94,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
     for (const cycle of cropCycles) {
       try {
-        // Use new database-first calculation service
+        // Use authoritative calculation service
         const totals = await CropCycleCalculationService.getAuthoritativeTotals(cycle.id)
 
         if (totals) {
@@ -104,21 +104,21 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
           metricsData[cycle.id] = {
             costs: {
-              estimated: `$${totals.estimatedTotalCost.toLocaleString()}`,
-              actual: `$${totals.actualTotalCost.toLocaleString()}`
+              estimated: `Rs ${totals.estimatedTotalCost.toLocaleString()}`,
+              actual: `Rs ${totals.actualTotalCost.toLocaleString()}`
             },
             yield: {
               sugarcane: `${totals.sugarcaneYieldTonnesPerHectare.toFixed(1)} t/ha`,
               intercrop: `${totals.intercropYieldTonnesPerHectare.toFixed(1)} t/ha`
             },
             revenue: {
-              total: `$${totals.totalRevenue.toLocaleString()}`,
-              sugarcane: `$${totals.totalRevenue.toLocaleString()}`, // TODO: Split by type in database
+              total: `Rs ${totals.totalRevenue.toLocaleString()}`,
+              sugarcane: `Rs ${totals.totalRevenue.toLocaleString()}`, // TODO: Split by type in database
               intercrop: 'N/A'
             },
             profit: {
-              total: `$${netProfit.toLocaleString()}`,
-              perHa: `$${totals.profitPerHectare.toLocaleString()}`,
+              total: `Rs ${netProfit.toLocaleString()}`,
+              perHa: `Rs ${totals.profitPerHectare.toLocaleString()}`,
               margin: `${profitMargin.toFixed(1)}%`
             }
           }
@@ -172,46 +172,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     }
   }
 
-  const loadConfigData = async () => {
-    try {
-      setConfigLoading(true)
-      const config = await ConfigurationService.getAllConfiguration()
-
-      // Transform database varieties to frontend format
-      const transformedSugarcane = config.sugarcaneVarieties.map(v => ({
-        id: v.variety_id,
-        name: v.name,
-        category: 'sugarcane',
-        harvestStart: v.harvest_start_month,
-        harvestEnd: v.harvest_end_month,
-        seasons: v.seasons,
-        soilTypes: v.soil_types,
-        description: v.description,
-        characteristics: v.characteristics
-      }))
-
-      const transformedIntercrop = config.intercropVarieties.map(v => ({
-        id: v.variety_id,
-        name: v.name,
-        scientificName: v.scientific_name,
-        category: 'intercrop',
-        benefits: v.benefits,
-        plantingTime: v.planting_time,
-        harvestTime: v.harvest_time,
-        description: v.description
-      }))
-
-      setSugarcaneVarieties(transformedSugarcane)
-      setIntercropVarieties(transformedIntercrop)
-    } catch (error) {
-      console.error('Error loading config data:', error)
-      // Fallback to empty arrays
-      setSugarcaneVarieties([])
-      setIntercropVarieties([])
-    } finally {
-      setConfigLoading(false)
-    }
-  }
+  // loadConfigData function removed - now using React Query hooks
 
   const validateCycleData = (): boolean => {
     const errors: string[] = []
@@ -254,7 +215,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         sugarcaneVarietyId: newCycleData.sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
         expectedYield: expectedYieldNum,
-        intercropVarietyId: newCycleData.intercropVarietyId || 'none',
+        intercropVarietyId: newCycleData.intercropVarietyId === 'none' ? undefined : newCycleData.intercropVarietyId,
         plantingDate: newCycleData.plantingDate
       }
 
@@ -353,17 +314,17 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
   const handleSugarcaneVarietySelect = (variety: CropVariety) => {
     if (showEditCycle) {
-      // Update edit form data
+      // Update edit form data - use UUID for database operations
       setEditCycleData(prev => ({
         ...prev,
-        sugarcaneVarietyId: variety.id,
+        sugarcaneVarietyId: variety.uuid, // Use UUID for database foreign key
         sugarcaneVarietyName: variety.name
       }))
     } else {
-      // Update new cycle data
+      // Update new cycle data - use UUID for database operations
       setNewCycleData(prev => ({
         ...prev,
-        sugarcaneVarietyId: variety.id,
+        sugarcaneVarietyId: variety.uuid, // Use UUID for database foreign key
         sugarcaneVarietyName: variety.name
       }))
     }
@@ -372,17 +333,17 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
   const handleIntercropVarietySelect = (variety: CropVariety) => {
     if (showEditCycle) {
-      // Update edit form data
+      // Update edit form data - use UUID for database operations
       setEditCycleData(prev => ({
         ...prev,
-        intercropVarietyId: variety.id,
+        intercropVarietyId: variety.uuid, // Use UUID for database foreign key
         intercropVarietyName: variety.name
       }))
     } else {
-      // Update new cycle data
+      // Update new cycle data - use UUID for database operations
       setNewCycleData(prev => ({
         ...prev,
-        intercropVarietyId: variety.id,
+        intercropVarietyId: variety.uuid, // Use UUID for database foreign key
         intercropVarietyName: variety.name
       }))
     }
@@ -390,11 +351,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   }
 
   const getSelectedSugarcaneVariety = () => {
-    return sugarcaneVarieties.find(v => v.id === newCycleData.sugarcaneVarietyId)
+    return (sugarcaneVarieties || []).find(v => v.id === newCycleData.sugarcaneVarietyId)
   }
 
   const getSelectedIntercropVariety = () => {
-    return intercropVarieties.find(v => v.id === newCycleData.intercropVarietyId)
+    return (intercropVarieties || []).find(v => v.id === newCycleData.intercropVarietyId)
   }
 
   const canCreateRatoonCycle = () => {
@@ -1052,7 +1013,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
               <div className="mb-6">
                 <p className="text-sm text-gray-700 mb-4">
-                  This will permanently delete <strong>{bloc.blocName}</strong> and all associated data including:
+                  This will permanently delete <strong>Bloc {bloc.id}</strong> and all associated data including:
                 </p>
                 <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
                   <li>All crop cycles and their history</li>
@@ -1120,7 +1081,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
               <div className="mb-6">
                 <p className="text-sm text-gray-700 mb-4">
-                  This will retire <strong>{bloc.blocName}</strong> and:
+                  This will retire <strong>Bloc {bloc.id}</strong> and:
                 </p>
                 <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
                   <li>Mark the bloc as retired (not deleted)</li>

@@ -54,40 +54,48 @@ export class ObservationService {
   }
 
   /**
-   * Create a new observation
+   * Create a new observation using atomic database function
    */
   static async createObservation(observation: BlocObservation): Promise<BlocObservation> {
     try {
-      const { data: observationData, error: observationError } = await supabase
-        .from('observations')
-        .insert({
-          name: observation.name,
-          description: observation.description,
-          category: observation.category,
-          status: 'draft',
-          crop_cycle_id: observation.cropCycleId,
-          observation_date: observation.observationDate,
-          number_of_samples: observation.numberOfSamples,
-          number_of_plants: observation.numberOfPlants,
-          observation_data: observation.observationData,
-          notes: observation.notes
-        })
-        .select()
-        .single()
+      console.log('💾 Creating observation with atomic transaction:', observation.name)
 
-      if (observationError) {
-        console.error('Error creating observation:', observationError)
-        throw new Error(`Failed to create observation: ${observationError.message}`)
+      // Prepare observation data
+      const observationData = {
+        crop_cycle_id: observation.cropCycleId,
+        name: observation.name,
+        description: observation.description,
+        category: observation.category,
+        status: observation.status || 'draft',
+        observation_date: observation.observationDate,
+        number_of_samples: observation.numberOfSamples,
+        number_of_plants: observation.numberOfPlants,
+        observation_data: observation.observationData || {},
+        yield_tons_ha: observation.yieldTonsHa,
+        area_hectares: observation.areaHectares,
+        total_yield_tons: observation.totalYieldTons,
+        notes: observation.notes
       }
 
-      const newObservation = this.transformDbToLocal(observationData)
+      // Call atomic database function
+      const { data, error } = await supabase.rpc('save_observation_with_totals', {
+        p_observation_data: observationData
+      })
 
-      // Recalculate and update crop cycle totals using database function
-      if (observation.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(observation.cropCycleId)
+      if (error) {
+        console.error('Error creating observation:', error)
+        throw new Error(`Failed to create observation: ${error.message}`)
       }
 
-      return newObservation
+      if (!data || data.length === 0) {
+        throw new Error('No data returned from observation creation')
+      }
+
+      const result = data[0]
+      console.log('✅ Observation created with totals:', result)
+
+      // Return the created observation (fetch fresh data)
+      return await this.getObservationById(result.observation_id)
     } catch (error) {
       console.error('Error creating observation:', error)
       throw error
@@ -116,7 +124,7 @@ export class ObservationService {
 
       const updatedObservation = this.transformDbToLocal(data)
 
-      // Recalculate and update crop cycle totals using database function
+      // Recalculate and update crop cycle totals
       if (updatedObservation.cropCycleId) {
         await CropCycleCalculationService.triggerRecalculation(updatedObservation.cropCycleId)
       }
@@ -145,7 +153,7 @@ export class ObservationService {
 
       if (error) throw error
 
-      // Recalculate crop cycle totals after deletion using database function
+      // Recalculate crop cycle totals after deletion
       if (cropCycleId) {
         await CropCycleCalculationService.triggerRecalculation(cropCycleId)
       }
