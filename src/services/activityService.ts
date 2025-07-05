@@ -119,11 +119,13 @@ export class ActivityService {
       // Convert resource string IDs to UUIDs and prepare resources
       const resources = await Promise.all((activity.resources || []).map(async resource => {
         const resourceUuid = await this.getResourceUuidById(resource.resourceId)
+        // Calculate cost per hour from estimated cost and hours
+        const costPerHour = resource.hours > 0 ? (resource.estimatedCost || 0) / resource.hours : 0
         return {
           resource_id: resourceUuid,
           resource_name: resource.resourceName,
           hours: resource.hours,
-          cost_per_hour: resource.costPerHour,
+          cost_per_hour: costPerHour,
           estimated_cost: resource.estimatedCost || 0,
           actual_cost: resource.actualCost || null
         }
@@ -208,11 +210,13 @@ export class ActivityService {
       // Convert resource string IDs to UUIDs and prepare resources
       const resources = await Promise.all((mergedActivity.resources || []).map(async resource => {
         const resourceUuid = await this.getResourceUuidById(resource.resourceId)
+        // Calculate cost per hour from estimated cost and hours
+        const costPerHour = resource.hours > 0 ? (resource.estimatedCost || 0) / resource.hours : 0
         return {
           resource_id: resourceUuid,
           resource_name: resource.resourceName,
           hours: resource.hours,
-          cost_per_hour: resource.costPerHour,
+          cost_per_hour: costPerHour,
           estimated_cost: resource.estimatedCost || 0,
           actual_cost: resource.actualCost || null
         }
@@ -448,15 +452,19 @@ export class ActivityService {
       .eq('activity_id', activityId)
 
     // Insert new resources
-    const resourceData = resources.map(resource => ({
-      activity_id: activityId,
-      resource_id: resource.resourceId,
-      resource_name: resource.resourceName,
-      hours: resource.hours,
-      cost_per_hour: resource.costPerHour,
-      estimated_cost: resource.estimatedCost || 0,
-      actual_cost: resource.actualCost || null
-    }))
+    const resourceData = resources.map(resource => {
+      // Calculate cost per hour from estimated cost and hours
+      const costPerHour = resource.hours > 0 ? (resource.estimatedCost || 0) / resource.hours : 0
+      return {
+        activity_id: activityId,
+        resource_id: resource.resourceId,
+        resource_name: resource.resourceName,
+        hours: resource.hours,
+        cost_per_hour: costPerHour,
+        estimated_cost: resource.estimatedCost || 0,
+        actual_cost: resource.actualCost || null
+      }
+    })
 
     const { error } = await supabase
       .from('activity_resources')
