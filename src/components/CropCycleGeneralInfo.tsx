@@ -176,8 +176,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
   const validateCycleData = (): boolean => {
     const errors: string[] = []
+    const isPlantationCycle = cropCycles.length === 0
 
-    if (!newCycleData.sugarcaneVarietyId) {
+    // For plantation cycles, sugarcane variety is required
+    // For ratoon cycles, it's inherited so we don't need to validate it
+    if (isPlantationCycle && !newCycleData.sugarcaneVarietyId) {
       errors.push('Sugarcane variety is required')
     }
 
@@ -185,7 +188,8 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       errors.push('Planned harvest date is required')
     }
 
-    if (!newCycleData.plantingDate && !activeCycle) {
+    // Planting date is only required for plantation cycles
+    if (isPlantationCycle && !newCycleData.plantingDate) {
       errors.push('Planting date is required for plantation cycle')
     }
 
@@ -197,11 +201,25 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       errors.push('Expected yield must be greater than 0 tons/ha')
     }
 
+    // For ratoon cycles, ensure previous cycle is closed
+    if (!isPlantationCycle) {
+      if (cropCycles.length === 0) {
+        errors.push('Cannot create ratoon cycle: No existing cycles found')
+      } else {
+        const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+          cycle.cycleNumber > latest.cycleNumber ? cycle : latest
+        )
+        if (mostRecentCycle.status !== 'closed') {
+          errors.push('Previous cycle must be closed before creating a ratoon cycle')
+        }
+      }
+    }
+
     setValidationErrors(errors)
     return errors.length === 0
   }
 
-  const handleCreatePlantationCycle = async () => {
+  const handleCreateCycle = async () => {
     if (!validateCycleData()) return
 
     try {
@@ -209,14 +227,36 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         ? parseFloat(newCycleData.expectedYield)
         : newCycleData.expectedYield
 
+      // Determine cycle type based on existing cycles
+      const cycleType = cropCycles.length === 0 ? 'plantation' : 'ratoon'
+
+      // For ratoon cycles, get sugarcane variety from plantation cycle
+      let sugarcaneVarietyId = newCycleData.sugarcaneVarietyId
+      if (cycleType === 'ratoon' && cropCycles.length > 0) {
+        const plantationCycle = cropCycles.find(cycle => cycle.type === 'plantation')
+        if (plantationCycle) {
+          sugarcaneVarietyId = plantationCycle.sugarcaneVarietyId
+        }
+      }
+
+      // For ratoon cycles, get the most recent cycle as parent
+      let parentCycleId: string | undefined = undefined
+      if (cycleType === 'ratoon' && cropCycles.length > 0) {
+        const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+          cycle.cycleNumber > latest.cycleNumber ? cycle : latest
+        )
+        parentCycleId = mostRecentCycle.id
+      }
+
       const cycleRequest: CreateCycleRequest = {
         blocId: bloc.id,
-        type: 'plantation',
-        sugarcaneVarietyId: newCycleData.sugarcaneVarietyId,
+        type: cycleType,
+        sugarcaneVarietyId: sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
         expectedYield: expectedYieldNum,
         intercropVarietyId: newCycleData.intercropVarietyId === 'none' ? undefined : newCycleData.intercropVarietyId,
-        plantingDate: newCycleData.plantingDate
+        plantingDate: cycleType === 'plantation' ? newCycleData.plantingDate : undefined,
+        parentCycleId: parentCycleId
       }
 
       const newCycle = await createCycle(cycleRequest)
@@ -237,71 +277,31 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         expectedYield: ''
       })
     } catch (error) {
-      console.error('🚨 DETAILED Error creating plantation cycle:', {
+      console.error('🚨 DETAILED Error creating cycle:', {
         error,
         errorType: typeof error,
         errorConstructor: error?.constructor?.name,
-        errorMessage: error?.message,
-        errorStack: error?.stack,
-        // cycleRequest, // This variable doesn't exist
-        newCycleData
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        newCycleData,
+        cycleType: cropCycles.length === 0 ? 'plantation' : 'ratoon'
       })
 
       const errorMessage = error instanceof Error ? error.message :
                           typeof error === 'string' ? error :
                           JSON.stringify(error)
 
-      alert(`Error creating plantation cycle: ${errorMessage}`)
+      const cycleTypeName = cropCycles.length === 0 ? 'plantation' : 'ratoon'
+      alert(`Error creating ${cycleTypeName} cycle: ${errorMessage}`)
     }
   }
 
+  // Keep the old function names for backward compatibility but redirect to unified function
+  const handleCreatePlantationCycle = handleCreateCycle
+
   const handleCreateRatoonCycle = async () => {
-    if (!activeCycle || activeCycle.status !== 'closed') {
-      alert('Previous cycle must be closed before creating a ratoon cycle')
-      return
-    }
-
-    if (!newCycleData.plannedHarvestDate) {
-      setValidationErrors(['Planned harvest date is required for ratoon cycle'])
-      return
-    }
-
-    try {
-      const expectedYieldNum = typeof newCycleData.expectedYield === 'string'
-        ? parseFloat(newCycleData.expectedYield)
-        : newCycleData.expectedYield
-
-      const cycleRequest: CreateCycleRequest = {
-        blocId: bloc.id,
-        type: 'ratoon',
-        sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
-        plannedHarvestDate: newCycleData.plannedHarvestDate,
-        expectedYield: expectedYieldNum,
-        intercropVarietyId: newCycleData.intercropVarietyId || 'none',
-        parentCycleId: activeCycle.id
-      }
-
-      const newCycle = await createCycle(cycleRequest)
-
-      // Reload cycles to get updated list
-      await loadCropCycles()
-
-      onSave(newCycle)
-
-      // Reset form
-      setNewCycleData({
-        sugarcaneVarietyId: '',
-        sugarcaneVarietyName: '',
-        intercropVarietyId: 'none',
-        intercropVarietyName: 'None',
-        plantingDate: '',
-        plannedHarvestDate: '',
-        expectedYield: ''
-      })
-    } catch (error) {
-      console.error('Error creating ratoon cycle:', error)
-      alert(`Error creating ratoon cycle: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
+    // Use the unified cycle creation function (validation is handled there)
+    await handleCreateCycle()
   }
 
   const handleCloseCycle = async () => {
@@ -377,7 +377,15 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   }
 
   const canCreateRatoonCycle = () => {
-    return activeCycle && activeCycle.status === 'closed' && activeCycle.type === 'plantation'
+    // Can create ratoon if there are existing cycles and the most recent one is closed
+    if (cropCycles.length === 0) return false
+
+    // Find the most recent cycle (highest cycle number)
+    const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+      cycle.cycleNumber > latest.cycleNumber ? cycle : latest
+    )
+
+    return mostRecentCycle.status === 'closed'
   }
 
   const canCloseCycle = () => {
@@ -590,24 +598,24 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         <div className="space-y-6">
           <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {!activeCycle ? 'Create Plantation Cycle' : 'Create Next Ratoon Cycle'}
+              {cropCycles.length === 0 ? 'Create Plantation Cycle' : `Create Next Ratoon Cycle (Ratoon ${cropCycles.length})`}
             </h3>
 
             {/* Sugarcane Variety Selection - Mandatory */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Sugarcane Variety *
-                {activeCycle && activeCycle.type === 'plantation' && (
+                {cropCycles.length > 0 && (
                   <span className="text-xs text-gray-500 ml-2">(Inherited from plantation cycle)</span>
                 )}
               </label>
               <button
                 type="button"
-                onClick={() => !activeCycle && setShowSugarcaneSelector(true)}
-                disabled={!!activeCycle}
+                onClick={() => cropCycles.length === 0 && setShowSugarcaneSelector(true)}
+                disabled={cropCycles.length > 0}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-left flex items-center justify-between transition-colors ${
-                  activeCycle 
-                    ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
+                  cropCycles.length > 0
+                    ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
                     : 'bg-white border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -662,7 +670,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
             </div>
 
             {/* Planting Date - Only for plantation cycles */}
-            {!activeCycle && (
+            {cropCycles.length === 0 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date *</label>
                 <input
@@ -710,10 +718,10 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
             {/* Action Buttons */}
             <div className="flex space-x-3">
-              {!activeCycle ? (
+              {cropCycles.length === 0 ? (
                 <button
                   type="button"
-                  onClick={handleCreatePlantationCycle}
+                  onClick={handleCreateCycle}
                   disabled={isCreatingCycle}
                   className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
@@ -722,11 +730,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
               ) : canCreateRatoonCycle() ? (
                 <button
                   type="button"
-                  onClick={handleCreateRatoonCycle}
+                  onClick={handleCreateCycle}
                   disabled={isCreatingCycle}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  {isCreatingCycle ? 'Creating...' : 'Create Ratoon Cycle'}
+                  {isCreatingCycle ? 'Creating...' : `Create Ratoon ${cropCycles.length} Cycle`}
                 </button>
               ) : (
                 <div className="flex-1 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-center">

@@ -153,11 +153,10 @@ export class CropCycleValidationService {
   ) {
     const hasIntercrop = !!(cycle.intercropVarietyId && cycle.intercropVarietyId !== 'none')
     const hasElectricityYield = false // observations.some(obs => obs.category === 'electricity-yield')
-    
+
     const mandatoryCategories = getMandatoryObservationsForCycle(
       cycle.type,
-      hasIntercrop,
-
+      hasIntercrop
     )
     
     // Check each mandatory category exists
@@ -176,8 +175,7 @@ export class CropCycleValidationService {
         categoryObservations.forEach(observation => {
           const validation = validateObservationForCycleClosure(
             observation,
-            hasIntercrop,
-
+            hasIntercrop
           )
           
           if (!validation.valid) {
@@ -217,16 +215,24 @@ export class CropCycleValidationService {
     observations: BlocObservation[],
     blocArea: number
   ): Promise<CycleSummary> {
-    // Calculate costs by phase
+    // Calculate totals from activities and observations data (UI-side calculation)
     const costs = this.calculateCostsByPhase(activities, blocArea)
-    
+    const totalRevenue = this.calculateTotalRevenue(observations)
+
     // Extract yield data from observations
     const yields = this.extractYieldData(observations, blocArea)
-    
-    // Extract revenue data from observations
-    const revenue = this.extractRevenueData(observations, blocArea)
-    
-    // Calculate profitability
+
+    // Calculate revenue from observations data (UI-side calculation)
+    const revenue = {
+      total: totalRevenue,
+      perHectare: blocArea > 0 ? totalRevenue / blocArea : 0,
+      sugarcane: totalRevenue, // Assuming all revenue is from sugarcane
+      sugar: 0,
+      electricity: 0,
+      intercrop: 0
+    }
+
+    // Calculate profitability using database totals
     const profitability = this.calculateProfitability(costs, revenue)
     
     // Extract quality metrics
@@ -322,6 +328,33 @@ export class CropCycleValidationService {
     const productCosts = activity.products?.reduce((sum, product) => sum + (product.actualCost || product.estimatedCost || 0), 0) || 0
     const resourceCosts = activity.resources?.reduce((sum, resource) => sum + (resource.actualCost || resource.estimatedCost || 0), 0) || 0
     return productCosts + resourceCosts
+  }
+
+  /**
+   * Calculate total revenue from observations
+   */
+  private static calculateTotalRevenue(observations: BlocObservation[]): number {
+    let totalRevenue = 0
+
+    // Calculate revenue from sugarcane yield observations
+    const sugarcaneObs = observations.find(obs => obs.category === 'sugarcane-yield-quality')
+    if (sugarcaneObs) {
+      const sugarcaneData = sugarcaneObs.data as any
+      if (sugarcaneData.sugarcaneRevenue) {
+        totalRevenue += sugarcaneData.sugarcaneRevenue
+      }
+    }
+
+    // Calculate revenue from intercrop yield observations
+    const intercropObs = observations.find(obs => obs.category === 'intercrop-yield-quality')
+    if (intercropObs) {
+      const intercropData = intercropObs.data as any
+      if (intercropData.intercropRevenue) {
+        totalRevenue += intercropData.intercropRevenue
+      }
+    }
+
+    return totalRevenue
   }
   
   /**

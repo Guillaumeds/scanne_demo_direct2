@@ -98,21 +98,46 @@ export class CropCycleService {
     }
 
     try {
+      // Calculate the correct cycle number based on existing cycles for this bloc
+      const existingCycles = await this.getCropCyclesForBloc(request.blocId)
+      const cycleNumber = existingCycles.length + 1
+
+      // Determine cycle type based on cycle number
+      // First cycle (1) = plantation, subsequent cycles (2+) = ratoon
+      const cycleType = cycleNumber === 1 ? 'plantation' : 'ratoon'
+
+      // Validate that the requested type matches the expected type
+      if (request.type !== cycleType) {
+        if (cycleNumber === 1) {
+          throw new Error('First cycle must be a plantation cycle')
+        } else {
+          throw new Error(`Cycle ${cycleNumber} must be a ratoon cycle (Ratoon ${cycleNumber - 1})`)
+        }
+      }
+
+      // For ratoon cycles, inherit sugarcane variety from plantation cycle
+      let sugarcaneVarietyUuid = request.sugarcaneVarietyId
+      if (cycleType === 'ratoon' && existingCycles.length > 0) {
+        const plantationCycle = existingCycles.find(cycle => cycle.type === 'plantation')
+        if (plantationCycle) {
+          sugarcaneVarietyUuid = plantationCycle.sugarcaneVarietyId
+        }
+      }
+
       // Calculate initial growth stage and days since planting
       const plantingDate = new Date(request.plantingDate || new Date())
       const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
       const initialGrowthStage = this.calculateGrowthStage(daysSincePlanting)
 
-      // Note: The frontend should now pass UUIDs directly from cached variety data
-      // This eliminates the need for database lookups during crop cycle creation
-      const sugarcaneVarietyUuid = request.sugarcaneVarietyId === 'none' ? null : request.sugarcaneVarietyId
+      // Handle variety UUIDs
+      const finalSugarcaneVarietyUuid = sugarcaneVarietyUuid === 'none' ? null : sugarcaneVarietyUuid
       const intercropVarietyUuid = request.intercropVarietyId === 'none' ? null : request.intercropVarietyId
 
       const insertData = {
         bloc_id: request.blocId,
-        type: request.type,
-        cycle_number: request.type === 'plantation' ? 1 : 2, // Calculate based on type
-        sugarcane_variety_id: sugarcaneVarietyUuid,
+        type: cycleType,
+        cycle_number: cycleNumber,
+        sugarcane_variety_id: finalSugarcaneVarietyUuid || null,
         intercrop_variety_id: intercropVarietyUuid,
         parent_cycle_id: request.parentCycleId || null,
         sugarcane_planting_date: request.plantingDate,
@@ -573,36 +598,11 @@ export class CropCycleService {
 
   /**
    * Get observations for a crop cycle (helper method)
+   * Uses ObservationService to ensure proper data transformation
    */
   private static async getObservationsForCycle(cycleId: string): Promise<BlocObservation[]> {
-    try {
-      const { data, error } = await supabase
-        .from('observations')
-        .select('*')
-        .eq('crop_cycle_id', cycleId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      return (data || []).map(observation => ({
-        id: observation.id,
-        name: observation.name,
-        description: observation.description,
-        category: observation.category,
-        status: observation.status,
-        cropCycleId: observation.crop_cycle_id,
-        observationDate: observation.observation_date,
-        numberOfSamples: observation.number_of_samples,
-        numberOfPlants: observation.number_of_plants,
-        observationData: observation.observation_data,
-        notes: observation.notes,
-        createdAt: observation.created_at,
-        updatedAt: observation.updated_at,
-        createdBy: observation.created_by || 'system'
-      }))
-    } catch (error) {
-      console.error('Error loading observations for cycle:', error)
-      return []
-    }
+    // Import ObservationService dynamically to avoid circular dependency
+    const { ObservationService } = await import('./observationService')
+    return ObservationService.getObservationsForCycle(cycleId)
   }
 }

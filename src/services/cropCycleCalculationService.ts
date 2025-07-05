@@ -82,15 +82,51 @@ export class CropCycleCalculationService {
   static async triggerRecalculation(cropCycleId: string): Promise<CropCycleTotals | null> {
     try {
       console.log('🔄 Triggering recalculation for crop cycle:', cropCycleId)
-      
-      // The database function automatically recalculates from current data
-      const totals = await this.getAuthoritativeTotals(cropCycleId)
-      
-      if (totals) {
-        console.log('✅ Recalculation completed:', totals)
+
+      // Call the database function to recalculate and update totals
+      const { data, error } = await supabase.rpc('calculate_crop_cycle_totals', {
+        cycle_id: cropCycleId
+      })
+
+      if (error) {
+        console.error('❌ Database recalculation error:', error)
+        throw error
       }
-      
-      return totals
+
+      if (data && data.length > 0) {
+        const result = data[0]
+        console.log('✅ Recalculation completed:', result)
+
+        // Update the crop cycle record with the calculated totals
+        const { error: updateError } = await supabase
+          .from('crop_cycles')
+          .update({
+            estimated_total_cost: result.estimated_total_cost,
+            actual_total_cost: result.actual_total_cost,
+            sugarcane_actual_yield_tons_ha: result.sugarcane_yield_tonnes_per_hectare,
+            total_revenue: result.total_revenue,
+            net_profit: result.total_revenue - result.actual_total_cost,
+            profit_per_hectare: result.profit_per_hectare,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', cropCycleId)
+
+        if (updateError) {
+          console.error('❌ Error updating crop cycle totals:', updateError)
+          throw updateError
+        }
+
+        return {
+          estimatedTotalCost: result.estimated_total_cost,
+          actualTotalCost: result.actual_total_cost,
+          sugarcaneYieldTonnesPerHectare: result.sugarcane_yield_tonnes_per_hectare,
+          intercropYieldTonnesPerHectare: result.intercrop_yield_tonnes_per_hectare,
+          totalRevenue: result.total_revenue,
+          profitPerHectare: result.profit_per_hectare
+        }
+      }
+
+      return null
     } catch (error) {
       console.error('❌ Error triggering recalculation:', error)
       throw error
@@ -216,6 +252,46 @@ export class CropCycleCalculationService {
     } catch (error) {
       console.error('❌ Error updating crop cycle display:', error)
       // Don't throw - this is for UI updates only
+    }
+  }
+
+  /**
+   * 🔧 MAINTENANCE: Force recalculation for all crop cycles
+   * Use this to fix crop cycles that were created before atomic functions were implemented
+   */
+  static async forceRecalculateAllCycles(): Promise<void> {
+    try {
+      console.log('🔧 Starting force recalculation for all crop cycles...')
+
+      // Get all active crop cycles
+      const { data: cycles, error } = await supabase
+        .from('crop_cycles')
+        .select('id')
+        .eq('status', 'active')
+
+      if (error) throw error
+
+      if (!cycles || cycles.length === 0) {
+        console.log('ℹ️ No active crop cycles found')
+        return
+      }
+
+      console.log(`🔄 Recalculating ${cycles.length} crop cycles...`)
+
+      // Recalculate each cycle
+      for (const cycle of cycles) {
+        try {
+          await this.triggerRecalculation(cycle.id)
+          console.log(`✅ Recalculated cycle: ${cycle.id}`)
+        } catch (error) {
+          console.error(`❌ Failed to recalculate cycle ${cycle.id}:`, error)
+        }
+      }
+
+      console.log('🎉 Force recalculation completed!')
+    } catch (error) {
+      console.error('❌ Error in force recalculation:', error)
+      throw error
     }
   }
 

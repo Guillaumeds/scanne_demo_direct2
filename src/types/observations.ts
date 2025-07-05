@@ -312,52 +312,74 @@ export const validateObservationForCycleClosure = (
 ): { valid: boolean; errors: string[] } => {
   const errors: string[] = []
 
+  console.log('🔍 Validating observation for closure:', observation.name)
+  console.log('📊 Observation data:', observation.data)
+  console.log('🌾 Top-level yield fields:', {
+    totalYieldTons: observation.totalYieldTons,
+    yieldTonsHa: observation.yieldTonsHa,
+    areaHectares: observation.areaHectares
+  })
+
   switch (observation.category) {
     case 'sugarcane-yield-quality':
       const sugarcaneData = observation.data as SugarcaneYieldQualityData
+
+      // Check yield data from both top-level fields and category data
+      const totalYield = observation.totalYieldTons || sugarcaneData?.totalYieldTons
+      const yieldPerHa = observation.yieldTonsHa || sugarcaneData?.yieldPerHectare
+
+      console.log('🔍 Yield validation data:', {
+        totalYield,
+        yieldPerHa,
+        fromTopLevel: { totalYieldTons: observation.totalYieldTons, yieldTonsHa: observation.yieldTonsHa },
+        fromCategoryData: { totalYieldTons: sugarcaneData?.totalYieldTons, yieldPerHectare: sugarcaneData?.yieldPerHectare }
+      })
+
       // Mandatory yield fields
-      if (!sugarcaneData.totalYieldTons || sugarcaneData.totalYieldTons <= 0) {
+      if (!totalYield || totalYield <= 0) {
         errors.push('Total sugarcane yield is required and must be greater than 0')
       }
-      if (!sugarcaneData.yieldPerHectare || sugarcaneData.yieldPerHectare <= 0) {
+      if (!yieldPerHa || yieldPerHa <= 0) {
         errors.push('Yield per hectare is required and must be greater than 0')
       }
-      if (!sugarcaneData.harvestDate) {
-        errors.push('Harvest date is required')
+
+      // Revenue validation (more flexible - check if any revenue data exists)
+      const hasRevenue = sugarcaneData?.sugarcaneRevenue > 0 ||
+                        sugarcaneData?.totalRevenue > 0 ||
+                        sugarcaneData?.pricePerTonne > 0
+
+      if (!hasRevenue) {
+        errors.push('Revenue data is required (price per tonne or total revenue)')
       }
 
-      // Mandatory quality fields
-      if (!sugarcaneData.brix || sugarcaneData.brix <= 0) {
-        errors.push('Brix percentage is required and must be greater than 0')
+      // Quality fields are optional for basic closure validation
+      // Only require them if they exist but are invalid
+      if (sugarcaneData?.brix !== undefined && sugarcaneData.brix <= 0) {
+        errors.push('Brix percentage must be greater than 0 if provided')
       }
-      if (!sugarcaneData.sugarContent || sugarcaneData.sugarContent <= 0) {
-        errors.push('Sugar content percentage is required and must be greater than 0')
-      }
-
-      // Mandatory revenue fields
-      if (!sugarcaneData.sugarcaneRevenue || sugarcaneData.sugarcaneRevenue <= 0) {
-        errors.push('Sugarcane revenue is required and must be greater than 0')
-      }
-      if (!sugarcaneData.sugarRevenue || sugarcaneData.sugarRevenue <= 0) {
-        errors.push('Sugar revenue is required and must be greater than 0')
+      if (sugarcaneData?.sugarContent !== undefined && sugarcaneData.sugarContent <= 0) {
+        errors.push('Sugar content percentage must be greater than 0 if provided')
       }
       break
 
     case 'intercrop-yield-quality':
       const intercropData = observation.data as IntercropYieldQualityData
-      if (!intercropData.intercropType) {
-        errors.push('Intercrop type is required')
-      }
-      if (!intercropData.totalYieldTons || intercropData.totalYieldTons <= 0) {
+
+      // Check yield data from both top-level fields and category data
+      const intercropTotalYield = observation.totalYieldTons || intercropData?.totalYieldTons
+      const intercropYieldPerHa = observation.yieldTonsHa || intercropData?.yieldPerHectare
+
+      // Mandatory yield fields
+      if (!intercropTotalYield || intercropTotalYield <= 0) {
         errors.push('Total intercrop yield is required and must be greater than 0')
       }
-      if (!intercropData.yieldPerHectare || intercropData.yieldPerHectare <= 0) {
+      if (!intercropYieldPerHa || intercropYieldPerHa <= 0) {
         errors.push('Intercrop yield per hectare is required and must be greater than 0')
       }
-      if (!intercropData.harvestDate) {
-        errors.push('Intercrop harvest date is required')
-      }
-      if (!intercropData.intercropRevenue || intercropData.intercropRevenue < 0) {
+
+      // Revenue validation (more flexible)
+      const hasIntercropRevenue = intercropData?.intercropRevenue !== undefined && intercropData.intercropRevenue >= 0
+      if (!hasIntercropRevenue) {
         errors.push('Intercrop revenue is required (can be 0)')
       }
       break

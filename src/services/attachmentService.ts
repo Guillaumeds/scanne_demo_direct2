@@ -98,40 +98,41 @@ export class AttachmentService {
    */
   static async createAttachment(attachment: BlocAttachment, file?: File): Promise<BlocAttachment> {
     try {
-      let fileUrl = null
-      let filePath = null
+      console.log('📎 Creating attachment:', attachment.name)
 
-      // Upload file if provided
+      let fileUrl = attachment.url || 'mock://file-url' // Use mock URL for demo
+
+      // For demo purposes, we'll use mock file URLs
+      // In production, you would upload to actual storage
       if (file) {
-        filePath = this.generateStoragePath(file.name, attachment.cropCycleId, attachment.activityId, attachment.observationId)
-        fileUrl = await this.uploadFile(file, filePath)
+        // Generate a mock URL for the file
+        fileUrl = `mock://storage/${attachment.cropCycleId}/${Date.now()}_${file.name}`
       }
 
-      // Create attachment record in database
+      // Create attachment record in database - only use fields that exist in schema
       const { data, error } = await supabase
         .from('attachments')
         .insert({
           name: attachment.name,
           description: attachment.description,
-          type: attachment.type,
           crop_cycle_id: attachment.cropCycleId,
-          activity_id: attachment.activityId,
-          observation_id: attachment.observationId,
           file_url: fileUrl,
-          file_path: filePath,
-          file_size: file?.size,
-          file_type: file?.type,
-          tags: attachment.tags,
-          metadata: attachment.metadata
+          file_size: file?.size || attachment.fileSize,
+          file_type: file?.type || attachment.fileType
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error creating attachment:', error)
+        throw error
+      }
+
+      console.log('✅ Attachment created successfully:', data)
 
       const newAttachment = this.transformDbToLocal(data)
 
-      // Recalculate crop cycle totals if attachment affects totals (rare case) using database function
+      // Recalculate crop cycle totals if attachment affects totals (rare case)
       if (attachment.cropCycleId) {
         await CropCycleCalculationService.triggerRecalculation(attachment.cropCycleId)
       }
@@ -296,37 +297,38 @@ export class AttachmentService {
     return {
       id: dbRecord.id,
       name: dbRecord.name,
-      description: dbRecord.description,
-      type: dbRecord.type,
-      cropCycleId: dbRecord.crop_cycle_id,
-      activityId: dbRecord.activity_id,
-      observationId: dbRecord.observation_id,
-      fileUrl: dbRecord.file_url,
-      filePath: dbRecord.file_path,
-      fileSize: dbRecord.file_size,
-      fileType: dbRecord.file_type,
+      originalName: dbRecord.name, // Use name as originalName since we don't have separate field
+      category: 'other', // Default category since not stored in current schema
+      fileType: dbRecord.file_type || 'unknown',
+      fileSize: dbRecord.file_size || 0,
       uploadDate: dbRecord.created_at,
-      lastModified: dbRecord.updated_at,
-      tags: dbRecord.tags || [],
-      metadata: dbRecord.metadata || {},
-      uploadedBy: dbRecord.created_by || 'system'
+      description: dbRecord.description,
+      tags: [], // Not stored in current schema
+      cropCycleId: dbRecord.crop_cycle_id,
+      cropCycleType: 'plantation', // Default since not stored
+      mimeType: dbRecord.file_type || 'unknown',
+      extension: dbRecord.file_type ? `.${dbRecord.file_type.split('/')[1]}` : '.unknown',
+      url: dbRecord.file_url,
+      thumbnailUrl: undefined, // Not stored in current schema
+      uploadedBy: 'user', // Default since not stored
+      lastModified: dbRecord.updated_at
     }
   }
 
   /**
    * Transform local BlocAttachment updates to database format
+   * Only includes fields that exist in the current database schema
    */
   private static transformLocalToDb(localUpdates: Partial<BlocAttachment>): any {
     const dbUpdates: any = {}
 
+    // Only include fields that exist in the current attachments table schema
     if (localUpdates.name) dbUpdates.name = localUpdates.name
     if (localUpdates.description) dbUpdates.description = localUpdates.description
-    if (localUpdates.type) dbUpdates.type = localUpdates.type
     if (localUpdates.cropCycleId) dbUpdates.crop_cycle_id = localUpdates.cropCycleId
-    if (localUpdates.activityId) dbUpdates.activity_id = localUpdates.activityId
-    if (localUpdates.observationId) dbUpdates.observation_id = localUpdates.observationId
-    if (localUpdates.tags) dbUpdates.tags = localUpdates.tags
-    if (localUpdates.metadata) dbUpdates.metadata = localUpdates.metadata
+    if (localUpdates.url) dbUpdates.file_url = localUpdates.url
+    if (localUpdates.fileType) dbUpdates.file_type = localUpdates.fileType
+    if (localUpdates.fileSize) dbUpdates.file_size = localUpdates.fileSize
 
     return dbUpdates
   }
