@@ -54,10 +54,10 @@ schema_paths = []
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
-enabled = true
+enabled = false  # Disabled - sample data is in migrations instead
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = []
 
 [realtime]
 enabled = true
@@ -290,7 +290,7 @@ enabled = false
 # domain = "example.clerk.accounts.dev"
 
 [edge_runtime]
-enabled = true
+enabled = false  # Disable edge functions if not using serverless functions
 # Configure one of the supported request policies: `oneshot`, `per_worker`.
 # Use `oneshot` for hot reload, or `per_worker` for load testing.
 policy = "oneshot"
@@ -303,7 +303,7 @@ deno_version = 1
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+enabled = false  # Disable analytics to reduce containers
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

@@ -20,6 +20,19 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
   // Use localStorage for varieties data
   const { data: allVarieties, loading, error } = useAllVarieties()
 
+  // Debug: Test direct ConfigurationService call
+  const testDirectCall = async () => {
+    try {
+      console.log('🧪 Testing direct ConfigurationService call...')
+      const { ConfigurationService } = await import('@/services/configurationService')
+      console.log('✅ ConfigurationService imported:', ConfigurationService)
+      const varieties = await ConfigurationService.getSugarcaneVarieties()
+      console.log('✅ Direct call successful:', varieties.length, 'varieties')
+    } catch (error) {
+      console.error('❌ Direct call failed:', error)
+    }
+  }
+
   // Filter base varieties by type
   const baseVarieties = varietyType === 'all'
     ? (allVarieties || [])
@@ -168,17 +181,27 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
               <p className="text-gray-600 mt-1">{getHeaderText().subtitle}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Close variety selector"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={testDirectCall}
+              className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+              title="Test direct database call"
+            >
+              Test DB
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Close variety selector"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
@@ -257,7 +280,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
                 <div className="text-center max-w-md">
                   <div className="text-red-500 text-6xl mb-4">⚠️</div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Varieties</h3>
-                  <p className="text-gray-600 mb-4">{error.message}</p>
+                  <p className="text-gray-600 mb-4">{typeof error === 'string' ? error : error?.message || 'Unknown error'}</p>
                   <button
                     type="button"
                     onClick={() => window.location.reload()}

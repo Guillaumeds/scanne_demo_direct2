@@ -20,5 +20,7 @@
   ],
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
-  }
+  },
+  "vscode-mcp-server.defaultEnabled": true,
+  "vscode-mcp-server.port": 3002
 }

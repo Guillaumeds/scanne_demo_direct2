@@ -38,7 +38,7 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
 
   // Pre-populate fields when editing existing resource
   useEffect(() => {
-    if (existingResource && resources.length > 0) {
+    if (existingResource && resources && resources.length > 0) {
       const resource = resources.find(r => r.id === existingResource.resourceId)
       if (resource) {
         setSelectedResource(resource)
@@ -111,13 +111,13 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
                   <span className="text-lg">🌟</span>
                   <div>
                     <div className="font-medium">All Categories</div>
-                    <div className="text-xs text-gray-500">{resources.length} resources</div>
+                    <div className="text-xs text-gray-500">{resources?.length || 0} resources</div>
                   </div>
                 </div>
               </button>
 
               {RESOURCE_CATEGORIES.map(category => {
-                const resourceCount = resources.filter(r => r.category === category.id).length
+                const resourceCount = resources?.filter(r => r.category === category.id).length || 0
                 return (
                   <button
                     key={category.id}
@@ -162,7 +162,7 @@ export default function ResourceSelector({ onSelect, onClose, existingResource }
                     <div className="text-center max-w-md">
                       <div className="text-red-500 text-6xl mb-4">⚠️</div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Resources</h3>
-                      <p className="text-gray-600 mb-4">{error.message}</p>
+                      <p className="text-gray-600 mb-4">{typeof error === 'string' ? error : error?.message || 'Unknown error'}</p>
                       <button
                         type="button"
                         onClick={() => window.location.reload()}

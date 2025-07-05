@@ -59,8 +59,8 @@ export class BlocService {
       const { data, error } = await supabase
         .from('blocs')
         .insert({
+          farm_id: '550e8400-e29b-41d4-a716-446655440001', // Demo Farm ID
           name: `Bloc ${drawnArea.id}`,
-          description: `Bloc created from map drawing`,
           coordinates: polygonWKT, // PostGIS will handle the SRID
           area_hectares: drawnArea.area,
           status: 'active'
@@ -113,8 +113,19 @@ export class BlocService {
    */
   static async getAllBlocs(): Promise<Bloc[]> {
     try {
+      console.log('🔍 Fetching blocs from database...')
+
+      // First try simple query to see if blocs table is accessible
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('blocs')
+        .select('id, name, area_hectares')
+
+      console.log('🔍 Simple blocs query result:', { data: simpleData, error: simpleError })
+
       // Use RPC function to get blocs with WKT coordinates for easier parsing
       const { data, error } = await supabase.rpc('get_blocs_with_wkt')
+
+      console.log('🔍 RPC blocs query result:', { data, error })
 
       if (error) throw error
       return data || []

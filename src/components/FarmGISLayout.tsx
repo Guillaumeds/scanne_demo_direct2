@@ -13,6 +13,7 @@ import FloatingInfoBox from './FloatingInfoBox'
 import { FieldData } from '@/types/field'
 import { loadFieldData } from '@/utils/csvParser'
 import { loadBelleVueFields, hasFieldsInDatabase } from '@/services/fieldService'
+import { LocalStorageService } from '@/services/localStorageService'
 
 interface DrawnArea {
   id: string
@@ -45,42 +46,62 @@ export default function FarmGISLayout() {
     console.log('🔄 selectedAreaId changed to:', selectedAreaId)
   }, [selectedAreaId])
 
-  // Load field data
+  // Auto-refresh cache and initialize
   useEffect(() => {
-    const loadFields = async () => {
+    const initializeApp = async () => {
       try {
-        console.log('🔄 Starting to load field data...')
         setLoading(true)
 
-        // Check if database has fields, otherwise fall back to GeoJSON
-        const hasDbFields = await hasFieldsInDatabase()
+        // Auto-refresh localStorage cache if stale
+        console.log('🔄 Checking and refreshing cache if needed...')
+        await LocalStorageService.autoRefreshIfStale()
 
-        let fieldData
-        if (hasDbFields) {
-          console.log('📊 Loading fields from database...')
-          fieldData = await loadBelleVueFields()
-        } else {
-          console.log('📊 No fields in database, loading from GeoJSON...')
-          fieldData = await loadFieldData()
-        }
+        // FIELD CREATION/LOADING DISABLED FOR DEMO
+        // const loadFields = async () => {
+        //   try {
+        //     console.log('🔄 Starting to load field data...')
 
-        console.log('✅ Loaded fields:', fieldData.length, 'fields')
-        console.log('📊 First field sample:', fieldData[0])
-        console.log('📊 Field data structure:', {
-          totalFields: fieldData.length,
-          hasCoordinates: fieldData.filter(f => f.coordinates && f.coordinates.length > 0).length,
-          sampleCoords: fieldData[0]?.coordinates?.slice(0, 3)
-        })
-        setFields(fieldData)
+        //     // Check if database has fields, otherwise fall back to GeoJSON
+        //     const hasDbFields = await hasFieldsInDatabase()
+
+        //     let fieldData
+        //     if (hasDbFields) {
+        //       console.log('📊 Loading fields from database...')
+        //       fieldData = await loadBelleVueFields()
+        //     } else {
+        //       console.log('📊 No fields in database, loading from GeoJSON...')
+        //       fieldData = await loadFieldData()
+        //     }
+
+        //     console.log('✅ Loaded fields:', fieldData.length, 'fields')
+        //     console.log('📊 First field sample:', fieldData[0])
+        //     console.log('📊 Field data structure:', {
+        //       totalFields: fieldData.length,
+        //       hasCoordinates: fieldData.filter(f => f.coordinates && f.coordinates.length > 0).length,
+        //       sampleCoords: fieldData[0]?.coordinates?.slice(0, 3)
+        //     })
+        //     setFields(fieldData)
+        //   } catch (error) {
+        //     console.error('❌ Failed to load field data:', error)
+        //     setError('Failed to load field data. Please check your database connection.')
+        //   }
+        // }
+
+        // await loadFields()
+
+        // Set empty fields array for demo
+        console.log('📊 Field loading disabled - using empty fields array')
+        setFields([])
+
       } catch (error) {
-        console.error('❌ Failed to load field data:', error)
-        setError('Failed to load field data. Please check your database connection.')
+        console.error('❌ Failed to initialize app:', error)
+        setError('Failed to initialize application. Please refresh the page.')
       } finally {
         setLoading(false)
       }
     }
 
-    loadFields()
+    initializeApp()
   }, [])
 
   // Load saved blocs from database on component mount

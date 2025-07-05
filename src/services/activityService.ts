@@ -16,6 +16,7 @@ import {
   retry
 } from '@/types/utils'
 import { CropCycleCalculationService } from './cropCycleCalculationService'
+import { LocalStorageService } from './localStorageService'
 import { supabase } from '@/lib/supabase'
 
 export class ActivityService {
@@ -72,9 +73,19 @@ export class ActivityService {
   }
 
   /**
-   * Create a new activity using atomic database function
+   * Create a new activity using atomic database function with auto-recovery
    */
   static async createActivity(activity: BlocActivity): Promise<BlocActivity> {
+    return LocalStorageService.withAutoRecovery(
+      () => this._createActivityInternal(activity),
+      'activity creation'
+    )
+  }
+
+  /**
+   * Internal activity creation method
+   */
+  private static async _createActivityInternal(activity: BlocActivity): Promise<BlocActivity> {
     try {
       console.log('💾 Creating activity with atomic transaction:', activity.name)
 
@@ -91,24 +102,31 @@ export class ActivityService {
         notes: activity.notes
       }
 
-      // Prepare products and resources
-      const products = (activity.products || []).map(product => ({
-        product_id: product.productId,
-        product_name: product.productName,
-        quantity: product.quantity,
-        rate: product.rate,
-        unit: product.unit,
-        estimated_cost: product.estimatedCost || 0,
-        actual_cost: product.actualCost || null
+      // Convert product string IDs to UUIDs and prepare products
+      const products = await Promise.all((activity.products || []).map(async product => {
+        const productUuid = await this.getProductUuidById(product.productId)
+        return {
+          product_id: productUuid,
+          product_name: product.productName,
+          quantity: product.quantity,
+          rate: product.rate,
+          unit: product.unit,
+          estimated_cost: product.estimatedCost || 0,
+          actual_cost: product.actualCost || null
+        }
       }))
 
-      const resources = (activity.resources || []).map(resource => ({
-        resource_id: resource.resourceId,
-        resource_name: resource.resourceName,
-        hours: resource.hours,
-        cost_per_hour: resource.costPerHour,
-        estimated_cost: resource.estimatedCost || 0,
-        actual_cost: resource.actualCost || null
+      // Convert resource string IDs to UUIDs and prepare resources
+      const resources = await Promise.all((activity.resources || []).map(async resource => {
+        const resourceUuid = await this.getResourceUuidById(resource.resourceId)
+        return {
+          resource_id: resourceUuid,
+          resource_name: resource.resourceName,
+          hours: resource.hours,
+          cost_per_hour: resource.costPerHour,
+          estimated_cost: resource.estimatedCost || 0,
+          actual_cost: resource.actualCost || null
+        }
       }))
 
       // Call atomic database function
@@ -131,7 +149,7 @@ export class ActivityService {
       console.log('✅ Activity created with totals:', result)
 
       // Return the created activity (fetch fresh data)
-      return await this.getActivityById(result.activity_id)
+      return await this.getActivityById(result.result_activity_id)
     } catch (error) {
       console.error('Error creating activity:', error)
       throw error
@@ -139,9 +157,19 @@ export class ActivityService {
   }
   
   /**
-   * Update an existing activity using atomic database function
+   * Update an existing activity using atomic database function with auto-recovery
    */
   static async updateActivity(activityId: string, updates: Partial<BlocActivity>): Promise<BlocActivity> {
+    return LocalStorageService.withAutoRecovery(
+      () => this._updateActivityInternal(activityId, updates),
+      'activity update'
+    )
+  }
+
+  /**
+   * Internal activity update method
+   */
+  private static async _updateActivityInternal(activityId: string, updates: Partial<BlocActivity>): Promise<BlocActivity> {
     try {
       console.log('💾 Updating activity with atomic transaction:', activityId)
 
@@ -163,24 +191,31 @@ export class ActivityService {
         notes: mergedActivity.notes
       }
 
-      // Prepare products and resources
-      const products = (mergedActivity.products || []).map(product => ({
-        product_id: product.productId,
-        product_name: product.productName,
-        quantity: product.quantity,
-        rate: product.rate,
-        unit: product.unit,
-        estimated_cost: product.estimatedCost || 0,
-        actual_cost: product.actualCost || null
+      // Convert product string IDs to UUIDs and prepare products
+      const products = await Promise.all((mergedActivity.products || []).map(async product => {
+        const productUuid = await this.getProductUuidById(product.productId)
+        return {
+          product_id: productUuid,
+          product_name: product.productName,
+          quantity: product.quantity,
+          rate: product.rate,
+          unit: product.unit,
+          estimated_cost: product.estimatedCost || 0,
+          actual_cost: product.actualCost || null
+        }
       }))
 
-      const resources = (mergedActivity.resources || []).map(resource => ({
-        resource_id: resource.resourceId,
-        resource_name: resource.resourceName,
-        hours: resource.hours,
-        cost_per_hour: resource.costPerHour,
-        estimated_cost: resource.estimatedCost || 0,
-        actual_cost: resource.actualCost || null
+      // Convert resource string IDs to UUIDs and prepare resources
+      const resources = await Promise.all((mergedActivity.resources || []).map(async resource => {
+        const resourceUuid = await this.getResourceUuidById(resource.resourceId)
+        return {
+          resource_id: resourceUuid,
+          resource_name: resource.resourceName,
+          hours: resource.hours,
+          cost_per_hour: resource.costPerHour,
+          estimated_cost: resource.estimatedCost || 0,
+          actual_cost: resource.actualCost || null
+        }
       }))
 
       // Call atomic database function
@@ -207,9 +242,19 @@ export class ActivityService {
   }
 
   /**
-   * Delete an activity using atomic database function
+   * Delete an activity using atomic database function with auto-recovery
    */
   static async deleteActivity(activityId: string): Promise<void> {
+    return LocalStorageService.withAutoRecovery(
+      () => this._deleteActivityInternal(activityId),
+      'activity deletion'
+    )
+  }
+
+  /**
+   * Internal activity deletion method
+   */
+  private static async _deleteActivityInternal(activityId: string): Promise<void> {
     try {
       console.log('💾 Deleting activity with atomic transaction:', activityId)
 
@@ -240,6 +285,8 @@ export class ActivityService {
    */
   static async getActivityById(activityId: string): Promise<BlocActivity | null> {
     try {
+      // BEST PRACTICE: Assume caller has validated UUID format
+      // This method should only be called with valid UUIDs
       const { data, error } = await supabase
         .from('activities')
         .select('*')
@@ -259,14 +306,85 @@ export class ActivityService {
   }
 
   /**
+   * Validate if a string is a valid UUID format
+   */
+  private static isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(uuid)
+  }
+
+  /**
+   * Get product UUID by string ID
+   */
+  private static async getProductUuidById(productId: string): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id')
+        .eq('product_id', productId)
+        .eq('active', true)
+        .single()
+
+      if (error) {
+        throw new Error(`Failed to find product UUID for ID '${productId}': ${error.message}`)
+      }
+
+      if (!data) {
+        throw new Error(`Product with ID '${productId}' not found in database`)
+      }
+
+      return data.id
+    } catch (error) {
+      console.error('Error getting product UUID:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get resource UUID by string ID
+   */
+  private static async getResourceUuidById(resourceId: string): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('id')
+        .eq('resource_id', resourceId)
+        .eq('active', true)
+        .single()
+
+      if (error) {
+        throw new Error(`Failed to find resource UUID for ID '${resourceId}': ${error.message}`)
+      }
+
+      if (!data) {
+        throw new Error(`Resource with ID '${resourceId}' not found in database`)
+      }
+
+      return data.id
+    } catch (error) {
+      console.error('Error getting resource UUID:', error)
+      throw error
+    }
+  }
+
+  /**
    * Auto-save activity (creates if new, updates if existing)
    */
   static async autoSaveActivity(activity: BlocActivity): Promise<BlocActivity> {
+    // BEST PRACTICE: Validate UUID format before database query
+    if (!activity.id || activity.id.trim() === '' || !this.isValidUUID(activity.id)) {
+      console.log('🆕 Creating new activity (invalid/empty ID):', activity.id)
+      return this.createActivity(activity)
+    }
+
+    // Only query database with valid UUID
     const existingActivity = await this.getActivityById(activity.id)
 
     if (existingActivity) {
+      console.log('📝 Updating existing activity:', activity.id)
       return this.updateActivity(activity.id, activity)
     } else {
+      console.log('🆕 Creating new activity (valid ID not found):', activity.id)
       return this.createActivity(activity)
     }
   }

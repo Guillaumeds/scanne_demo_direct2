@@ -59,7 +59,7 @@ function useLocalStorageData<T>(
  */
 export function useSugarcaneVarieties(): UseDataResult<SugarcaneVariety[]> {
   return useLocalStorageData(
-    LocalStorageService.getSugarcaneVarieties,
+    () => LocalStorageService.getSugarcaneVarieties(),
     []
   )
 }
@@ -69,7 +69,7 @@ export function useSugarcaneVarieties(): UseDataResult<SugarcaneVariety[]> {
  */
 export function useIntercropVarieties(): UseDataResult<InterCropPlant[]> {
   return useLocalStorageData(
-    LocalStorageService.getIntercropVarieties,
+    () => LocalStorageService.getIntercropVarieties(),
     []
   )
 }
@@ -79,7 +79,7 @@ export function useIntercropVarieties(): UseDataResult<InterCropPlant[]> {
  */
 export function useAllVarieties(): UseDataResult<CropVariety[]> {
   return useLocalStorageData(
-    LocalStorageService.getAllVarieties,
+    () => LocalStorageService.getAllVarieties(),
     []
   )
 }
@@ -89,7 +89,7 @@ export function useAllVarieties(): UseDataResult<CropVariety[]> {
  */
 export function useProducts(): UseDataResult<Product[]> {
   return useLocalStorageData(
-    LocalStorageService.getProducts,
+    () => LocalStorageService.getProducts(),
     []
   )
 }
@@ -99,7 +99,7 @@ export function useProducts(): UseDataResult<Product[]> {
  */
 export function useResources(): UseDataResult<Resource[]> {
   return useLocalStorageData(
-    LocalStorageService.getResources,
+    () => LocalStorageService.getResources(),
     []
   )
 }

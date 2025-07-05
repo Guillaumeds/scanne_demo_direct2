@@ -20,6 +20,7 @@ import { BlocObservation } from '@/types/observations'
 import { BlocAttachment } from '@/types/attachments'
 import { CropCycleValidationService } from './cropCycleValidationService'
 import { CropCycleCalculationService } from './cropCycleCalculationService'
+import { LocalStorageService } from './localStorageService'
 import { supabase } from '@/lib/supabase'
 
 export class CropCycleService {
@@ -77,9 +78,19 @@ export class CropCycleService {
   }
 
   /**
-   * Create a new crop cycle
+   * Create a new crop cycle with auto-recovery for UUID mismatches
    */
   static async createCropCycle(request: CreateCycleRequest): Promise<CropCycle> {
+    return LocalStorageService.withAutoRecovery(
+      () => this._createCropCycleInternal(request),
+      'crop cycle creation'
+    )
+  }
+
+  /**
+   * Internal crop cycle creation method
+   */
+  private static async _createCropCycleInternal(request: CreateCycleRequest): Promise<CropCycle> {
     // Validate that only one active cycle exists per bloc
     const activeCycle = await this.getActiveCropCycle(request.blocId)
     if (activeCycle) {
@@ -97,32 +108,57 @@ export class CropCycleService {
       const sugarcaneVarietyUuid = request.sugarcaneVarietyId === 'none' ? null : request.sugarcaneVarietyId
       const intercropVarietyUuid = request.intercropVarietyId === 'none' ? null : request.intercropVarietyId
 
+      const insertData = {
+        bloc_id: request.blocId,
+        type: request.type,
+        cycle_number: request.type === 'plantation' ? 1 : 2, // Calculate based on type
+        sugarcane_variety_id: sugarcaneVarietyUuid,
+        intercrop_variety_id: intercropVarietyUuid,
+        parent_cycle_id: request.parentCycleId || null,
+        sugarcane_planting_date: request.plantingDate,
+        sugarcane_planned_harvest_date: request.plannedHarvestDate,
+        growth_stage: initialGrowthStage,
+        days_since_planting: daysSincePlanting,
+        estimated_total_cost: 0,
+        actual_total_cost: 0,
+        sugarcane_revenue: 0,
+        intercrop_revenue: 0,
+        total_revenue: 0,
+        net_profit: 0,
+        profit_per_hectare: 0,
+        profit_margin_percent: 0,
+        closure_validated: false
+      }
+
+      console.log('🔍 DEBUG - Bloc ID being inserted:', request.blocId)
+      console.log('🔍 DEBUG - Insert data:', insertData)
+
+      // Debug: Check if bloc exists
+      const { data: blocCheck, error: blocError } = await supabase
+        .from('blocs')
+        .select('id, name')
+        .eq('id', request.blocId)
+        .single()
+
+      console.log('🔍 DEBUG - Bloc check result:', { blocCheck, blocError })
+
       const { data, error } = await supabase
         .from('crop_cycles')
-        .insert({
-          bloc_id: request.blocId,
-          type: request.type,
-          cycle_number: request.type === 'plantation' ? 1 : 2, // Calculate based on type
-          sugarcane_variety_id: sugarcaneVarietyUuid,
-          intercrop_variety_id: intercropVarietyUuid,
-          parent_cycle_id: request.parentCycleId || null,
-          sugarcane_planting_date: request.plantingDate,
-          sugarcane_planned_harvest_date: request.plannedHarvestDate,
-          growth_stage: initialGrowthStage,
-          days_since_planting: daysSincePlanting,
-          estimated_total_cost: 0,
-          actual_total_cost: 0,
-          sugarcane_revenue: 0,
-          intercrop_revenue: 0,
-          total_revenue: 0,
-          net_profit: 0,
-          profit_margin_percent: 0,
-          closure_validated: false
-        })
+        .insert(insertData)
         .select('*')
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('🚨 Detailed error creating crop cycle:', {
+          error,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          insertData
+        })
+        throw new Error(`Database error: ${error.message || 'Unknown database error'}`)
+      }
 
       const newCycle = await this.transformDbToLocal(data)
 

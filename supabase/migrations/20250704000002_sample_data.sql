@@ -11,10 +11,7 @@ INSERT INTO companies (id, name) VALUES
 INSERT INTO farms (id, company_id, name, location, total_area_hectares) VALUES 
 ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'Demo Farm', 'Mauritius', 100.0);
 
--- Insert sample blocs (the ones that exist in your current app)
-INSERT INTO blocs (id, farm_id, name, area_hectares, coordinates) VALUES
-('550e8400-e29b-41d4-a716-446655440010', '550e8400-e29b-41d4-a716-446655440001', 'Demo Bloc 1', 5.0, NULL),
-('550e8400-e29b-41d4-a716-446655440011', '550e8400-e29b-41d4-a716-446655440001', 'Demo Bloc 2', 7.5, NULL);
+-- Blocs table is kept empty - no sample blocs inserted
 
 -- =====================================================
 -- CONFIGURATION DATA - MINIMAL SET
@@ -47,3 +44,5 @@ INSERT INTO resources (resource_id, name, category, subcategory, unit, cost_per_
 ('labor-general', 'General Labor', 'labour', 'Field Work', 'hour', 125.00, true),
 ('labor-skilled', 'Skilled Labor', 'labour', 'Technical', 'hour', 180.00, true),
 ('fuel-diesel', 'Diesel Fuel', 'fleet', 'Machinery', 'L', 45.50, true);
+
+-- Crop cycles table is kept empty - no sample crop cycles inserted

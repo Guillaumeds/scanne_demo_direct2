@@ -124,7 +124,14 @@ export class LocalStorageService {
   static async getSugarcaneVarieties(): Promise<SugarcaneVariety[]> {
     return this.getOrFetch(
       this.KEYS.SUGARCANE_VARIETIES,
-      ConfigurationService.getSugarcaneVarieties
+      () => {
+        console.log('🔍 ConfigurationService:', ConfigurationService)
+        console.log('🔍 ConfigurationService.getSugarcaneVarieties:', ConfigurationService?.getSugarcaneVarieties)
+        if (!ConfigurationService || !ConfigurationService.getSugarcaneVarieties) {
+          throw new Error('ConfigurationService or getSugarcaneVarieties method is not available')
+        }
+        return ConfigurationService.getSugarcaneVarieties()
+      }
     )
   }
 
@@ -134,7 +141,7 @@ export class LocalStorageService {
   static async getIntercropVarieties(): Promise<InterCropPlant[]> {
     return this.getOrFetch(
       this.KEYS.INTERCROP_VARIETIES,
-      ConfigurationService.getIntercropVarieties
+      () => ConfigurationService.getIntercropVarieties()
     )
   }
 
@@ -155,7 +162,7 @@ export class LocalStorageService {
   static async getProducts(): Promise<Product[]> {
     return this.getOrFetch(
       this.KEYS.PRODUCTS,
-      ConfigurationService.getProducts
+      () => ConfigurationService.getProducts()
     )
   }
 
@@ -165,7 +172,7 @@ export class LocalStorageService {
   static async getResources(): Promise<Resource[]> {
     return this.getOrFetch(
       this.KEYS.RESOURCES,
-      ConfigurationService.getResources
+      () => ConfigurationService.getResources()
     )
   }
 
@@ -194,7 +201,7 @@ export class LocalStorageService {
    */
   static getStorageStats(): Record<string, any> {
     const stats: Record<string, any> = {}
-    
+
     Object.entries(this.KEYS).forEach(([name, key]) => {
       const item = this.getFromStorage(key)
       if (item) {
@@ -210,7 +217,138 @@ export class LocalStorageService {
         stats[name] = { exists: false }
       }
     })
-    
+
     return stats
+  }
+
+  /**
+   * Clear all cached data (useful for debugging or when database is reset)
+   */
+  static clearAllCache(): void {
+    Object.values(this.KEYS).forEach(key => {
+      localStorage.removeItem(key)
+    })
+    console.log('🧹 Cleared all localStorage cache')
+  }
+
+  /**
+   * Force refresh all data from database (clears cache and reloads)
+   */
+  static async refreshAllData(): Promise<void> {
+    console.log('🔄 Force refreshing all localStorage data...')
+    this.clearAllCache()
+
+    // Reload all data from database
+    await Promise.all([
+      this.getSugarcaneVarieties(),
+      this.getIntercropVarieties(),
+      this.getProducts(),
+      this.getResources()
+    ])
+
+    console.log('✅ All localStorage data refreshed from database')
+  }
+
+  /**
+   * Auto-refresh cache if stale (called on app initialization)
+   */
+  static async autoRefreshIfStale(): Promise<void> {
+    try {
+      const stats = this.getStorageStats()
+      let needsRefresh = false
+
+      // Check if any cache is missing or stale (older than 1 hour)
+      Object.entries(stats).forEach(([name, stat]) => {
+        if (!stat.exists || !stat.isValid || stat.ageHours > 1) {
+          console.log(`🔄 Cache ${name} needs refresh: exists=${stat.exists}, valid=${stat.isValid}, age=${stat.ageHours}h`)
+          needsRefresh = true
+        }
+      })
+
+      if (needsRefresh) {
+        console.log('🔄 Auto-refreshing stale cache...')
+        await this.refreshAllData()
+      } else {
+        console.log('✅ Cache is fresh, no auto-refresh needed')
+      }
+    } catch (error) {
+      console.error('❌ Error during auto-refresh check:', error)
+      // If there's an error, refresh anyway to be safe
+      await this.refreshAllData()
+    }
+  }
+
+  /**
+   * Check if error indicates UUID mismatch or foreign key violation
+   */
+  static isUuidMismatchError(error: any): boolean {
+    if (!error) return false
+
+    // PostgreSQL error codes for foreign key violations
+    const foreignKeyErrorCodes = ['23503', '23505', 'PGRST116']
+
+    // Check error code
+    if (foreignKeyErrorCodes.includes(error.code)) return true
+
+    // Check error message for common UUID mismatch patterns
+    const errorMessage = error.message?.toLowerCase() || ''
+    const uuidMismatchPatterns = [
+      'does not exist',
+      'violates foreign key constraint',
+      'invalid uuid',
+      'uuid not found',
+      'foreign key violation',
+      'constraint violation'
+    ]
+
+    return uuidMismatchPatterns.some(pattern => errorMessage.includes(pattern))
+  }
+
+  /**
+   * Auto-recovery wrapper for database operations that use cached UUIDs
+   * Automatically refreshes cache and retries once if UUID mismatch is detected
+   */
+  static async withAutoRecovery<T>(
+    operation: () => Promise<T>,
+    operationName: string = 'database operation'
+  ): Promise<T> {
+    try {
+      console.log(`🔄 Starting ${operationName}...`)
+      return await operation()
+    } catch (error) {
+      console.log(`🚨 Error in ${operationName}:`, {
+        error,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        isUuidMismatch: this.isUuidMismatchError(error)
+      })
+
+      if (this.isUuidMismatchError(error)) {
+        console.log(`🔄 UUID mismatch detected in ${operationName}, refreshing cache and retrying...`)
+        console.log('🚨 Original error:', error.message)
+
+        // Refresh cache
+        await this.refreshAllData()
+
+        // Retry operation once
+        try {
+          console.log(`🔁 Retrying ${operationName} after cache refresh...`)
+          const result = await operation()
+          console.log(`✅ ${operationName} succeeded after auto-recovery`)
+          return result
+        } catch (retryError) {
+          console.error(`❌ ${operationName} failed even after auto-recovery:`, {
+            retryError,
+            originalError: error,
+            operationName
+          })
+          throw new Error(`${operationName} failed: ${retryError.message || 'Unknown error after auto-recovery'}`)
+        }
+      }
+
+      // If not a UUID mismatch error, throw original error
+      console.log(`❌ ${operationName} failed with non-UUID error, not retrying`)
+      throw error
+    }
   }
 }

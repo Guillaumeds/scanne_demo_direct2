@@ -779,20 +779,16 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 cropCycleType: activeCycleInfo?.type || 'plantation'
               }
 
-              // Check if this is truly an existing activity (exists in database)
-              const existingActivity = editingActivity ? await ActivityService.getActivityById(editingActivity.id) : null
+              // Use autoSaveActivity which handles UUID validation and create/update logic
+              console.log('Auto-saving activity with ID:', activityWithCycle.id)
+              savedActivity = await ActivityService.autoSaveActivity(activityWithCycle)
 
-              console.log('Save logic - editingActivity:', editingActivity?.id, 'existingActivity:', existingActivity?.id)
-
-              if (existingActivity && editingActivity) {
-                // Update existing activity in database
-                console.log('Updating existing activity:', editingActivity.id)
-                savedActivity = await ActivityService.updateActivity(editingActivity.id, activityWithCycle)
+              // Update local state
+              if (editingActivity && editingActivity.id && editingActivity.id.trim() !== '') {
+                // Update existing activity in local state
                 setActivities(prev => prev.map(a => a.id === editingActivity.id ? savedActivity : a))
               } else {
-                // Create new activity in database
-                console.log('Creating new activity')
-                savedActivity = await ActivityService.createActivity(activityWithCycle)
+                // Add new activity to local state
                 setActivities(prev => [...prev, savedActivity])
               }
 

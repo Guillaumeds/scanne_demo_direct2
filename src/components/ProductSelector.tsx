@@ -41,7 +41,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
 
   // Pre-populate fields when editing existing product
   useEffect(() => {
-    if (existingProduct && products.length > 0) {
+    if (existingProduct && products && products.length > 0) {
       const product = products.find(p => p.id === existingProduct.productId)
       if (product) {
         setSelectedProduct(product)
@@ -132,13 +132,13 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                   <span className="text-lg">🌟</span>
                   <div>
                     <div className="font-medium">All Categories</div>
-                    <div className="text-xs text-gray-500">{products.length} products</div>
+                    <div className="text-xs text-gray-500">{products?.length || 0} products</div>
                   </div>
                 </div>
               </button>
 
               {PRODUCT_CATEGORIES.map(category => {
-                const productCount = products.filter(p => p.category === category.id).length
+                const productCount = products?.filter(p => p.category === category.id).length || 0
                 return (
                   <button
                     key={category.id}
@@ -183,7 +183,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                     <div className="text-center max-w-md">
                       <div className="text-red-500 text-6xl mb-4">⚠️</div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
-                      <p className="text-gray-600 mb-4">{error.message}</p>
+                      <p className="text-gray-600 mb-4">{typeof error === 'string' ? error : error?.message || 'Unknown error'}</p>
                       <button
                         type="button"
                         onClick={() => window.location.reload()}

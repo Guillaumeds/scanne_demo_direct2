@@ -237,8 +237,21 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         expectedYield: ''
       })
     } catch (error) {
-      console.error('Error creating plantation cycle:', error)
-      alert(`Error creating plantation cycle: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('🚨 DETAILED Error creating plantation cycle:', {
+        error,
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        // cycleRequest, // This variable doesn't exist
+        newCycleData
+      })
+
+      const errorMessage = error instanceof Error ? error.message :
+                          typeof error === 'string' ? error :
+                          JSON.stringify(error)
+
+      alert(`Error creating plantation cycle: ${errorMessage}`)
     }
   }
 
@@ -313,6 +326,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   }
 
   const handleSugarcaneVarietySelect = (variety: CropVariety) => {
+    console.log('🌾 Sugarcane variety selected:', variety)
+    console.log('🌾 Variety UUID:', variety.uuid)
+    console.log('🌾 Variety ID:', variety.id)
+    console.log('🌾 Show edit cycle:', showEditCycle)
+
     if (showEditCycle) {
       // Update edit form data - use UUID for database operations
       setEditCycleData(prev => ({
@@ -351,11 +369,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   }
 
   const getSelectedSugarcaneVariety = () => {
-    return (sugarcaneVarieties || []).find(v => v.id === newCycleData.sugarcaneVarietyId)
+    return (sugarcaneVarieties || []).find(v => v.uuid === newCycleData.sugarcaneVarietyId)
   }
 
   const getSelectedIntercropVariety = () => {
-    return (intercropVarieties || []).find(v => v.id === newCycleData.intercropVarietyId)
+    return (intercropVarieties || []).find(v => v.uuid === newCycleData.intercropVarietyId)
   }
 
   const canCreateRatoonCycle = () => {

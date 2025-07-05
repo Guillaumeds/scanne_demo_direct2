@@ -12,8 +12,9 @@ import CropCycleGeneralInfo from './CropCycleGeneralInfo'
 import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
 import { CropCycleProvider, useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
 import { SelectedCropCycleProvider } from '@/contexts/SelectedCropCycleContext'
-import { CropVariety, ALL_VARIETIES } from '@/types/varieties'
+import { CropVariety } from '@/types/varieties'
 import { FormCommitRef } from '@/hooks/useFormWithAutoCommit'
+import { useAllVarieties } from '@/hooks/useLocalStorageData'
 
 
 
@@ -79,6 +80,9 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
 
   // Get active cycle info
   const activeCycleInfo = getActiveCycleInfo()
+
+  // Load varieties data
+  const { data: allVarieties, loading: varietiesLoading } = useAllVarieties()
 
   const [activeTab, setActiveTab] = useState('general')
   const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
@@ -208,11 +212,13 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   }
 
   const getSelectedSugarcaneVarietyDetails = () => {
-    return ALL_VARIETIES.find(v => v.name === blocData.sugarcaneVariety && v.category === 'sugarcane')
+    if (!allVarieties) return null
+    return allVarieties.find(v => v.name === blocData.sugarcaneVariety && v.category === 'sugarcane')
   }
 
   const getSelectedIntercropVarietyDetails = () => {
-    return ALL_VARIETIES.find(v => v.name === blocData.intercropVariety && v.category === 'intercrop')
+    if (!allVarieties) return null
+    return allVarieties.find(v => v.name === blocData.intercropVariety && v.category === 'intercrop')
   }
 
   // Simple tab change handler - no auto-commit needed with database persistence

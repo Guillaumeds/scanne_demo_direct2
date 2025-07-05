@@ -1448,8 +1448,16 @@ export default function DrawingManager({
     map?.removeLayer(currentDrawingRef.current)
     drawnLayersRef.current.addLayer(finalPolygon)
 
-    // Store layer reference for deletion
-    const areaId = L.stamp(finalPolygon).toString()
+    // Generate a proper UUID for the bloc
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0
+        const v = c == 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+      })
+    }
+
+    const areaId = generateUUID()
     layerMapRef.current.set(areaId, finalPolygon)
 
     // Add vertex markers for editing
@@ -1483,7 +1491,7 @@ export default function DrawingManager({
     setTotalDrawnArea(prev => prev + area)
 
     const drawnArea: DrawnArea = {
-      id: L.stamp(finalPolygon).toString(),
+      id: areaId,
       type: 'polygon',
       coordinates,
       area
@@ -1681,8 +1689,17 @@ export default function DrawingManager({
       const coordinates = latlngs.map(latlng => [latlng.lng, latlng.lat] as [number, number])
       const area = calculateArea(coordinates)
 
+      // Find the existing area ID from the layer map
+      let existingAreaId = ''
+      for (const [id, layer] of layerMapRef.current.entries()) {
+        if (layer === polygon) {
+          existingAreaId = id
+          break
+        }
+      }
+
       const updatedArea: DrawnArea = {
-        id: L.stamp(polygon).toString(),
+        id: existingAreaId,
         type: 'polygon',
         coordinates,
         area

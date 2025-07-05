@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION save_activity_with_totals(
     p_resources JSONB DEFAULT '[]'::jsonb
 )
 RETURNS TABLE(
-    activity_id UUID,
+    result_activity_id UUID,
     estimated_total_cost DECIMAL(12,2),
     actual_total_cost DECIMAL(12,2),
     total_revenue DECIMAL(12,2),
@@ -20,34 +20,34 @@ RETURNS TABLE(
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_activity_id UUID;
-    v_crop_cycle_id UUID;
-    v_bloc_area DECIMAL(10,2);
-    v_estimated_cost DECIMAL(12,2) := 0;
-    v_actual_cost DECIMAL(12,2) := 0;
-    v_total_revenue DECIMAL(12,2) := 0;
-    v_net_profit DECIMAL(12,2) := 0;
-    v_profit_per_ha DECIMAL(12,2) := 0;
+    var_activity_id UUID;
+    var_crop_cycle_id UUID;
+    var_bloc_area DECIMAL(10,2);
+    var_estimated_cost DECIMAL(12,2) := 0;
+    var_actual_cost DECIMAL(12,2) := 0;
+    var_total_revenue DECIMAL(12,2) := 0;
+    var_net_profit DECIMAL(12,2) := 0;
+    var_profit_per_ha DECIMAL(12,2) := 0;
     product_item JSONB;
     resource_item JSONB;
 BEGIN
     -- Extract crop cycle ID
-    v_crop_cycle_id := (p_activity_data->>'crop_cycle_id')::UUID;
-    
+    var_crop_cycle_id := (p_activity_data->>'crop_cycle_id')::UUID;
+
     -- Get bloc area for calculations
-    SELECT b.area_hectares INTO v_bloc_area
+    SELECT b.area_hectares INTO var_bloc_area
     FROM crop_cycles cc
     JOIN blocs b ON cc.bloc_id = b.id
-    WHERE cc.id = v_crop_cycle_id;
-    
+    WHERE cc.id = var_crop_cycle_id;
+
     -- Default to 1 hectare if not found
-    v_bloc_area := COALESCE(v_bloc_area, 1.0);
+    var_bloc_area := COALESCE(var_bloc_area, 1.0);
 
     -- Insert or update activity
     IF (p_activity_data->>'id') IS NOT NULL AND (p_activity_data->>'id') != '' THEN
         -- Update existing activity
-        v_activity_id := (p_activity_data->>'id')::UUID;
-        
+        var_activity_id := (p_activity_data->>'id')::UUID;
+
         UPDATE activities SET
             name = p_activity_data->>'name',
             description = p_activity_data->>'description',
@@ -58,11 +58,11 @@ BEGIN
             duration = (p_activity_data->>'duration')::INTEGER,
             notes = p_activity_data->>'notes',
             updated_at = NOW()
-        WHERE id = v_activity_id;
-        
+        WHERE id = var_activity_id;
+
         -- Delete existing products and resources
-        DELETE FROM activity_products WHERE activity_id = v_activity_id;
-        DELETE FROM activity_resources WHERE activity_id = v_activity_id;
+        DELETE FROM activity_products WHERE activity_products.activity_id = var_activity_id;
+        DELETE FROM activity_resources WHERE activity_resources.activity_id = var_activity_id;
     ELSE
         -- Insert new activity
         INSERT INTO activities (
@@ -76,7 +76,7 @@ BEGIN
             duration,
             notes
         ) VALUES (
-            v_crop_cycle_id,
+            var_crop_cycle_id,
             p_activity_data->>'name',
             p_activity_data->>'description',
             p_activity_data->>'phase',
@@ -85,7 +85,7 @@ BEGIN
             (p_activity_data->>'end_date')::DATE,
             (p_activity_data->>'duration')::INTEGER,
             p_activity_data->>'notes'
-        ) RETURNING id INTO v_activity_id;
+        ) RETURNING id INTO var_activity_id;
     END IF;
 
     -- Insert products
@@ -101,7 +101,7 @@ BEGIN
             estimated_cost,
             actual_cost
         ) VALUES (
-            v_activity_id,
+            var_activity_id,
             (product_item->>'product_id')::UUID,
             product_item->>'product_name',
             (product_item->>'quantity')::DECIMAL(10,2),
@@ -126,7 +126,7 @@ BEGIN
             estimated_cost,
             actual_cost
         ) VALUES (
-            v_activity_id,
+            var_activity_id,
             (resource_item->>'resource_id')::UUID,
             resource_item->>'resource_name',
             (resource_item->>'hours')::DECIMAL(10,2),
@@ -142,18 +142,18 @@ BEGIN
     SELECT 
         COALESCE(SUM(a.estimated_total_cost), 0),
         COALESCE(SUM(a.actual_total_cost), 0)
-    INTO v_estimated_cost, v_actual_cost
+    INTO var_estimated_cost, var_actual_cost
     FROM activities a
-    WHERE a.crop_cycle_id = v_crop_cycle_id;
+    WHERE a.crop_cycle_id = var_crop_cycle_id;
 
     -- Calculate revenue from observations
-    SELECT COALESCE(SUM(o.total_yield_tons * 3000), 0) INTO v_total_revenue
+    SELECT COALESCE(SUM(o.total_yield_tons * 3000), 0) INTO var_total_revenue
     FROM observations o
-    WHERE o.crop_cycle_id = v_crop_cycle_id AND o.total_yield_tons IS NOT NULL;
+    WHERE o.crop_cycle_id = var_crop_cycle_id AND o.total_yield_tons IS NOT NULL;
 
     -- Calculate profit metrics
-    v_net_profit := v_total_revenue - v_actual_cost;
-    v_profit_per_ha := CASE WHEN v_bloc_area > 0 THEN v_net_profit / v_bloc_area ELSE 0 END;
+    var_net_profit := var_total_revenue - var_actual_cost;
+    var_profit_per_ha := CASE WHEN var_bloc_area > 0 THEN var_net_profit / var_bloc_area ELSE 0 END;
 
     -- Update activity with calculated costs
     UPDATE activities SET
@@ -161,36 +161,36 @@ BEGIN
             SELECT COALESCE(SUM(ap.estimated_cost), 0) + COALESCE(SUM(ar.estimated_cost), 0)
             FROM activity_products ap
             FULL OUTER JOIN activity_resources ar ON ap.activity_id = ar.activity_id
-            WHERE COALESCE(ap.activity_id, ar.activity_id) = v_activity_id
+            WHERE COALESCE(ap.activity_id, ar.activity_id) = var_activity_id
         ),
         actual_total_cost = (
             SELECT COALESCE(SUM(ap.actual_cost), 0) + COALESCE(SUM(ar.actual_cost), 0)
             FROM activity_products ap
             FULL OUTER JOIN activity_resources ar ON ap.activity_id = ar.activity_id
-            WHERE COALESCE(ap.activity_id, ar.activity_id) = v_activity_id
+            WHERE COALESCE(ap.activity_id, ar.activity_id) = var_activity_id
         )
-    WHERE id = v_activity_id;
+    WHERE id = var_activity_id;
 
     -- Update crop cycle totals
     UPDATE crop_cycles SET
-        estimated_total_cost = v_estimated_cost,
-        actual_total_cost = v_actual_cost,
-        total_revenue = v_total_revenue,
-        net_profit = v_net_profit,
-        profit_per_hectare = v_profit_per_ha,
-        profit_margin_percent = CASE WHEN v_total_revenue > 0 THEN (v_net_profit / v_total_revenue) * 100 ELSE 0 END,
+        estimated_total_cost = var_estimated_cost,
+        actual_total_cost = var_actual_cost,
+        total_revenue = var_total_revenue,
+        net_profit = var_net_profit,
+        profit_per_hectare = var_profit_per_ha,
+        profit_margin_percent = CASE WHEN var_total_revenue > 0 THEN (var_net_profit / var_total_revenue) * 100 ELSE 0 END,
         updated_at = NOW()
-    WHERE id = v_crop_cycle_id;
+    WHERE id = var_crop_cycle_id;
 
     -- Return results
     RETURN QUERY
-    SELECT 
-        v_activity_id,
-        v_estimated_cost,
-        v_actual_cost,
-        v_total_revenue,
-        v_net_profit,
-        v_profit_per_ha;
+    SELECT
+        var_activity_id,
+        var_estimated_cost,
+        var_actual_cost,
+        var_total_revenue,
+        var_net_profit,
+        var_profit_per_ha;
 END;
 $$;
 

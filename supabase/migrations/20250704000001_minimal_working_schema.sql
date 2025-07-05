@@ -158,6 +158,7 @@ CREATE TABLE crop_cycles (
     intercrop_revenue DECIMAL(12,2) DEFAULT 0,
     total_revenue DECIMAL(12,2) DEFAULT 0,
     net_profit DECIMAL(12,2) DEFAULT 0,
+    profit_per_hectare DECIMAL(12,2) DEFAULT 0,
     profit_margin_percent DECIMAL(5,2) DEFAULT 0,
 
     -- Closure validation
