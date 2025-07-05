@@ -350,6 +350,11 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   }
 
   const handleEditActivity = (activity: BlocActivity) => {
+    console.log('✏️ Editing activity:', activity.id, activity.name)
+    console.log('📦 Activity products:', activity.products?.length || 0, 'products')
+    console.log('🔧 Activity resources:', activity.resources?.length || 0, 'resources')
+    console.log('📋 Full activity data:', activity)
+
     setEditingActivity(activity)
     setShowAddModal(true)
   }
@@ -832,22 +837,28 @@ function AddActivityModal({
   onSave: (activity: BlocActivity) => void
   onCancel: () => void
 }) {
-  const [formData, setFormData] = useState<Partial<BlocActivity>>({
-    id: activity?.id, // Preserve the ID for editing
-    name: activity?.name || '',
-    description: activity?.description || '',
-    phase: activity?.phase || 'land-preparation',
-    status: activity?.status || 'planned',
-    startDate: activity?.startDate || new Date().toISOString().split('T')[0],
-    endDate: activity?.endDate || new Date().toISOString().split('T')[0],
-    duration: activity?.duration || 4,
-    products: activity?.products || [],
-    resources: activity?.resources || [],
-    resourceType: activity?.resourceType || 'both',
-    laborHours: activity?.laborHours || 0,
-    machineHours: activity?.machineHours || 0,
-    totalCost: activity?.totalCost || 0,
-    notes: activity?.notes || ''
+  const [formData, setFormData] = useState<Partial<BlocActivity>>(() => {
+    console.log('🎯 Initializing form with activity:', activity?.id, activity?.name)
+    console.log('📦 Initial products:', activity?.products?.length || 0, 'products')
+    console.log('🔧 Initial resources:', activity?.resources?.length || 0, 'resources')
+
+    return {
+      id: activity?.id, // Preserve the ID for editing
+      name: activity?.name || '',
+      description: activity?.description || '',
+      phase: activity?.phase || 'land-preparation',
+      status: activity?.status || 'planned',
+      startDate: activity?.startDate || new Date().toISOString().split('T')[0],
+      endDate: activity?.endDate || new Date().toISOString().split('T')[0],
+      duration: activity?.duration || 4,
+      products: activity?.products || [],
+      resources: activity?.resources || [],
+      resourceType: activity?.resourceType || 'both',
+      laborHours: activity?.laborHours || 0,
+      machineHours: activity?.machineHours || 0,
+      totalCost: activity?.totalCost || 0,
+      notes: activity?.notes || ''
+    }
   })
 
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')

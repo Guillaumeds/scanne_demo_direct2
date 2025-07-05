@@ -45,7 +45,7 @@ export class ActivityService {
 
       if (error) throw error
 
-      return (data || []).map(this.transformDbToLocal)
+      return await Promise.all((data || []).map(record => this.transformDbToLocal(record)))
     } catch (error) {
       console.error('Error loading activities for bloc:', error)
       return []
@@ -57,6 +57,8 @@ export class ActivityService {
    */
   static async getActivitiesForCycle(cycleId: string): Promise<BlocActivity[]> {
     try {
+      console.log('📋 Loading activities for cycle:', cycleId)
+
       const { data, error } = await supabase
         .from('activities')
         .select('*')
@@ -65,7 +67,13 @@ export class ActivityService {
 
       if (error) throw error
 
-      return (data || []).map(this.transformDbToLocal)
+      console.log('📋 Raw activities from DB:', data?.length || 0, 'activities')
+
+      const transformedActivities = await Promise.all((data || []).map(record => this.transformDbToLocal(record)))
+
+      console.log('📋 Transformed activities:', transformedActivities.length, 'activities with products/resources loaded')
+
+      return transformedActivities
     } catch (error) {
       console.error('Error loading activities for cycle:', error)
       return []
@@ -285,7 +293,7 @@ export class ActivityService {
   }
 
   /**
-   * Get activity by ID
+   * Get activity by ID with products and resources
    */
   static async getActivityById(activityId: string): Promise<BlocActivity | null> {
     try {
@@ -302,7 +310,7 @@ export class ActivityService {
         throw error
       }
 
-      return this.transformDbToLocal(data)
+      return await this.transformDbToLocal(data)
     } catch (error) {
       console.error('Error getting activity by ID:', error)
       return null
@@ -367,6 +375,60 @@ export class ActivityService {
       return data.id
     } catch (error) {
       console.error('Error getting resource UUID:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get product string ID by UUID (reverse lookup)
+   */
+  private static async getProductStringIdByUuid(productUuid: string): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('product_id')
+        .eq('id', productUuid)
+        .eq('active', true)
+        .single()
+
+      if (error) {
+        throw new Error(`Failed to find product string ID for UUID '${productUuid}': ${error.message}`)
+      }
+
+      if (!data) {
+        throw new Error(`Product with UUID '${productUuid}' not found in database`)
+      }
+
+      return data.product_id
+    } catch (error) {
+      console.error('Error getting product string ID:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get resource string ID by UUID (reverse lookup)
+   */
+  private static async getResourceStringIdByUuid(resourceUuid: string): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('resource_id')
+        .eq('id', resourceUuid)
+        .eq('active', true)
+        .single()
+
+      if (error) {
+        throw new Error(`Failed to find resource string ID for UUID '${resourceUuid}': ${error.message}`)
+      }
+
+      if (!data) {
+        throw new Error(`Resource with UUID '${resourceUuid}' not found in database`)
+      }
+
+      return data.resource_id
+    } catch (error) {
+      console.error('Error getting resource string ID:', error)
       throw error
     }
   }
@@ -476,24 +538,164 @@ export class ActivityService {
   /**
    * Transform database record to local BlocActivity type
    */
-  private static transformDbToLocal(dbRecord: any): BlocActivity {
-    return {
+  private static async transformDbToLocal(dbRecord: any): Promise<BlocActivity> {
+    console.log('🔄 Transforming activity:', dbRecord.id, dbRecord.name)
+
+    // Get products and resources separately to avoid JOIN complexity
+    const products = await this.getActivityProducts(dbRecord.id)
+    const resources = await this.getActivityResources(dbRecord.id)
+
+    const activity = {
       id: dbRecord.id,
       name: dbRecord.name,
       description: dbRecord.description,
       phase: dbRecord.phase,
       status: dbRecord.status,
       cropCycleId: dbRecord.crop_cycle_id,
+      cropCycleType: 'plantation', // Default, could be enhanced
       startDate: dbRecord.start_date,
       endDate: dbRecord.end_date,
       actualDate: dbRecord.actual_date,
-      durationHours: dbRecord.duration_hours,
-      estimatedTotalCost: dbRecord.estimated_total_cost || 0,
-      actualTotalCost: dbRecord.actual_total_cost || 0,
+      duration: dbRecord.duration || 0,
+      products,
+      resources,
       notes: dbRecord.notes,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,
       createdBy: dbRecord.created_by || 'system'
+    }
+
+    console.log('✅ Transformed activity with', products.length, 'products and', resources.length, 'resources')
+    return activity
+  }
+
+  /**
+   * Get products for an activity
+   */
+  private static async getActivityProducts(activityId: string): Promise<any[]> {
+    try {
+      console.log('🔍 Loading products for activity:', activityId)
+
+      // Step 1: Get activity_products records
+      const { data: activityProductsData, error: apError } = await supabase
+        .from('activities')
+        .select(`
+          activity_products:activity_products!activity_id (
+            product_id,
+            product_name,
+            quantity,
+            rate,
+            unit,
+            estimated_cost,
+            actual_cost
+          )
+        `)
+        .eq('id', activityId)
+        .single()
+
+      if (apError) {
+        console.error('❌ Error getting activity products:', apError)
+        return []
+      }
+
+      console.log('📦 Raw activity_products data:', activityProductsData)
+
+      const activityProducts = (activityProductsData as any)?.activity_products || []
+
+      if (activityProducts.length === 0) {
+        console.log('📦 No products found for activity')
+        return []
+      }
+
+      // Step 2: Convert product UUIDs to string IDs
+      const products = await Promise.all(activityProducts.map(async (ap: any) => {
+        try {
+          const productStringId = await this.getProductStringIdByUuid(ap.product_id)
+          return {
+            productId: productStringId,
+            productName: ap.product_name,
+            quantity: parseFloat(ap.quantity) || 0,
+            rate: parseFloat(ap.rate) || 0,
+            unit: ap.unit,
+            estimatedCost: parseFloat(ap.estimated_cost) || 0,
+            actualCost: ap.actual_cost ? parseFloat(ap.actual_cost) : undefined
+          }
+        } catch (error) {
+          console.error('❌ Error converting product UUID:', ap.product_id, error)
+          return null
+        }
+      }))
+
+      const validProducts = products.filter(p => p !== null)
+      console.log('✅ Transformed products:', validProducts)
+      return validProducts
+    } catch (error) {
+      console.error('❌ Error getting activity products:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get resources for an activity
+   */
+  private static async getActivityResources(activityId: string): Promise<any[]> {
+    try {
+      console.log('🔍 Loading resources for activity:', activityId)
+
+      // Step 1: Get activity_resources records
+      const { data: activityResourcesData, error: arError } = await supabase
+        .from('activities')
+        .select(`
+          activity_resources:activity_resources!activity_id (
+            resource_id,
+            resource_name,
+            hours,
+            estimated_cost,
+            actual_cost
+          )
+        `)
+        .eq('id', activityId)
+        .single()
+
+      if (arError) {
+        console.error('❌ Error getting activity resources:', arError)
+        return []
+      }
+
+      console.log('🔧 Raw activity_resources data:', activityResourcesData)
+
+      const activityResources = (activityResourcesData as any)?.activity_resources || []
+
+      if (activityResources.length === 0) {
+        console.log('🔧 No resources found for activity')
+        return []
+      }
+
+      // Step 2: Convert resource UUIDs to string IDs
+      const resources = await Promise.all(activityResources.map(async (ar: any) => {
+        try {
+          const resourceStringId = await this.getResourceStringIdByUuid(ar.resource_id)
+          return {
+            resourceId: resourceStringId,
+            resourceName: ar.resource_name,
+            hours: parseFloat(ar.hours) || 0,
+            unit: 'hours',
+            estimatedCost: parseFloat(ar.estimated_cost) || 0,
+            actualCost: ar.actual_cost ? parseFloat(ar.actual_cost) : undefined,
+            category: 'general'
+          }
+        } catch (error) {
+          console.error('❌ Error converting resource UUID:', ar.resource_id, error)
+          return null
+        }
+      }))
+
+      const validResources = resources.filter(r => r !== null)
+      console.log('✅ Transformed resources:', validResources)
+      return validResources
+    } catch (error) {
+      console.error('❌ Error getting activity resources:', error)
+      return []
     }
   }
 
