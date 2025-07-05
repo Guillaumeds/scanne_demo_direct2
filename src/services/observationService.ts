@@ -38,6 +38,8 @@ export class ObservationService {
    */
   static async getObservationsForCycle(cycleId: string): Promise<BlocObservation[]> {
     try {
+      console.log('📋 Loading observations for cycle:', cycleId)
+
       const { data, error } = await supabase
         .from('observations')
         .select('*')
@@ -46,7 +48,13 @@ export class ObservationService {
 
       if (error) throw error
 
-      return (data || []).map(this.transformDbToLocal)
+      console.log('📋 Raw observations from DB:', data?.length || 0, 'observations')
+
+      const transformedObservations = (data || []).map(this.transformDbToLocal)
+
+      console.log('📋 Transformed observations:', transformedObservations.length, 'observations')
+
+      return transformedObservations
     } catch (error) {
       console.error('Error loading observations for cycle:', error)
       return []
@@ -103,33 +111,55 @@ export class ObservationService {
   }
   
   /**
-   * Update an existing observation
+   * Update an existing observation using atomic database function
    */
   static async updateObservation(observationId: string, updates: Partial<BlocObservation>): Promise<BlocObservation> {
     try {
-      // Transform local updates to database format
-      const dbUpdates = this.transformLocalToDb(updates)
+      console.log('💾 Updating observation with atomic transaction:', observationId)
 
-      const { data, error } = await supabase
-        .from('observations')
-        .update({
-          ...dbUpdates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', observationId)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      const updatedObservation = this.transformDbToLocal(data)
-
-      // Recalculate and update crop cycle totals
-      if (updatedObservation.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(updatedObservation.cropCycleId)
+      // Get existing observation to merge with updates
+      const existingObservation = await this.getObservationById(observationId)
+      if (!existingObservation) {
+        throw new Error(`Observation with ID ${observationId} not found`)
       }
 
-      return updatedObservation
+      // Merge existing data with updates
+      const mergedObservation = { ...existingObservation, ...updates }
+
+      // Prepare observation data for atomic function
+      const observationData = {
+        id: observationId, // Include ID for update
+        crop_cycle_id: mergedObservation.cropCycleId,
+        name: mergedObservation.name,
+        description: mergedObservation.description,
+        category: mergedObservation.category,
+        status: mergedObservation.status || 'draft',
+        observation_date: mergedObservation.observationDate,
+        number_of_samples: mergedObservation.numberOfSamples,
+        number_of_plants: mergedObservation.numberOfPlants,
+        observation_data: mergedObservation.data || {},
+        yield_tons_ha: mergedObservation.yieldTonsHa,
+        area_hectares: mergedObservation.areaHectares,
+        total_yield_tons: mergedObservation.totalYieldTons,
+        notes: mergedObservation.notes
+      }
+
+      console.log('💾 Observation data for atomic update:', observationData)
+
+      // Call atomic database function
+      const { data, error } = await supabase.rpc('save_observation_with_totals', {
+        p_observation_data: observationData
+      })
+
+      if (error) {
+        console.error('❌ Error in atomic observation update:', error)
+        throw new Error(`Failed to update observation: ${error.message}`)
+      }
+
+      console.log('✅ Observation updated with totals:', data)
+
+      // Return the updated observation
+      return await this.getObservationById(observationId) || mergedObservation
     } catch (error) {
       console.error('Error updating observation:', error)
       throw error
@@ -203,28 +233,47 @@ export class ObservationService {
    * Transform database record to local BlocObservation type
    */
   private static transformDbToLocal(dbRecord: any): BlocObservation {
-    return {
+    console.log('🔄 Transforming observation:', dbRecord.id, dbRecord.name)
+    console.log('🗃️ Raw database record:', dbRecord)
+    console.log('📊 Raw observation_data:', dbRecord.observation_data)
+    console.log('🌾 Raw yield fields:', {
+      yield_tons_ha: dbRecord.yield_tons_ha,
+      area_hectares: dbRecord.area_hectares,
+      total_yield_tons: dbRecord.total_yield_tons
+    })
+
+    const observation = {
       id: dbRecord.id,
       name: dbRecord.name,
       description: dbRecord.description,
       category: dbRecord.category,
       status: dbRecord.status,
       cropCycleId: dbRecord.crop_cycle_id,
+      cropCycleType: 'plantation' as const, // Default, could be enhanced
       observationDate: dbRecord.observation_date,
+      actualDate: dbRecord.actual_date,
       numberOfSamples: dbRecord.number_of_samples,
       numberOfPlants: dbRecord.number_of_plants,
-      observationData: dbRecord.observation_data,
+      data: dbRecord.observation_data || {}, // Map observation_data to data field
+      yieldTonsHa: dbRecord.yield_tons_ha,
+      areaHectares: dbRecord.area_hectares,
+      totalYieldTons: dbRecord.total_yield_tons,
       notes: dbRecord.notes,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,
       createdBy: dbRecord.created_by || 'system'
     }
+
+    console.log('✅ Transformed observation:', observation)
+    return observation
   }
 
   /**
    * Transform local BlocObservation updates to database format
    */
   private static transformLocalToDb(localUpdates: Partial<BlocObservation>): any {
+    console.log('🔄 Transforming local updates to DB format:', localUpdates)
+
     const dbUpdates: any = {}
 
     if (localUpdates.name) dbUpdates.name = localUpdates.name
@@ -233,9 +282,19 @@ export class ObservationService {
     if (localUpdates.status) dbUpdates.status = localUpdates.status
     if (localUpdates.cropCycleId) dbUpdates.crop_cycle_id = localUpdates.cropCycleId
     if (localUpdates.observationDate) dbUpdates.observation_date = localUpdates.observationDate
+    if (localUpdates.actualDate) dbUpdates.actual_date = localUpdates.actualDate
     if (localUpdates.numberOfSamples) dbUpdates.number_of_samples = localUpdates.numberOfSamples
     if (localUpdates.numberOfPlants) dbUpdates.number_of_plants = localUpdates.numberOfPlants
-    if (localUpdates.observationData) dbUpdates.observation_data = localUpdates.observationData
+    if (localUpdates.data) dbUpdates.observation_data = localUpdates.data // Map data to observation_data
+    if (localUpdates.notes) dbUpdates.notes = localUpdates.notes
+
+    // Add yield fields - these are critical!
+    if (localUpdates.yieldTonsHa !== undefined) dbUpdates.yield_tons_ha = localUpdates.yieldTonsHa
+    if (localUpdates.areaHectares !== undefined) dbUpdates.area_hectares = localUpdates.areaHectares
+    if (localUpdates.totalYieldTons !== undefined) dbUpdates.total_yield_tons = localUpdates.totalYieldTons
+
+    console.log('✅ Transformed DB updates:', dbUpdates)
+    return dbUpdates
     if (localUpdates.notes) dbUpdates.notes = localUpdates.notes
 
     return dbUpdates

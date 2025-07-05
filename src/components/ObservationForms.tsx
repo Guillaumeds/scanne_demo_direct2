@@ -180,17 +180,27 @@ export default function ObservationForm({
 
   const categoryInfo = OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)
 
-  const [formData, setFormData] = useState({
-    name: observation?.name || categoryInfo?.name || '',
-    description: observation?.description || '',
-    category: selectedCategory,
-    status: observation?.status || 'planned' as ObservationStatus,
-    observationDate: observation?.observationDate || new Date().toISOString().split('T')[0],
-    actualDate: observation?.actualDate || '',
-    numberOfSamples: observation?.numberOfSamples || undefined,
-    numberOfPlants: observation?.numberOfPlants || undefined,
-    notes: observation?.notes || '',
-    data: observation?.data || {}
+  const [formData, setFormData] = useState(() => {
+    console.log('🎯 Initializing observation form with:', observation?.id, observation?.name)
+    console.log('📊 Initial observation data:', observation?.data)
+    console.log('🌾 Initial yield data:', {
+      yieldTonsHa: observation?.yieldTonsHa,
+      areaHectares: observation?.areaHectares,
+      totalYieldTons: observation?.totalYieldTons
+    })
+
+    return {
+      name: observation?.name || categoryInfo?.name || '',
+      description: observation?.description || '',
+      category: selectedCategory,
+      status: observation?.status || 'planned' as ObservationStatus,
+      observationDate: observation?.observationDate || new Date().toISOString().split('T')[0],
+      actualDate: observation?.actualDate || '',
+      numberOfSamples: observation?.numberOfSamples || undefined,
+      numberOfPlants: observation?.numberOfPlants || undefined,
+      notes: observation?.notes || '',
+      data: observation?.data || {}
+    }
   })
 
   const [attachments, setAttachments] = useState<BlocAttachment[]>(observation?.attachments || [])
@@ -204,6 +214,39 @@ export default function ObservationForm({
       alert('No active crop cycle found. Please create a crop cycle first.')
       return
     }
+
+    // Extract yield data from category-specific data
+    const extractYieldData = () => {
+      const data = formData.data as any
+
+      // For sugarcane yield observations
+      if (formData.category === 'sugarcane-yield-quality' && data) {
+        return {
+          yieldTonsHa: data.yieldPerHectare,
+          areaHectares: blocArea, // Use the bloc area passed as prop
+          totalYieldTons: data.totalYieldTons
+        }
+      }
+
+      // For intercrop yield observations
+      if (formData.category === 'intercrop-yield-quality' && data) {
+        return {
+          yieldTonsHa: data.yieldPerHectare,
+          areaHectares: blocArea, // Use the bloc area passed as prop
+          totalYieldTons: data.totalYieldTons
+        }
+      }
+
+      // For other categories, preserve existing values
+      return {
+        yieldTonsHa: observation?.yieldTonsHa,
+        areaHectares: observation?.areaHectares,
+        totalYieldTons: observation?.totalYieldTons
+      }
+    }
+
+    const yieldData = extractYieldData()
+    console.log('💾 Submitting observation with yield data:', yieldData)
 
     const newObservation: BlocObservation = {
       id: observation?.id || Date.now().toString(),
@@ -219,12 +262,17 @@ export default function ObservationForm({
       numberOfPlants: formData.numberOfPlants,
       notes: formData.notes,
       data: formData.data,
+      // Add yield data as top-level fields
+      yieldTonsHa: yieldData.yieldTonsHa,
+      areaHectares: yieldData.areaHectares,
+      totalYieldTons: yieldData.totalYieldTons,
       attachments: attachments,
       createdAt: observation?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: observation?.createdBy || 'user'
     }
 
+    console.log('💾 Final observation object:', newObservation)
     onSave(newObservation)
   }
 

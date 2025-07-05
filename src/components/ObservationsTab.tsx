@@ -32,6 +32,7 @@ import CategorySelector from './CategorySelector'
 import { useCropCyclePermissions, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ObservationService } from '@/services/observationService'
+import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import CropCycleSelector from './CropCycleSelector'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
@@ -230,6 +231,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
   const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
+  const [cropCycleTotals, setCropCycleTotals] = useState<any>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -303,6 +305,15 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   }
 
   const handleEditObservation = (observation: BlocObservation) => {
+    console.log('✏️ Editing observation:', observation.id, observation.name)
+    console.log('📊 Observation data:', observation.data)
+    console.log('🌾 Yield data:', {
+      yieldTonsHa: observation.yieldTonsHa,
+      areaHectares: observation.areaHectares,
+      totalYieldTons: observation.totalYieldTons
+    })
+    console.log('📋 Full observation:', observation)
+
     setEditingObservation(observation)
     setShowAddModal(true)
   }
@@ -391,8 +402,8 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-blue-800">SC Yield/ha</span>
                   <span className="text-sm font-bold text-blue-900">
-                    {selectedCycleInfo.sugarcaneYieldTonsPerHa > 0
-                      ? `${selectedCycleInfo.sugarcaneYieldTonsPerHa.toFixed(1)} t`
+                    {cropCycleTotals?.sugarcaneYieldTonnesPerHectare > 0
+                      ? `${cropCycleTotals.sugarcaneYieldTonnesPerHectare.toFixed(1)} t`
                       : '0 t'}
                   </span>
                 </div>
@@ -401,7 +412,15 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-green-800">Total Revenue</span>
                   <span className="text-sm font-bold text-green-900">
-                    Rs {((selectedCycleInfo.sugarcaneRevenue || 0) + (selectedCycleInfo.intercropRevenue || 0)).toLocaleString()}
+                    Rs {(cropCycleTotals?.totalRevenue || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-purple-800">Profit/ha</span>
+                  <span className="text-sm font-bold text-purple-900">
+                    Rs {(cropCycleTotals?.profitPerHectare || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -646,6 +665,14 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 // Create new observation in database
                 savedObservation = await ObservationService.createObservation(observation)
                 setObservations(prev => [...prev, savedObservation])
+              }
+
+              // Refresh crop cycle totals after saving observation
+              if (selectedCycleInfo?.id) {
+                console.log('🔄 Refreshing crop cycle totals after observation save')
+                const updatedTotals = await CropCycleCalculationService.getAuthoritativeTotals(selectedCycleInfo.id)
+                setCropCycleTotals(updatedTotals)
+                console.log('✅ Updated crop cycle totals:', updatedTotals)
               }
 
               setShowAddModal(false)
