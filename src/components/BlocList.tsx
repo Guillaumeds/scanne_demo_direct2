@@ -2,14 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { CropCycleService } from '@/services/cropCycleService'
-
-
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
+import { DrawnArea, DrawnAreaUtils, DrawnAreaGuards } from '@/types/drawnArea'
 
 interface BlocCycleData {
   blocId: string
@@ -43,194 +36,7 @@ interface BlocListProps {
 
 }
 
-// Individual bloc card component
-function BlocCard({
-  bloc,
-  isDrawn,
-  isSaved,
-  isSelected,
-  onAreaSelect,
-  onAreaDelete,
-  onAreaHover,
-  onBlocCardClick,
-  onBlocPopOut
-}: {
-  bloc: DrawnArea
-  isDrawn: boolean
-  isSaved: boolean
-  isSelected: boolean
-  onAreaSelect?: (areaId: string) => void
-  onAreaDelete?: (areaId: string) => void
-  onAreaHover?: (areaId: string | null) => void
-  onBlocCardClick?: (areaId: string) => void
-  onBlocPopOut?: (areaId: string) => void
-}) {
-  const [cropCycleData, setCropCycleData] = useState<BlocCycleData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
-  // Load crop cycle data for saved blocs
-  useEffect(() => {
-    if (isSaved && !isLoading && !cropCycleData) {
-      setIsLoading(true)
-      CropCycleService.getBlocSummary(bloc.id)
-        .then(setCropCycleData)
-        .catch(console.error)
-        .finally(() => setIsLoading(false))
-    }
-  }, [bloc.id, isSaved, isLoading, cropCycleData])
-
-  return (
-    <div
-      key={bloc.id}
-      className={`
-        relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
-        ${isSelected
-          ? 'border-blue-500 bg-blue-50 shadow-lg'
-          : isDrawn
-            ? 'border-blue-300 bg-blue-50/50 hover:border-blue-400'
-            : 'border-gray-200 bg-white hover:border-gray-300'
-        }
-      `}
-      onClick={() => {
-        onAreaSelect?.(bloc.id)
-        onBlocCardClick?.(bloc.id)
-      }}
-      onMouseEnter={() => onAreaHover?.(bloc.id)}
-      onMouseLeave={() => onAreaHover?.(null)}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${
-            isSaved ? 'bg-green-500' : 'bg-blue-500'
-          }`}></div>
-          <h3 className="font-semibold text-gray-900">
-            Bloc {bloc.id}
-          </h3>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {/* Pop-out icon - Only show for saved blocs */}
-          {isSaved && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onBlocPopOut?.(bloc.id)
-              }}
-              className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-md transition-all duration-200 hover:shadow-md"
-              title="Pop out bloc details"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2-2v-2"/>
-                <polyline points="7,13 12,8 21,8"/>
-                <polyline points="16,3 21,8 16,13"/>
-              </svg>
-            </button>
-          )}
-
-          {/* Delete button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (confirm(`Delete Bloc ${bloc.id}?`)) {
-                onAreaDelete?.(bloc.id)
-              }
-            }}
-            className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all duration-200"
-            title="Delete bloc"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="3,6 5,6 21,6"></polyline>
-              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Bloc details */}
-      <div className="space-y-1 text-sm text-gray-600">
-        <div className="flex justify-between">
-          <span>Area:</span>
-          <span className="font-medium text-green-600">
-            {bloc.area.toFixed(2)} ha
-          </span>
-        </div>
-
-        <div className="flex justify-between">
-          <span>Cycle:</span>
-          <span className="capitalize text-xs">
-            {isLoading ? (
-              <span className="text-gray-400">Loading...</span>
-            ) : cropCycleData?.hasActiveCycle ? (
-              <span className="text-green-600">
-                {cropCycleData.cycleType === 'plantation' ? 'Plantation' : `Ratoon ${cropCycleData.cycleNumber! - 1}`}
-              </span>
-            ) : (
-              <span className="text-gray-500">No Cycle</span>
-            )}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>Variety:</span>
-          <span className="text-xs">
-            {isLoading ? (
-              <span className="text-gray-400">Loading...</span>
-            ) : cropCycleData?.varietyName ? (
-              <span className="text-blue-600 font-medium">{cropCycleData.varietyName}</span>
-            ) : (
-              <span className="text-gray-500">Not Set</span>
-            )}
-          </span>
-        </div>
-        {cropCycleData?.hasActiveCycle && cropCycleData.growthStageName && (
-          <div className="flex justify-between">
-            <span>Stage:</span>
-            <span className="text-xs">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${cropCycleData.growthStageColor}`}>
-                {cropCycleData.growthStageIcon} {cropCycleData.growthStageName}
-              </span>
-            </span>
-          </div>
-        )}
-        {cropCycleData?.plannedHarvestDate && (
-          <div className="flex justify-between">
-            <span>Harvest:</span>
-            <span className="text-xs text-orange-600 font-medium">
-              {new Date(cropCycleData.plannedHarvestDate).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}
-            </span>
-          </div>
-        )}
-
-      </div>
-    </div>
-  )
-}
 
 export default function BlocList({
   drawnAreas,
@@ -252,26 +58,39 @@ export default function BlocList({
   // Crop cycle data for all blocs
   const [cropCycleDataMap, setCropCycleDataMap] = useState<Record<string, BlocCycleData>>({})
 
-  // Load crop cycle data for all saved blocs
+  // Load crop cycle data for all saved blocs using optimized batch method
   useEffect(() => {
     const loadCropCycleData = async () => {
-      const dataMap: typeof cropCycleDataMap = {}
+      if (savedAreas.length === 0) return
 
-      for (const bloc of savedAreas) {
-        try {
-          const data = await CropCycleService.getBlocSummary(bloc.id)
-          dataMap[bloc.id] = data
-        } catch (error) {
-          console.error(`Error loading crop cycle data for bloc ${bloc.id}:`, error)
-        }
+      try {
+        console.log('🔄 Loading crop cycle data for', savedAreas.length, 'saved blocs')
+
+        // Get all bloc IDs
+        const blocIds = savedAreas.map(bloc => DrawnAreaUtils.getEntityKey(bloc))
+
+        // Use optimized batch method to avoid 406 errors
+        const batchData = await CropCycleService.getBlocSummariesBatch(blocIds)
+
+        setCropCycleDataMap(batchData)
+        console.log('✅ Batch crop cycle data loaded successfully')
+      } catch (error) {
+        console.error('❌ Error loading crop cycle data batch:', error)
+        // Fallback: set all blocs as having no cycles
+        const fallbackMap: typeof cropCycleDataMap = {}
+        savedAreas.forEach(bloc => {
+          const blocKey = DrawnAreaUtils.getEntityKey(bloc)
+          fallbackMap[blocKey] = {
+            blocId: blocKey,
+            blocStatus: 'active',
+            hasActiveCycle: false
+          }
+        })
+        setCropCycleDataMap(fallbackMap)
       }
-
-      setCropCycleDataMap(dataMap)
     }
 
-    if (savedAreas.length > 0) {
-      loadCropCycleData()
-    }
+    loadCropCycleData()
   }, [savedAreas.length]) // Re-run when number of saved areas changes
 
   // Debug props
@@ -280,7 +99,7 @@ export default function BlocList({
     drawnAreasCount: drawnAreas.length,
     savedAreasCount: savedAreas.length,
     allBlocsCount: allBlocs.length,
-    allBlocIds: allBlocs.map(b => b.id)
+    allBlocIds: allBlocs.map(b => DrawnAreaUtils.getEntityKey(b))
   })
 
   // Refs for scrolling to specific bloc cards
@@ -397,14 +216,15 @@ export default function BlocList({
         ) : (
           <div className="p-4 space-y-3">
             {allBlocs.map((bloc, index) => {
-              const isDrawn = drawnAreas.some(a => a.id === bloc.id)
-              const isSaved = savedAreas.some(a => a.id === bloc.id)
-              const isSelected = selectedAreaId === bloc.id
+              const blocKey = DrawnAreaUtils.getEntityKey(bloc)
+              const isDrawn = drawnAreas.some(a => DrawnAreaUtils.getEntityKey(a) === blocKey)
+              const isSaved = savedAreas.some(a => DrawnAreaUtils.getEntityKey(a) === blocKey)
+              const isSelected = selectedAreaId === blocKey
 
               // Debug selection state
-              if (bloc.id === selectedAreaId) {
+              if (blocKey === selectedAreaId) {
                 console.log('🎨 Rendering selected bloc:', {
-                  blocId: bloc.id,
+                  blocKey,
                   selectedAreaId,
                   isSelected,
                   isDrawn,
@@ -414,12 +234,12 @@ export default function BlocList({
 
               return (
                 <div
-                  key={bloc.id}
+                  key={blocKey}
                   ref={(el) => {
                     if (el) {
-                      blocCardRefs.current.set(bloc.id, el)
+                      blocCardRefs.current.set(blocKey, el)
                     } else {
-                      blocCardRefs.current.delete(bloc.id)
+                      blocCardRefs.current.delete(blocKey)
                     }
                   }}
                   className={`border rounded-lg p-3 transition-all duration-300 cursor-pointer ${
@@ -431,8 +251,8 @@ export default function BlocList({
                     backgroundColor: isSelected ? '#dbeafe' : undefined,
                     borderColor: isSelected ? '#93c5fd' : undefined
                   }}
-                  onClick={() => handleCardClick(bloc.id)}
-                  onMouseEnter={() => onAreaHover?.(bloc.id)}
+                  onClick={() => handleCardClick(blocKey)}
+                  onMouseEnter={() => onAreaHover?.(blocKey)}
                   onMouseLeave={() => onAreaHover?.(null)}
                 >
                   {/* Bloc header */}
@@ -443,7 +263,7 @@ export default function BlocList({
                         isSaved ? 'bg-green-500' : 'bg-blue-500'
                       }`} />
                       <span className="font-medium text-gray-800">
-                        Bloc {index + 1}
+                        {DrawnAreaUtils.getDisplayName(bloc)}
                       </span>
                     </div>
 
@@ -454,7 +274,7 @@ export default function BlocList({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation()
-                            onBlocPopOut?.(bloc.id)
+                            onBlocPopOut?.(DrawnAreaUtils.getEntityKey(bloc))
                           }}
                           className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-md transition-all duration-200 hover:shadow-md"
                           title="Pop out bloc details"
@@ -482,7 +302,7 @@ export default function BlocList({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation()
-                            onAreaDelete?.(bloc.id)
+                            onAreaDelete?.(blocKey)
                           }}
                           className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all duration-200 hover:shadow-md"
                           title="Delete bloc"
@@ -520,7 +340,7 @@ export default function BlocList({
                       <span>Cycle:</span>
                       <span className="capitalize text-xs">
                         {(() => {
-                          const cycleData = cropCycleDataMap[bloc.id]
+                          const cycleData = cropCycleDataMap[blocKey]
                           if (!cycleData) return <span className="text-gray-500">No Cycle</span>
                           if (cycleData.hasActiveCycle) {
                             return (
@@ -537,7 +357,7 @@ export default function BlocList({
                       <span>Variety:</span>
                       <span className="text-xs">
                         {(() => {
-                          const cycleData = cropCycleDataMap[bloc.id]
+                          const cycleData = cropCycleDataMap[blocKey]
                           if (cycleData?.varietyName) {
                             return <span className="text-blue-600 font-medium">{cycleData.varietyName}</span>
                           }
@@ -545,21 +365,21 @@ export default function BlocList({
                         })()}
                       </span>
                     </div>
-                    {cropCycleDataMap[bloc.id]?.hasActiveCycle && cropCycleDataMap[bloc.id]?.growthStageName && (
+                    {cropCycleDataMap[blocKey]?.hasActiveCycle && cropCycleDataMap[blocKey]?.growthStageName && (
                       <div className="flex justify-between">
                         <span>Stage:</span>
                         <span className="text-xs">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${cropCycleDataMap[bloc.id]?.growthStageColor}`}>
-                            {cropCycleDataMap[bloc.id]?.growthStageIcon} {cropCycleDataMap[bloc.id]?.growthStageName}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${cropCycleDataMap[blocKey]?.growthStageColor}`}>
+                            {cropCycleDataMap[blocKey]?.growthStageIcon} {cropCycleDataMap[blocKey]?.growthStageName}
                           </span>
                         </span>
                       </div>
                     )}
-                    {cropCycleDataMap[bloc.id]?.plannedHarvestDate && (
+                    {cropCycleDataMap[blocKey]?.plannedHarvestDate && (
                       <div className="flex justify-between">
                         <span>Harvest:</span>
                         <span className="text-xs text-orange-600 font-medium">
-                          {new Date(cropCycleDataMap[bloc.id].plannedHarvestDate!).toLocaleDateString('en-GB', {
+                          {new Date(cropCycleDataMap[blocKey].plannedHarvestDate!).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric'

@@ -14,25 +14,20 @@ import CycleClosureModal from './CycleClosureModal'
 import { FormSaveStatus } from './UnsavedChangesIndicator'
 import { Trash2, Archive, AlertTriangle } from 'lucide-react'
 
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
+// Import the proper DrawnArea type instead of redefining it
+import { DrawnArea } from '@/types/drawnArea'
 
 interface CropCycleGeneralInfoProps {
   bloc: DrawnArea
   onSave: (data: any) => void
+  sidePanel?: boolean
+  hideSidePanel?: boolean
 }
 
 const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
-  ({ bloc, onSave }, ref) => {
-    // Use crop cycle context
-    const { createCycle } = useCropCycle()
-
-    const [cropCycles, setCropCycles] = useState<CropCycle[]>([])
-    const [activeCycle, setActiveCycle] = useState<CropCycle | null>(null)
+  ({ bloc, onSave, sidePanel = false, hideSidePanel = false }, ref) => {
+    // Use crop cycle context (eliminates redundant API calls!)
+    const { createCycle, allCycles, activeCycle, refreshCycles } = useCropCycle()
     const [cycleMetrics, setCycleMetrics] = useState<{[cycleId: string]: any}>({})
     const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
     const [showIntercropSelector, setShowIntercropSelector] = useState(false)
@@ -82,51 +77,42 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       save: () => Promise.resolve() // No auto-save needed
     }))
 
-  useEffect(() => {
-    // Load existing crop cycles for this bloc
-    loadCropCycles()
-    // Config data is now loaded via localStorage hooks
-  }, [bloc.id])
+  // No need to load crop cycles - context already provides them!
 
-  // Load metrics for all cycles
-  const loadCycleMetrics = async () => {
+  // Extract metrics from allCycles data (no API calls needed!)
+  const loadCycleMetrics = () => {
     const metricsData: {[cycleId: string]: any} = {}
 
-    for (const cycle of cropCycles) {
+    // Use totals already included in allCycles - no database calls needed!
+    for (const cycle of allCycles) {
       try {
-        // Use authoritative calculation service
-        const totals = await CropCycleCalculationService.getAuthoritativeTotals(cycle.id)
+        // Calculate derived values from included totals
+        const netProfit = (cycle.totalRevenue || 0) - (cycle.actualTotalCost || 0)
+        const profitMargin = (cycle.totalRevenue || 0) > 0 ?
+          (netProfit / (cycle.totalRevenue || 1)) * 100 : 0
 
-        if (totals) {
-          // Convert to display format
-          const netProfit = totals.totalRevenue - totals.actualTotalCost
-          const profitMargin = totals.totalRevenue > 0 ? (netProfit / totals.totalRevenue) * 100 : 0
-
-          metricsData[cycle.id] = {
-            costs: {
-              estimated: `Rs ${totals.estimatedTotalCost.toLocaleString()}`,
-              actual: `Rs ${totals.actualTotalCost.toLocaleString()}`
-            },
-            yield: {
-              sugarcane: `${totals.sugarcaneYieldTonnesPerHectare.toFixed(1)} t/ha`,
-              intercrop: `${totals.intercropYieldTonnesPerHectare.toFixed(1)} t/ha`
-            },
-            revenue: {
-              total: `Rs ${totals.totalRevenue.toLocaleString()}`,
-              sugarcane: `Rs ${totals.totalRevenue.toLocaleString()}`, // TODO: Split by type in database
-              intercrop: 'N/A'
-            },
-            profit: {
-              total: `Rs ${netProfit.toLocaleString()}`,
-              perHa: `Rs ${totals.profitPerHectare.toLocaleString()}`,
-              margin: `${profitMargin.toFixed(1)}%`
-            }
+        metricsData[cycle.id] = {
+          costs: {
+            estimated: `Rs ${(cycle.estimatedTotalCost || 0).toLocaleString()}`,
+            actual: `Rs ${(cycle.actualTotalCost || 0).toLocaleString()}`
+          },
+          yield: {
+            sugarcane: `${(cycle.sugarcaneYieldTonsPerHa || 0).toFixed(1)} t/ha`,
+            intercrop: `${(cycle.intercropYieldTons || 0).toFixed(1)} t/ha`
+          },
+          revenue: {
+            total: `Rs ${(cycle.totalRevenue || 0).toLocaleString()}`,
+            sugarcane: `Rs ${(cycle.sugarcaneRevenue || 0).toLocaleString()}`,
+            intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
+          },
+          profit: {
+            total: `Rs ${netProfit.toLocaleString()}`,
+            perHa: `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}`,
+            margin: `${profitMargin.toFixed(1)}%`
           }
-        } else {
-          throw new Error('No calculation results available')
         }
       } catch (error) {
-        console.error(`Failed to load metrics for cycle ${cycle.id}:`, error)
+        console.error(`Failed to process metrics for cycle ${cycle.id}:`, error)
         metricsData[cycle.id] = {
           costs: { estimated: 'N/A', actual: 'N/A' },
           yield: { sugarcane: 'TBC', intercrop: 'N/A' },
@@ -139,44 +125,152 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     setCycleMetrics(metricsData)
   }
 
-  // Load metrics when cycles change
+  // Load metrics when cycles change (only when needed - no API calls!)
   useEffect(() => {
-    if (cropCycles.length > 0) {
-      loadCycleMetrics()
+    if (allCycles.length > 0) {
+      console.log('🔄 CropCycleGeneralInfo: allCycles changed, reloading metrics...')
+      loadCycleMetrics() // Now synchronous - no await needed!
+      console.log('✅ CropCycleGeneralInfo: metrics reloaded')
     }
-  }, [cropCycles])
+  }, [allCycles])
 
-  // Refresh metrics periodically to catch updates from activities/observations
+  // Load metrics when cycles change (React Query invalidation will trigger this)
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (cropCycles.length > 0) {
-        loadCycleMetrics()
+    console.log('🔄 CropCycleGeneralInfo: useEffect triggered, allCycles.length:', allCycles.length)
+    console.log('🔍 CropCycleGeneralInfo: allCycles data:', allCycles.map(c => ({
+      id: c.id.substring(0, 8) + '...',
+      estimatedCost: c.estimatedTotalCost,
+      actualCost: c.actualTotalCost,
+      lastUpdated: c.lastUpdated
+    })))
+
+    // Compare with what we just calculated and saved
+    console.log('💰 Expected totals from last calculation: estimated=6860, actual=1')
+    console.log('📊 Actual totals from DB:', allCycles.map(c => `estimated=${c.estimatedTotalCost}, actual=${c.actualTotalCost}`))
+
+    if (allCycles.length > 0) {
+      console.log('🔄 CropCycleGeneralInfo: Loading metrics from fresh DB data')
+
+      const metricsData: {[cycleId: string]: any} = {}
+
+      for (const cycle of allCycles) {
+        try {
+          metricsData[cycle.id] = {
+            costs: {
+              estimated: `Rs ${(cycle.estimatedTotalCost || 0).toLocaleString()}`,
+              actual: `Rs ${(cycle.actualTotalCost || 0).toLocaleString()}`
+            },
+            yield: {
+              sugarcane: `${(cycle.sugarcaneActualYieldTonsHa || 0).toFixed(1)} t/ha`,
+              intercrop: `0.0 t/ha`
+            },
+            revenue: {
+              total: `Rs ${(cycle.totalRevenue || 0).toLocaleString()}`,
+              sugarcane: `Rs ${(cycle.sugarcaneRevenue || 0).toLocaleString()}`,
+              intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
+            },
+            profit: {
+              total: `Rs ${(cycle.netProfit || 0).toLocaleString()}`,
+              perHa: `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}`,
+              margin: `${(cycle.profitMarginPercent || 0).toFixed(1)}%`
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to process metrics for cycle ${cycle.id}:`, error)
+          metricsData[cycle.id] = {
+            costs: { estimated: 'N/A', actual: 'N/A' },
+            yield: { sugarcane: 'TBC', intercrop: 'N/A' },
+            revenue: { total: 'N/A', sugarcane: 'N/A', intercrop: 'N/A' },
+            profit: { total: 'TBC', perHa: 'TBC', margin: 'N/A' }
+          }
+        }
       }
-    }, 5000) // Refresh every 5 seconds
 
-    return () => clearInterval(interval)
-  }, [cropCycles])
-
-  const loadCropCycles = async () => {
-    try {
-      const cycles = await CropCycleService.getCropCyclesForBloc(bloc.id)
-      setCropCycles(cycles)
-
-      // Set active cycle
-      const active = await CropCycleService.getActiveCropCycle(bloc.id)
-      setActiveCycle(active)
-    } catch (error) {
-      console.error('Error loading crop cycles:', error)
-      setCropCycles([])
-      setActiveCycle(null)
+      setCycleMetrics(metricsData)
+      console.log('✅ CropCycleGeneralInfo: Metrics loaded from DB')
     }
+  }, [allCycles]) // Re-run when cycles change (from React Query invalidation)
+
+  // If this is a side panel, only show the metrics
+  if (sidePanel) {
+    return (
+      <div className="space-y-4">
+        {allCycles.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <p>No crop cycles yet</p>
+            <p className="text-sm">Create a cycle in the General tab</p>
+          </div>
+        ) : (
+          allCycles.map(cycle => (
+            <div key={cycle.id} className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">
+                  {cycle.type === 'plantation' ? 'Plantation' : `Ratoon ${cycle.cycleNumber - 1}`}
+                </h4>
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  cycle.status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {cycle.status}
+                </span>
+              </div>
+
+              {cycleMetrics[cycle.id] && (
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-gray-600">Est. Cost:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].costs.estimated}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Actual Cost:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].costs.actual}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-gray-600">Revenue:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].revenue.total}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Profit:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].profit.total}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-gray-600">Yield:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].yield.sugarcane}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Margin:</span>
+                      <div className="font-medium">{cycleMetrics[cycle.id].profit.margin}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    )
   }
+
+  // Remove 5-second polling - metrics will refresh when:
+  // 1. Cycles change (above useEffect)
+  // 2. Activities/observations are added (via refreshCycles() calls)
+  // 3. User manually refreshes the page
+
+  // loadCropCycles function removed - using context data instead!
 
   // loadConfigData function removed - now using React Query hooks
 
   const validateCycleData = (): boolean => {
     const errors: string[] = []
-    const isPlantationCycle = cropCycles.length === 0
+    const isPlantationCycle = allCycles.length === 0
 
     // For plantation cycles, sugarcane variety is required
     // For ratoon cycles, it's inherited so we don't need to validate it
@@ -203,10 +297,10 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
     // For ratoon cycles, ensure previous cycle is closed
     if (!isPlantationCycle) {
-      if (cropCycles.length === 0) {
+      if (allCycles.length === 0) {
         errors.push('Cannot create ratoon cycle: No existing cycles found')
       } else {
-        const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+        const mostRecentCycle = allCycles.reduce((latest, cycle) =>
           cycle.cycleNumber > latest.cycleNumber ? cycle : latest
         )
         if (mostRecentCycle.status !== 'closed') {
@@ -228,12 +322,12 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         : newCycleData.expectedYield
 
       // Determine cycle type based on existing cycles
-      const cycleType = cropCycles.length === 0 ? 'plantation' : 'ratoon'
+      const cycleType = allCycles.length === 0 ? 'plantation' : 'ratoon'
 
       // For ratoon cycles, get sugarcane variety from plantation cycle
       let sugarcaneVarietyId = newCycleData.sugarcaneVarietyId
-      if (cycleType === 'ratoon' && cropCycles.length > 0) {
-        const plantationCycle = cropCycles.find(cycle => cycle.type === 'plantation')
+      if (cycleType === 'ratoon' && allCycles.length > 0) {
+        const plantationCycle = allCycles.find(cycle => cycle.type === 'plantation')
         if (plantationCycle) {
           sugarcaneVarietyId = plantationCycle.sugarcaneVarietyId
         }
@@ -241,15 +335,20 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
       // For ratoon cycles, get the most recent cycle as parent
       let parentCycleId: string | undefined = undefined
-      if (cycleType === 'ratoon' && cropCycles.length > 0) {
-        const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+      if (cycleType === 'ratoon' && allCycles.length > 0) {
+        const mostRecentCycle = allCycles.reduce((latest, cycle) =>
           cycle.cycleNumber > latest.cycleNumber ? cycle : latest
         )
         parentCycleId = mostRecentCycle.id
       }
 
+      // Validate bloc has UUID for database operations
+      if (!bloc.uuid) {
+        throw new Error(`Cannot create crop cycle: Bloc "${bloc.localId}" must be saved to database first`)
+      }
+
       const cycleRequest: CreateCycleRequest = {
-        blocId: bloc.id,
+        blocId: bloc.uuid,
         type: cycleType,
         sugarcaneVarietyId: sugarcaneVarietyId,
         plannedHarvestDate: newCycleData.plannedHarvestDate,
@@ -262,7 +361,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       const newCycle = await createCycle(cycleRequest)
 
       // Reload cycles to get updated list
-      await loadCropCycles()
+      await refreshCycles()
 
       onSave(newCycle)
 
@@ -284,14 +383,14 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorStack: error instanceof Error ? error.stack : undefined,
         newCycleData,
-        cycleType: cropCycles.length === 0 ? 'plantation' : 'ratoon'
+        cycleType: allCycles.length === 0 ? 'plantation' : 'ratoon'
       })
 
       const errorMessage = error instanceof Error ? error.message :
                           typeof error === 'string' ? error :
                           JSON.stringify(error)
 
-      const cycleTypeName = cropCycles.length === 0 ? 'plantation' : 'ratoon'
+      const cycleTypeName = allCycles.length === 0 ? 'plantation' : 'ratoon'
       alert(`Error creating ${cycleTypeName} cycle: ${errorMessage}`)
     }
   }
@@ -378,10 +477,10 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
   const canCreateRatoonCycle = () => {
     // Can create ratoon if there are existing cycles and the most recent one is closed
-    if (cropCycles.length === 0) return false
+    if (allCycles.length === 0) return false
 
     // Find the most recent cycle (highest cycle number)
-    const mostRecentCycle = cropCycles.reduce((latest, cycle) =>
+    const mostRecentCycle = allCycles.reduce((latest, cycle) =>
       cycle.cycleNumber > latest.cycleNumber ? cycle : latest
     )
 
@@ -598,23 +697,23 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         <div className="space-y-6">
           <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {cropCycles.length === 0 ? 'Create Plantation Cycle' : `Create Next Ratoon Cycle (Ratoon ${cropCycles.length})`}
+              {allCycles.length === 0 ? 'Create Plantation Cycle' : `Create Next Ratoon Cycle (Ratoon ${allCycles.length})`}
             </h3>
 
             {/* Sugarcane Variety Selection - Mandatory */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Sugarcane Variety *
-                {cropCycles.length > 0 && (
+                {allCycles.length > 0 && (
                   <span className="text-xs text-gray-500 ml-2">(Inherited from plantation cycle)</span>
                 )}
               </label>
               <button
                 type="button"
-                onClick={() => cropCycles.length === 0 && setShowSugarcaneSelector(true)}
-                disabled={cropCycles.length > 0}
+                onClick={() => allCycles.length === 0 && setShowSugarcaneSelector(true)}
+                disabled={allCycles.length > 0}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-left flex items-center justify-between transition-colors ${
-                  cropCycles.length > 0
+                  allCycles.length > 0
                     ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
                     : 'bg-white border-gray-300 hover:bg-gray-50'
                 }`}
@@ -670,7 +769,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
             </div>
 
             {/* Planting Date - Only for plantation cycles */}
-            {cropCycles.length === 0 && (
+            {allCycles.length === 0 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date *</label>
                 <input
@@ -718,7 +817,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
             {/* Action Buttons */}
             <div className="flex space-x-3">
-              {cropCycles.length === 0 ? (
+              {allCycles.length === 0 ? (
                 <button
                   type="button"
                   onClick={handleCreateCycle}
@@ -734,7 +833,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                   disabled={isCreatingCycle}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  {isCreatingCycle ? 'Creating...' : `Create Ratoon ${cropCycles.length} Cycle`}
+                  {isCreatingCycle ? 'Creating...' : `Create Ratoon ${allCycles.length} Cycle`}
                 </button>
               ) : (
                 <div className="flex-1 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-center">
@@ -749,7 +848,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Cycle History</h3>
-            {cropCycles.length === 0 ? (
+            {allCycles.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -759,7 +858,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
               </div>
             ) : (
               <div className="space-y-3">
-                {cropCycles.map((cycle) => (
+                {allCycles.map((cycle) => (
                   <div
                     key={cycle.id}
                     className={`p-3 rounded-lg ${
@@ -839,7 +938,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
               console.log('Cycle closed successfully:', closedCycle)
 
               // Reload cycles to get updated list
-              await loadCropCycles()
+              await refreshCycles()
 
               setShowClosureModal(false)
               setClosureValidation(null)
@@ -885,7 +984,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                 })
 
                 // Reload cycles to get updated data
-                await loadCropCycles()
+                await refreshCycles()
                 setShowEditCycle(false)
                 alert('Crop cycle updated successfully!')
               } catch (error) {

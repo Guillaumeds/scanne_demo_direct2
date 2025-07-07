@@ -5,14 +5,8 @@
 
 import { supabase } from '@/lib/supabase'
 import type { Bloc } from '@/lib/supabase'
-
-// Interface for drawn areas from the map
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
+import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
+import { EntityIdentifierUtils, UnsavedEntityError } from '@/types/entityIdentifiers'
 
 // Interface for creating a new bloc
 interface CreateBlocRequest {
@@ -29,6 +23,15 @@ export class BlocService {
    */
   static async saveDrawnAreaAsBloc(drawnArea: DrawnArea): Promise<Bloc> {
     try {
+      // Validate drawn area can be saved
+      DrawnAreaUtils.validateForSave(drawnArea)
+
+      // Prevent saving already saved areas
+      if (drawnArea.isSaved && drawnArea.uuid) {
+        console.warn('⚠️ Attempting to save already saved bloc:', drawnArea.localId)
+        throw new Error(`Bloc "${drawnArea.localId}" is already saved to database`)
+      }
+
       // Convert coordinates from Leaflet format [lat, lng] to PostGIS WKT format
       // PostGIS WKT expects "longitude latitude" format with SRID 4326 for GPS coordinates
 
@@ -46,21 +49,21 @@ export class BlocService {
       const polygonWKT = `POLYGON((${coordinatesString}, ${closingCoord}))`
 
       console.log('🔧 Converting coordinates for PostGIS SRID 4326:', {
+        localId: drawnArea.localId,
         leafletFormat: drawnArea.coordinates.slice(0, 3), // Show first 3 coords
         postgisWKT: polygonWKT.substring(0, 100) + '...',
         totalCoords: drawnArea.coordinates.length
       })
-      
+
       // Save bloc directly to database without field association
-      console.log('💾 Saving bloc to database without field association')
-      console.log('🔧 Using direct table insert')
+      console.log('💾 Saving bloc to database:', drawnArea.localId)
 
       // Insert bloc without field_id (column has been removed)
       const { data, error } = await supabase
         .from('blocs')
         .insert({
           farm_id: '550e8400-e29b-41d4-a716-446655440001', // Demo Farm ID
-          name: `Bloc ${drawnArea.id}`,
+          name: DrawnAreaUtils.getDisplayName(drawnArea),
           coordinates: polygonWKT, // PostGIS will handle the SRID
           area_hectares: drawnArea.area,
           status: 'active'
@@ -96,7 +99,7 @@ export class BlocService {
           const bloc = await this.saveDrawnAreaAsBloc(drawnArea)
           savedBlocs.push(bloc)
         } catch (error) {
-          console.error(`Failed to save bloc ${drawnArea.id}:`, error)
+          console.error(`Failed to save bloc ${drawnArea.localId}:`, error)
           // Continue with other blocs even if one fails
         }
       }
@@ -128,32 +131,90 @@ export class BlocService {
       console.log('🔍 RPC blocs query result:', { data, error })
 
       if (error) throw error
-      return data || []
+
+      // Transform database records to DrawnArea format with new naming convention
+      console.log('🔄 Raw database data:', data)
+
+      const transformedBlocs = (data || []).map((dbRecord: any, index: number) => {
+        console.log('🔄 Transforming record:', {
+          id: dbRecord.id,
+          name: dbRecord.name,
+          coordinates_wkt: dbRecord.coordinates_wkt,
+          area_hectares: dbRecord.area_hectares,
+          allFields: Object.keys(dbRecord)
+        })
+        const transformed = this.transformDbToDrawnArea(dbRecord, index)
+        console.log('✅ Transformed to:', {
+          localId: transformed.localId,
+          uuid: transformed.uuid,
+          name: transformed.name,
+          coordinates: transformed.coordinates?.length,
+          area: transformed.area,
+          isSaved: transformed.isSaved,
+          getEntityKey: DrawnAreaUtils.getEntityKey(transformed)
+        })
+        return transformed
+      })
+
+      console.log('🔄 Final transformed blocs:', transformedBlocs.length, 'blocs')
+
+      return transformedBlocs
     } catch (error) {
       console.error('Failed to fetch blocs:', error)
       return []
     }
   }
-  
+
+  /**
+   * Transform database bloc record to DrawnArea format
+   */
+  private static transformDbToDrawnArea(dbRecord: any, index?: number): DrawnArea {
+    // Parse WKT coordinates to coordinate array
+    const coordinates = DrawnAreaUtils.parseWKTToCoordinates(dbRecord.coordinates_wkt || '')
+
+    // Generate simple sequential local ID for internal use
+    const localId = `bloc-${(index ?? 0) + 1}`
+
+    return {
+      localId,
+      uuid: dbRecord.id,
+      type: 'polygon',
+      coordinates,
+      area: dbRecord.area_hectares || 0,
+      name: dbRecord.name, // Use actual database name for display
+      isSaved: true,
+      isDirty: false,
+      createdAt: dbRecord.created_at || new Date().toISOString(),
+      updatedAt: dbRecord.updated_at || new Date().toISOString()
+    }
+  }
+
   /**
    * Get bloc with crop cycle data
    */
   static async getBlocWithCropCycle(blocId: string): Promise<any> {
     try {
-      const { data, error } = await supabase
+      // First get the bloc data
+      const { data: blocData, error: blocError } = await supabase
         .from('blocs')
-        .select(`
-          *,
-          crop_cycles(
-            *,
-            sugarcane_varieties(name, variety_id),
-            intercrop_varieties(name, variety_id)
-          )
-        `)
+        .select('*')
         .eq('id', blocId)
         .single()
-      
-      if (error) throw error
+
+      if (blocError) throw blocError
+
+      // Then get crop cycles separately to avoid join issues
+      const { data: cropCycles, error: cycleError } = await supabase
+        .from('crop_cycles')
+        .select('*')
+        .eq('bloc_id', blocId)
+
+      if (cycleError) {
+        console.warn('⚠️ Error fetching crop cycles for bloc:', cycleError)
+        return { ...blocData, crop_cycles: [] }
+      }
+
+      return { ...blocData, crop_cycles: cropCycles || [] }
       return data
     } catch (error) {
       console.error('Failed to fetch bloc with crop cycle:', error)
@@ -203,67 +264,14 @@ export class BlocService {
    * Convert database bloc to drawn area format for map display
    */
   static convertBlocToDrawnArea(bloc: any): DrawnArea {
-    // Parse PostGIS WKT coordinates from the database
-    let coordinates: [number, number][] = []
-
-    console.log('🔍 Converting bloc to drawn area:', {
-      id: bloc.id,
+    console.log('🔍 Converting database bloc to drawn area:', {
+      databaseUuid: bloc.id,
+      name: bloc.name,
       coordinates_wkt: bloc.coordinates_wkt,
       area_hectares: bloc.area_hectares
     })
 
-    if (bloc.coordinates_wkt) {
-      try {
-        console.log('🔍 Converting bloc WKT to coordinates:', bloc.id)
-        console.log('🔍 Raw WKT:', bloc.coordinates_wkt)
-
-        // Handle WKT format: POLYGON((lng lat,lng lat,...))
-        let coordString = bloc.coordinates_wkt
-
-        // Remove POLYGON(( and )) wrapper
-        if (coordString.startsWith('POLYGON((') && coordString.endsWith('))')) {
-          coordString = coordString.slice(9, -2) // Remove "POLYGON((" and "))"
-        }
-
-        console.log('🔍 Cleaned coord string:', coordString)
-
-        // Split by comma to get individual coordinate pairs
-        const coordPairs = coordString.split(',')
-        console.log('🔍 Coordinate pairs:', coordPairs)
-
-        coordinates = coordPairs
-          .map((pair: string) => {
-            // Each pair is "lng lat" format from PostGIS
-            const cleanPair = pair.trim()
-            const [lng, lat] = cleanPair.split(' ').map(Number)
-
-            if (isNaN(lng) || isNaN(lat)) {
-              console.error('❌ Invalid coordinate pair in bloc:', cleanPair)
-              return null
-            }
-
-            // Return as [lng, lat] for internal use (GeoJSON format)
-            return [lng, lat] as [number, number]
-          })
-          .filter(coord => coord !== null) as [number, number][]
-
-        console.log('✅ Converted bloc coordinates:', coordinates.length, 'points')
-        console.log('🔍 First few coordinates:', coordinates.slice(0, 3))
-        console.log('🔍 All coordinates:', coordinates)
-
-      } catch (error) {
-        console.error('❌ Error parsing bloc WKT coordinates:', error)
-        coordinates = []
-      }
-    } else {
-      console.warn('⚠️ No coordinates_wkt found for bloc:', bloc.id)
-    }
-
-    return {
-      id: bloc.id,
-      type: 'polygon',
-      coordinates: coordinates,
-      area: Number(bloc.area_hectares)
-    }
+    // Use the utility function to create from database bloc
+    return DrawnAreaUtils.fromDatabaseBloc(bloc)
   }
 }

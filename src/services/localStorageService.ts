@@ -1,13 +1,15 @@
 /**
  * Simple LocalStorage Service
- * Replaces React Query with browser localStorage + direct DB calls
- * No complex caching - just simple browser storage with TTL
+ * Handles two types of localStorage:
+ * 1. Config data (products, resources, varieties) - 24h TTL
+ * 2. Cycle totals (financial calculations) - cleared when bloc closed
  */
 
 import { ConfigurationService } from './configurationService'
 import { SugarcaneVariety, InterCropPlant, CropVariety } from '@/types/varieties'
 import { Product } from '@/types/products'
 import { Resource } from '@/types/resources'
+import { CropCycleTotals } from './frontendCalculationService'
 
 interface StorageItem<T> {
   data: T
@@ -17,13 +19,16 @@ interface StorageItem<T> {
 
 export class LocalStorageService {
   private static readonly TTL = 24 * 60 * 60 * 1000 // 24 hours
-  
+
   private static readonly KEYS = {
     SUGARCANE_VARIETIES: 'scanne_sugarcane_varieties',
     INTERCROP_VARIETIES: 'scanne_intercrop_varieties',
     PRODUCTS: 'scanne_products',
     RESOURCES: 'scanne_resources',
   } as const
+
+  // Storage keys for cycle totals (separate from config data)
+  private static readonly CYCLE_TOTALS_PREFIX = 'scanne_cycle_totals_'
 
   /**
    * Generic method to get data from localStorage or fetch from database
@@ -349,6 +354,96 @@ export class LocalStorageService {
       // If not a UUID mismatch error, throw original error
       console.log(`❌ ${operationName} failed with non-UUID error, not retrying`)
       throw error
+    }
+  }
+
+  // =====================================================
+  // CYCLE TOTALS MANAGEMENT (separate from config data)
+  // =====================================================
+
+  /**
+   * Store cycle totals in localStorage (no TTL - cleared when bloc closed)
+   */
+  static storeCycleTotals(cycleId: string, totals: CropCycleTotals): void {
+    try {
+      const key = this.CYCLE_TOTALS_PREFIX + cycleId
+      localStorage.setItem(key, JSON.stringify(totals))
+      console.log('💾 Stored cycle totals in localStorage:', cycleId)
+    } catch (error) {
+      console.error('❌ Error storing cycle totals:', error)
+    }
+  }
+
+  /**
+   * Get cycle totals from localStorage
+   */
+  static getCycleTotals(cycleId: string): CropCycleTotals | null {
+    try {
+      const key = this.CYCLE_TOTALS_PREFIX + cycleId
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        const totals = JSON.parse(stored) as CropCycleTotals
+        console.log('📊 Retrieved cycle totals from localStorage:', cycleId)
+        return totals
+      }
+      return null
+    } catch (error) {
+      console.error('❌ Error retrieving cycle totals:', error)
+      return null
+    }
+  }
+
+  /**
+   * Clear cycle totals from localStorage
+   */
+  static clearCycleTotals(cycleId: string): void {
+    try {
+      const key = this.CYCLE_TOTALS_PREFIX + cycleId
+      localStorage.removeItem(key)
+      console.log('🧹 Cleared cycle totals from localStorage:', cycleId)
+    } catch (error) {
+      console.error('❌ Error clearing cycle totals:', error)
+    }
+  }
+
+  /**
+   * Clear all cycle totals (when bloc is closed)
+   */
+  static clearAllCycleTotals(): void {
+    try {
+      const keys = Object.keys(localStorage).filter(key =>
+        key.startsWith(this.CYCLE_TOTALS_PREFIX)
+      )
+
+      keys.forEach(key => localStorage.removeItem(key))
+      console.log('🧹 Cleared all cycle totals from localStorage:', keys.length, 'items')
+    } catch (error) {
+      console.error('❌ Error clearing all cycle totals:', error)
+    }
+  }
+
+  /**
+   * Get all stored cycle totals (for debugging)
+   */
+  static getAllCycleTotals(): Record<string, CropCycleTotals> {
+    try {
+      const result: Record<string, CropCycleTotals> = {}
+      const keys = Object.keys(localStorage).filter(key =>
+        key.startsWith(this.CYCLE_TOTALS_PREFIX)
+      )
+
+      keys.forEach(key => {
+        const cycleId = key.replace(this.CYCLE_TOTALS_PREFIX, '')
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          result[cycleId] = JSON.parse(stored)
+        }
+      })
+
+      return result
+    } catch (error) {
+      console.error('❌ Error getting all cycle totals:', error)
+      return {}
     }
   }
 }

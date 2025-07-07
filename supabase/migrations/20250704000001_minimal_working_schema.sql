@@ -203,9 +203,18 @@ CREATE TABLE observations (
     number_of_samples INTEGER,
     number_of_plants INTEGER,
     observation_data JSONB DEFAULT '{}',
+
+    -- Yield data
     yield_tons_ha DECIMAL(10,2),
     area_hectares DECIMAL(10,2),
     total_yield_tons DECIMAL(10,2),
+
+    -- Revenue data (NEW - from observation forms)
+    sugarcane_revenue DECIMAL(12,2),
+    intercrop_revenue DECIMAL(12,2),
+    price_per_tonne DECIMAL(10,2),
+    revenue_per_hectare DECIMAL(12,2),
+
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

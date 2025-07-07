@@ -4,19 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 // @ts-ignore - Turf.js types issue with package.json exports
 import * as turf from '@turf/turf'
+import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 
 // Extend Leaflet types for vertex markers
 declare module 'leaflet' {
   interface Polygon {
     _vertexMarkers?: L.CircleMarker[]
   }
-}
-
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
 }
 
 interface DrawingManagerProps {
@@ -317,7 +311,7 @@ export default function DrawingManager({
     }
   }, [activeTool, map])
 
-  // Create Leaflet polygons for saved areas loaded from database
+  // Create Leaflet polygons for saved areas with batched rendering for performance
   useEffect(() => {
     if (!map) {
       console.log('🚫 Map not ready for saved areas processing')
@@ -325,28 +319,33 @@ export default function DrawingManager({
     }
 
     console.log('🗺️ Processing saved areas for map display:', savedAreas.length)
-    console.log('🔍 Saved areas data:', savedAreas.map(a => ({
-      id: a.id,
-      coordsLength: a.coordinates?.length || 0,
-      firstCoord: a.coordinates?.[0] || null,
-      coordinates: a.coordinates
-    })))
 
-    savedAreas.forEach(area => {
-      // Check if this saved area already has a polygon on the map
-      const hasExistingPolygon = layerMapRef.current.has(area.id)
-      console.log(`🔍 Checking saved area ${area.id}: hasExistingPolygon=${hasExistingPolygon}`)
+    // Filter areas that need polygon creation
+    const areasToProcess = savedAreas.filter(area => {
+      const areaKey = DrawnAreaUtils.getEntityKey(area)
+      return !layerMapRef.current.has(areaKey) && area.coordinates && area.coordinates.length >= 3
+    })
 
-      if (!hasExistingPolygon) {
-        console.log('🔄 Creating polygon for saved area:', area.id)
-        console.log('🚨 NEW DEBUG CODE IS RUNNING! 🚨')
-        console.log('🔍 Area coordinates before conversion:', area.coordinates)
+    if (areasToProcess.length === 0) {
+      console.log('✅ All polygons already rendered')
+      return
+    }
 
-        // Validate coordinates
-        if (!area.coordinates || area.coordinates.length < 3) {
-          console.error('❌ Invalid coordinates for saved area:', area.id, area.coordinates)
-          return
-        }
+    console.log('⚡ Batched polygon rendering:', areasToProcess.length, 'polygons to process')
+
+    // Process polygons in batches to avoid blocking UI
+    const BATCH_SIZE = 10
+    let currentBatch = 0
+
+    const processBatch = () => {
+      const startIdx = currentBatch * BATCH_SIZE
+      const endIdx = Math.min(startIdx + BATCH_SIZE, areasToProcess.length)
+      const batch = areasToProcess.slice(startIdx, endIdx)
+
+      console.log(`🔄 Processing batch ${currentBatch + 1}/${Math.ceil(areasToProcess.length / BATCH_SIZE)}: ${batch.length} polygons`)
+
+      batch.forEach(area => {
+        const areaKey = DrawnAreaUtils.getEntityKey(area)
 
         // Database stores coordinates as [lat, lng] which is what Leaflet expects
         const latlngs = area.coordinates.map(coord => {
@@ -354,16 +353,7 @@ export default function DrawingManager({
             console.error('❌ Invalid coordinate format:', coord)
             return [0, 0] as [number, number]
           }
-          // Keep coordinates as-is: [lat, lng]
           return [coord[0], coord[1]] as [number, number]
-        })
-
-        console.log('🔍 Coordinates for Leaflet (no conversion needed):', latlngs)
-        console.log('🔍 Sample coordinate check:', {
-          originalCoord: area.coordinates[0],
-          leafletCoord: latlngs[0],
-          isValidLat: latlngs[0][0] >= -90 && latlngs[0][0] <= 90,
-          isValidLng: latlngs[0][1] >= -180 && latlngs[0][1] <= 180
         })
 
         // Create polygon with green styling for saved blocs
@@ -375,64 +365,48 @@ export default function DrawingManager({
           opacity: 0.8
         })
 
-        console.log('🔍 Polygon bounds:', polygon.getBounds())
-        console.log('🔍 Polygon center:', polygon.getBounds().getCenter())
-
         // Add to map and store reference
         drawnLayersRef.current.addLayer(polygon)
-        layerMapRef.current.set(area.id, polygon)
-
-        // Check if polygon is within current map view
-        const mapBounds = map.getBounds()
-        const polygonBounds = polygon.getBounds()
-        const isInView = mapBounds.intersects(polygonBounds)
-
-        console.log('✅ Created and added saved polygon to map:', area.id)
-        console.log('🔍 Map bounds:', mapBounds)
-        console.log('🔍 Polygon bounds:', polygonBounds)
-        console.log('🔍 Polygon in current view:', isInView)
-
-        if (!isInView) {
-          console.log('⚠️ Polygon is outside current map view - you may need to zoom out or pan to see it')
-        }
+        layerMapRef.current.set(areaKey, polygon)
 
         // Add click handler
         polygon.on('click', (e) => {
-          console.log('🖱️ Saved polygon clicked:', area.id)
           if (e.originalEvent) {
             e.originalEvent.stopPropagation()
             e.originalEvent.preventDefault()
             e.originalEvent.stopImmediatePropagation()
           }
           L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(area.id)
+          onPolygonClick?.(areaKey)
         })
+      })
 
-        console.log('✅ Created and added saved polygon to map:', area.id)
-        console.log('🔍 DrawnLayers now has layers:', drawnLayersRef.current.getLayers().length)
+      currentBatch++
+
+      // Process next batch if there are more
+      if (currentBatch * BATCH_SIZE < areasToProcess.length) {
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(processBatch)
       } else {
-        console.log('🔄 Polygon already exists for saved area:', area.id)
+        console.log('✅ All polygons rendered successfully in', currentBatch, 'batches')
       }
-    })
+    }
+
+    // Start processing batches
+    processBatch()
   }, [map, savedAreas, onPolygonClick])
 
   // Detect when areas are saved and clear totals
   useEffect(() => {
-    console.log('💾 Saved areas effect triggered:', {
-      currentSavedCount: savedAreas?.length || 0,
-      lastSavedCount: lastSavedAreasCount,
-      savedAreaIds: savedAreas?.map(a => a.id) || []
-    })
-
     if (savedAreas && savedAreas.length > lastSavedAreasCount) {
-      console.log('💾 Areas were saved! Making them non-editable')
       // Areas were saved, clear the drawing session totals
       setTotalDrawnArea(0)
       setCurrentCropCycleId('')
 
       // Remove vertex markers and text labels from saved areas (make them non-editable)
       savedAreas.forEach(area => {
-        const layer = layerMapRef.current.get(area.id)
+        const areaKey = DrawnAreaUtils.getEntityKey(area)
+        const layer = layerMapRef.current.get(areaKey)
         if (layer && layer instanceof L.Polygon) {
           removeVertexMarkers(layer)
           removeTextLabel(layer)
@@ -440,7 +414,7 @@ export default function DrawingManager({
           // Ensure saved areas have click handlers
           layer.off('click') // Remove any existing handlers
           layer.on('click', (e) => {
-            console.log('🖱️ Saved polygon clicked:', area.id)
+            console.log('🖱️ Saved polygon clicked:', areaKey)
             // Stop event propagation more aggressively
             if (e.originalEvent) {
               e.originalEvent.stopPropagation()
@@ -448,10 +422,10 @@ export default function DrawingManager({
               e.originalEvent.stopImmediatePropagation()
             }
             L.DomEvent.stopPropagation(e)
-            onPolygonClick?.(area.id)
+            onPolygonClick?.(areaKey)
           })
 
-          console.log('💾 Made area non-editable, removed text, and added click handler:', area.id)
+          console.log('💾 Made area non-editable, removed text, and added click handler:', areaKey)
         }
       })
     }
@@ -464,11 +438,12 @@ export default function DrawingManager({
 
     // Add click handlers to drawn areas
     drawnAreas.forEach(area => {
-      const layer = layerMapRef.current.get(area.id)
+      const areaKey = DrawnAreaUtils.getEntityKey(area)
+      const layer = layerMapRef.current.get(areaKey)
       if (layer && layer instanceof L.Polygon) {
         layer.off('click') // Remove any existing handlers
         layer.on('click', (e) => {
-          console.log('🖱️ Drawn polygon clicked:', area.id)
+          console.log('🖱️ Drawn polygon clicked:', areaKey)
           // Stop event propagation more aggressively
           if (e.originalEvent) {
             e.originalEvent.stopPropagation()
@@ -476,19 +451,20 @@ export default function DrawingManager({
             e.originalEvent.stopImmediatePropagation()
           }
           L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(area.id)
+          onPolygonClick?.(areaKey)
         })
-        console.log('🔗 Added click handler to drawn area:', area.id)
+        console.log('🔗 Added click handler to drawn area:', areaKey)
       }
     })
 
     // Add click handlers to saved areas
     savedAreas.forEach(area => {
-      const layer = layerMapRef.current.get(area.id)
+      const areaKey = DrawnAreaUtils.getEntityKey(area)
+      const layer = layerMapRef.current.get(areaKey)
       if (layer && layer instanceof L.Polygon) {
         layer.off('click') // Remove any existing handlers
         layer.on('click', (e) => {
-          console.log('🖱️ Saved polygon clicked:', area.id)
+          console.log('🖱️ Saved polygon clicked:', areaKey)
           // Stop event propagation more aggressively
           if (e.originalEvent) {
             e.originalEvent.stopPropagation()
@@ -496,9 +472,9 @@ export default function DrawingManager({
             e.originalEvent.stopImmediatePropagation()
           }
           L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(area.id)
+          onPolygonClick?.(areaKey)
         })
-        console.log('🔗 Added click handler to saved area:', area.id)
+        console.log('🔗 Added click handler to saved area:', areaKey)
       }
     })
   }, [drawnAreas, savedAreas, onPolygonClick])
@@ -564,11 +540,11 @@ export default function DrawingManager({
       const isHovered = hoveredAreaId === areaId
 
       // Get the area to determine if it's saved or drawn
-      const isSaved = savedAreas.some(a => a.id === areaId)
-      const isDrawn = drawnAreas.some(a => a.id === areaId)
+      const isSaved = savedAreas.some(a => DrawnAreaUtils.getEntityKey(a) === areaId)
+      const isDrawn = drawnAreas.some(a => DrawnAreaUtils.getEntityKey(a) === areaId)
 
       // Get the actual area object
-      const area = savedAreas.find(a => a.id === areaId) || drawnAreas.find(a => a.id === areaId)
+      const area = savedAreas.find(a => DrawnAreaUtils.getEntityKey(a) === areaId) || drawnAreas.find(a => DrawnAreaUtils.getEntityKey(a) === areaId)
 
       if (!area) {
         console.warn(`Area not found for ID: ${areaId}`)
@@ -782,7 +758,7 @@ export default function DrawingManager({
   const showOverlapIndicator = (point: L.LatLng, reason: string = 'Invalid location') => {
     if (!map) return
 
-    console.log('🔴 Showing overlap indicator at:', { lat: point.lat, lng: point.lng, reason })
+
 
     // Remove previous indicator
     if (snapIndicatorRef.current) {
@@ -830,10 +806,6 @@ export default function DrawingManager({
 
   // Check if a point overlaps with existing blocs (saved or drawn) OR is outside field boundaries
   const checkOverlapWithSavedAreas = (point: L.LatLng): { isOverlap: boolean; reason: string } => {
-    console.log('🔍 Checking overlap for point:', { lat: point.lat, lng: point.lng })
-    console.log('🔍 Available saved areas:', savedAreas.length)
-    console.log('🔍 Available drawn areas:', drawnAreas.length)
-    console.log('🔍 Available field polygons:', fieldPolygons.size)
 
     // Check overlap with saved areas (cultivation areas)
     // Only block if point is STRICTLY INSIDE, not just touching boundary
@@ -869,7 +841,6 @@ export default function DrawingManager({
 
     // Field boundary check removed - allow drawing anywhere
 
-    console.log('✅ No overlap detected - allowing drawing')
     return { isOverlap: false, reason: '' }
   }
 
@@ -877,11 +848,6 @@ export default function DrawingManager({
   const checkPolygonOverlapWithExistingBlocs = (polygon: L.Polygon): { isOverlap: boolean; reason: string } => {
     const polygonLatLngs = polygon.getLatLngs()[0] as L.LatLng[]
     const currentPolygonId = L.stamp(polygon).toString()
-
-    console.log('🔍 Checking polygon overlap for polygon ID:', currentPolygonId)
-    console.log('🔍 Polygon coordinates:', polygonLatLngs.length, 'points')
-    console.log('🔍 Available saved areas:', savedAreas.length)
-    console.log('🔍 Available drawn areas:', drawnAreas.length)
 
     // Check overlap with saved areas
     for (const savedArea of savedAreas) {
@@ -1158,18 +1124,14 @@ export default function DrawingManager({
   const handleMapClick = (e: L.LeafletMouseEvent) => {
     if (!isDrawingRef.current || activeTool !== 'polygon') return
 
-    console.log('🖱️ Map click during drawing:', { lat: e.latlng.lat, lng: e.latlng.lng })
-
     // Apply snapping with proper GIS tolerance
     const snappedPoint = findNearestFieldPoint(e.latlng)
-    console.log('📍 Snapped point:', { lat: snappedPoint.lat, lng: snappedPoint.lng })
 
     // Check for overlap with saved areas and field boundaries
     const overlapCheck = checkOverlapWithSavedAreas(snappedPoint)
     if (overlapCheck.isOverlap) {
       // Show red indicator for invalid placement
       showOverlapIndicator(snappedPoint, overlapCheck.reason)
-      console.log('🚫 Drawing blocked:', overlapCheck.reason)
       return // Don't add the point
     }
 
@@ -1415,8 +1377,6 @@ export default function DrawingManager({
     const polygonOverlap = checkPolygonOverlapWithExistingBlocs(tempPolygon)
 
     if (polygonOverlap.isOverlap) {
-      console.log('❌ Polygon completion blocked due to overlap:', polygonOverlap.reason)
-
       // Show error indicator at polygon center
       const centerPoint = calculatePolygonCentroid(drawingPointsRef.current)
       showOverlapIndicator(centerPoint, polygonOverlap.reason)
@@ -1433,7 +1393,6 @@ export default function DrawingManager({
       onDrawingEnd()
       onDrawingProgress?.(0, false)
 
-      console.log('🗑️ Overlapping polygon cancelled and removed')
       return
     }
 
@@ -1490,12 +1449,8 @@ export default function DrawingManager({
     // Update total drawn area
     setTotalDrawnArea(prev => prev + area)
 
-    const drawnArea: DrawnArea = {
-      id: areaId,
-      type: 'polygon',
-      coordinates,
-      area
-    }
+    // Use DrawnAreaUtils to create properly structured area
+    const drawnArea = DrawnAreaUtils.createNew(coordinates, area, 'polygon')
 
     // Calculate dimensions for the completed polygon
     const dimensions = calculatePolygonDimensions(drawingPointsRef.current)
@@ -1706,7 +1661,6 @@ export default function DrawingManager({
       }
 
       onAreaUpdated?.(updatedArea)
-      console.log('✅ Polygon updated successfully after vertex edit')
     }
 
     map.on('mousemove', handleMouseMove)
@@ -1736,13 +1690,7 @@ export default function DrawingManager({
       // Convert to hectares: 1 hectare = 10,000 m²
       const hectares = areaInSquareMeters / 10000
 
-      // Debug area calculation
-      console.log('🧮 Area calculation debug:', {
-        coordinatesCount: coordinates.length,
-        areaInSquareMeters: areaInSquareMeters,
-        hectares: hectares,
-        method: 'turf.js geodesic'
-      })
+
 
       return hectares
     } catch (error) {

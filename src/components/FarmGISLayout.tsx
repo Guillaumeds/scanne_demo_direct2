@@ -11,16 +11,10 @@ import PolygonInfoModal from './PolygonInfoModal'
 import BlocDataScreen from './BlocDataScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { FieldData } from '@/types/field'
+import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { loadFieldData } from '@/utils/csvParser'
 import { loadBelleVueFields, hasFieldsInDatabase } from '@/services/fieldService'
 import { LocalStorageService } from '@/services/localStorageService'
-
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
 
 export default function FarmGISLayout() {
   const [fields, setFields] = useState<FieldData[]>([])
@@ -104,18 +98,24 @@ export default function FarmGISLayout() {
     initializeApp()
   }, [])
 
-  // Load saved blocs from database on component mount
+  // Load saved blocs from database on component mount with deferred polygon rendering
   useEffect(() => {
     const loadSavedBlocs = async () => {
       try {
         console.log('🔄 Loading saved blocs from database...')
         const { BlocService } = await import('@/services/blocService')
+
+        // Load bloc data without coordinates first (fast)
+        console.log('⚡ Loading bloc metadata first for instant display...')
         const savedBlocs = await BlocService.getAllBlocs()
 
-        // Convert database blocs to drawn area format for display
-        const savedAreasFromDB = savedBlocs.map(bloc => BlocService.convertBlocToDrawnArea(bloc))
-        setSavedAreas(savedAreasFromDB)
-        console.log('✅ Loaded saved blocs from database:', savedBlocs.length)
+        // Set blocs immediately for card display (without waiting for polygon rendering)
+        setSavedAreas(savedBlocs)
+        console.log('✅ Bloc cards displayed instantly:', savedBlocs.length, 'blocs')
+
+        // Polygon rendering will happen in MapComponent when ready
+        console.log('🔄 Polygon rendering will be handled by MapComponent...')
+
       } catch (error) {
         console.warn('⚠️ Could not load saved blocs from database:', error)
         // Don't fail the app if blocs can't be loaded
@@ -158,17 +158,17 @@ export default function FarmGISLayout() {
     console.log(`✅ ${area.type} drawn: ${area.area.toFixed(2)} ha`)
   }
 
-  const handleAreaDelete = (areaId: string) => {
-    setDrawnAreas(prev => prev.filter(area => area.id !== areaId))
-    console.log('Area deleted:', areaId)
+  const handleAreaDelete = (areaKey: string) => {
+    setDrawnAreas(prev => prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaKey))
+    console.log('Area deleted:', areaKey)
   }
 
-  const handleAreaSelect = (areaId: string) => {
+  const handleAreaSelect = (areaKey: string) => {
     // Toggle selection - if already selected, deselect
-    if (selectedAreaId === areaId) {
+    if (selectedAreaId === areaKey) {
       setSelectedAreaId(null)
     } else {
-      setSelectedAreaId(areaId)
+      setSelectedAreaId(areaKey)
     }
   }
 
@@ -184,7 +184,7 @@ export default function FarmGISLayout() {
 
   const handleAreaUpdated = (updatedArea: DrawnArea) => {
     setDrawnAreas(prev => prev.map(area =>
-      area.id === updatedArea.id ? updatedArea : area
+      DrawnAreaUtils.getEntityKey(area) === DrawnAreaUtils.getEntityKey(updatedArea) ? updatedArea : area
     ))
     console.log('Area updated:', updatedArea)
   }
@@ -285,13 +285,13 @@ export default function FarmGISLayout() {
     console.log('All areas cancelled')
   }
 
-  const handleBlocPopOut = (areaId: string) => {
+  const handleBlocPopOut = (areaKey: string) => {
     // Find the bloc in either drawn or saved areas
-    const bloc = [...drawnAreas, ...savedAreas].find(area => area.id === areaId)
+    const bloc = [...drawnAreas, ...savedAreas].find(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
     if (bloc) {
       setDataScreenBloc(bloc)
       setShowDataScreen(true)
-      console.log('Opening data screen for bloc:', areaId)
+      console.log('Opening data screen for bloc:', areaKey)
     }
   }
 

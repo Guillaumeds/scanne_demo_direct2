@@ -35,7 +35,7 @@ import {
   SUGARCANE_PHASES,
   ACTIVITY_TEMPLATES
 } from '@/types/activities'
-import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ActivityService } from '@/services/activityService'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
@@ -213,8 +213,9 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange, acti
 export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   // Crop cycle context hooks
   const permissions = useCropCyclePermissions()
-  const { getActiveCycleInfo } = useCropCycleInfo()
+  const { getActiveCycleInfo, allCycles } = useCropCycleInfo()
   const validation = useCropCycleValidation()
+  const { refreshCycles } = useCropCycle()
 
   // Selected crop cycle context
   const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
@@ -279,27 +280,22 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     setConfigLoading(false)
   }, [])
 
-  // Load global metrics for the selected cycle
-  const loadGlobalMetrics = async () => {
+  // Load global metrics from context data (no API calls needed!)
+  const loadGlobalMetrics = () => {
     if (!selectedCycleInfo?.id) {
       setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
       return
     }
 
-    try {
-      // Use new database-first calculation service
-      const totals = await CropCycleCalculationService.getAuthoritativeTotals(selectedCycleInfo.id)
+    // Find the selected cycle in allCycles context data (no API call needed!)
+    const selectedCycle = allCycles.find(cycle => cycle.id === selectedCycleInfo.id)
 
-      if (totals) {
-        setGlobalMetrics({
-          totalEstimatedCosts: totals.estimatedTotalCost,
-          totalActualCosts: totals.actualTotalCost
-        })
-      } else {
-        setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
-      }
-    } catch (error) {
-      console.error('Failed to load global metrics:', error)
+    if (selectedCycle) {
+      setGlobalMetrics({
+        totalEstimatedCosts: selectedCycle.estimatedTotalCost || 0,
+        totalActualCosts: selectedCycle.actualTotalCost || 0
+      })
+    } else {
       setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
     }
   }
@@ -332,6 +328,10 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
       setActivities(prev => prev.map(activity =>
         activity.id === id ? updatedActivity : activity
       ))
+
+      // Wait for database transaction to commit, then refresh
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await refreshCycles()
     } catch (error) {
       console.error('Error updating activity status:', error)
     }
@@ -343,6 +343,10 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         // Delete from database and state
         await ActivityService.deleteActivity(id)
         setActivities(prev => prev.filter(activity => activity.id !== id))
+
+        // Wait for database transaction to commit, then refresh
+        await new Promise(resolve => setTimeout(resolve, 300))
+        await refreshCycles()
       } catch (error) {
         console.error('Error deleting activity:', error)
       }
@@ -796,6 +800,15 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 // Add new activity to local state
                 setActivities(prev => [...prev, savedActivity])
               }
+
+              // Wait for database transaction to fully commit before refreshing
+              console.log('⏳ Waiting for database transaction to commit...')
+              await new Promise(resolve => setTimeout(resolve, 500))
+
+              // Invalidate crop cycle queries to refresh side panel (React Query best practice)
+              console.log('🔄 Invalidating crop cycle queries to refresh side panel...')
+              await refreshCycles()
+              console.log('✅ Activity saved and side panel refreshed')
 
               setShowAddModal(false)
               setEditingActivity(null)

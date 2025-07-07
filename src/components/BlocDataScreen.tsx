@@ -13,17 +13,9 @@ import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
 import { CropCycleProvider, useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
 import { SelectedCropCycleProvider } from '@/contexts/SelectedCropCycleContext'
 import { CropVariety } from '@/types/varieties'
+import { DrawnArea } from '@/types/drawnArea'
 import { FormCommitRef } from '@/hooks/useFormWithAutoCommit'
 import { useAllVarieties } from '@/hooks/useLocalStorageData'
-
-
-
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
 
 interface BlocDataScreenProps {
   bloc: DrawnArea
@@ -292,7 +284,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
           <div className="h-6 w-px bg-gray-300"></div>
           
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Bloc {bloc.id}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{bloc.name || `Bloc ${bloc.localId}`}</h1>
             <p className="text-sm text-gray-600">
               Area: {bloc.area.toFixed(2)} ha
             </p>
@@ -373,24 +365,27 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
-          {activeTab === 'general' && (
-            <CropCycleGeneralInfo
-              ref={cropCycleFormRef}
-              bloc={bloc}
-              onSave={async (data) => {
-                try {
-                  console.log('Crop cycle data saved:', data)
-                  // The cycle creation and activation is handled in the CropCycleGeneralInfo component
-                  // and the CropCycleContext automatically sets it as active
-                } catch (error) {
-                  console.error('Error handling crop cycle save:', error)
-                }
-              }}
-            />
-          )}
+      {/* Main Content Area with Side Panel */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Main Tab Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            {activeTab === 'general' && (
+              <CropCycleGeneralInfo
+                ref={cropCycleFormRef}
+                bloc={bloc}
+                onSave={async (data) => {
+                  try {
+                    console.log('Crop cycle data saved:', data)
+                    // The cycle creation and activation is handled in the CropCycleGeneralInfo component
+                    // and the CropCycleContext automatically sets it as active
+                  } catch (error) {
+                    console.error('Error handling crop cycle save:', error)
+                  }
+                }}
+                hideSidePanel={true}
+              />
+            )}
 
           {activeTab === 'cultivation' && (
             <div className="bg-white rounded-lg shadow-sm p-6">
@@ -697,6 +692,27 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         />
       )}
 
+        {/* Persistent Side Panel - Hidden on General tab */}
+        {activeTab !== 'general' && (
+          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Crop Cycle Summary</h3>
+              <CropCycleGeneralInfo
+                bloc={bloc}
+                onSave={async (data) => {
+                  try {
+                    console.log('Crop cycle data saved:', data)
+                  } catch (error) {
+                    console.error('Error handling crop cycle save:', error)
+                  }
+                }}
+                sidePanel={true}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Intercrop Variety Selector Modal */}
       {showIntercropSelector && (
         <VarietySelector
@@ -712,8 +728,13 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
 
 // Main component wrapper with CropCycleProvider
 export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScreenProps) {
+  // Validate that bloc is saved and has UUID before creating crop cycles
+  if (!bloc.uuid) {
+    throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
+  }
+
   return (
-    <CropCycleProvider blocId={bloc.id} userRole="user">
+    <CropCycleProvider blocId={bloc.uuid} userRole="user">
       <SelectedCropCycleProvider>
         <BlocDataScreenInner bloc={bloc} onBack={onBack} onDelete={onDelete} />
       </SelectedCropCycleProvider>

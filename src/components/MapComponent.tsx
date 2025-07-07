@@ -618,30 +618,8 @@ export default function MapComponent({
 
     // No field labels to update - parcelles are background only
 
-    // Fit map to show all fields if we have any
-    if (fields.length > 0) {
-      console.log('🔍 Fitting map bounds to show all fields')
-      const layers = fieldLayersRef.current.getLayers()
-      console.log('🔍 Available layers for bounds:', layers.length)
-
-      if (layers.length > 0) {
-        const group = L.featureGroup(layers)
-        const bounds = group.getBounds()
-        console.log('🔍 Field bounds:', bounds)
-
-        if (bounds && bounds.isValid && bounds.isValid()) {
-          console.log('✅ Fitting map to valid bounds')
-          map.fitBounds(bounds.pad(0.1))
-        } else {
-          console.error('❌ Invalid bounds returned from field layer group')
-          console.log('❌ Bounds object:', bounds)
-        }
-      } else {
-        console.error('❌ No valid layers found for bounds calculation')
-      }
-    } else {
-      console.log('⚠️ No fields to fit bounds to')
-    }
+    // Keep original zoom level - don't auto-fit to fields
+    console.log('🗺️ Fields loaded but maintaining original zoom level')
 
   }, [fields, mapReady])
 

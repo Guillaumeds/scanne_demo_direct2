@@ -29,10 +29,9 @@ import {
 } from '@/types/observations'
 import ObservationForm from './ObservationForms'
 import CategorySelector from './CategorySelector'
-import { useCropCyclePermissions, useCropCycleValidation } from '@/contexts/CropCycleContext'
+import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { useSelectedCropCycle } from '@/contexts/SelectedCropCycleContext'
 import { ObservationService } from '@/services/observationService'
-import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import CropCycleSelector from './CropCycleSelector'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
 
@@ -213,9 +212,10 @@ function SortableObservationItem({ observation, onEdit, onDelete, onStatusChange
 }
 
 export default function ObservationsTab({ bloc }: ObservationsTabProps) {
-  // Crop cycle permissions
+  // Crop cycle permissions and data
   const permissions = useCropCyclePermissions()
   const validation = useCropCycleValidation()
+  const { allCycles } = useCropCycleInfo()
 
   // Selected crop cycle context
   const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
@@ -231,7 +231,19 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
   const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
-  const [cropCycleTotals, setCropCycleTotals] = useState<any>(null)
+  // Get crop cycle totals from context data (no API calls needed!)
+  const getSelectedCycleTotals = () => {
+    if (!selectedCycleInfo?.id) return null
+
+    const selectedCycle = allCycles.find(cycle => cycle.id === selectedCycleInfo.id)
+    return selectedCycle ? {
+      sugarcaneYieldTonnesPerHectare: selectedCycle.sugarcaneYieldTonsPerHa || 0,
+      totalRevenue: selectedCycle.totalRevenue || 0,
+      profitPerHectare: selectedCycle.profitPerHectare || 0
+    } : null
+  }
+
+  const cropCycleTotals = getSelectedCycleTotals()
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -667,13 +679,9 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 setObservations(prev => [...prev, savedObservation])
               }
 
-              // Refresh crop cycle totals after saving observation
-              if (selectedCycleInfo?.id) {
-                console.log('🔄 Refreshing crop cycle totals after observation save')
-                const updatedTotals = await CropCycleCalculationService.getAuthoritativeTotals(selectedCycleInfo.id)
-                setCropCycleTotals(updatedTotals)
-                console.log('✅ Updated crop cycle totals:', updatedTotals)
-              }
+              // Note: Crop cycle totals will be updated by the database function
+              // and refreshed automatically when context data is reloaded
+              console.log('✅ Observation saved - totals will be updated by database function')
 
               setShowAddModal(false)
               setEditingObservation(null)

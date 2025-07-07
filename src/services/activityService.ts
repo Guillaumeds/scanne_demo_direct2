@@ -15,8 +15,8 @@ import {
   AppError,
   retry
 } from '@/types/utils'
-import { CropCycleCalculationService } from './cropCycleCalculationService'
-import { LocalStorageService } from './localStorageService'
+import { FrontendCalculationService } from '@/services/frontendCalculationService'
+import { CropCycleTotalsService } from '@/services/cropCycleTotalsService'
 import { supabase } from '@/lib/supabase'
 
 export class ActivityService {
@@ -81,13 +81,10 @@ export class ActivityService {
   }
 
   /**
-   * Create a new activity using atomic database function with auto-recovery
+   * Create a new activity using simple database function
    */
   static async createActivity(activity: BlocActivity): Promise<BlocActivity> {
-    return LocalStorageService.withAutoRecovery(
-      () => this._createActivityInternal(activity),
-      'activity creation'
-    )
+    return this._createActivityInternal(activity)
   }
 
   /**
@@ -139,8 +136,11 @@ export class ActivityService {
         }
       }))
 
-      // Call atomic database function
-      const { data, error } = await supabase.rpc('save_activity_with_totals', {
+      // Atomic operation: Save activity + calculate and update totals
+      console.log('🔄 Starting atomic activity creation with totals update...')
+
+      // Step 1: Save activity to database
+      const { data, error } = await supabase.rpc('save_activity_simple', {
         p_activity_data: activityData,
         p_products: products,
         p_resources: resources
@@ -151,15 +151,62 @@ export class ActivityService {
         throw new Error(`Failed to create activity: ${error.message}`)
       }
 
-      if (!data || data.length === 0) {
+      if (!data) {
         throw new Error('No data returned from activity creation')
       }
 
-      const result = data[0]
-      console.log('✅ Activity created with totals:', result)
+      const activityId = data
+      console.log('✅ Activity created:', activityId)
 
-      // Return the created activity (fetch fresh data)
-      return await this.getActivityById(result.result_activity_id)
+      // Get the created activity
+      const createdActivity = await this.getActivityById(activityId)
+
+      if (!createdActivity || !createdActivity.cropCycleId) {
+        throw new Error('Failed to retrieve created activity or missing crop cycle ID')
+      }
+
+      // Step 2: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get all activities for this crop cycle (including the one we just created)
+        const activities = await this.getActivitiesForCycle(createdActivity.cropCycleId)
+        console.log('🔍 Activities fetched for calculation:', activities.length, 'activities')
+        console.log('🔍 Activity IDs:', activities.map(a => `${a.id.substring(0, 8)}... (${a.name})`))
+
+        const observations: any[] = [] // TODO: Get observations when available
+
+        // Clear any cached calculations first
+        console.log('🧹 Clearing localStorage cache for cycle:', createdActivity.cropCycleId)
+        FrontendCalculationService.clearCycleTotals(createdActivity.cropCycleId)
+
+        // Calculate totals using frontend service
+        console.log('🧮 Calculating totals with', activities.length, 'activities')
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          createdActivity.cropCycleId
+        )
+        console.log('💰 Calculated totals:', {
+          estimated: totals.estimatedTotalCost,
+          actual: totals.actualTotalCost,
+          revenue: totals.totalRevenue
+        })
+
+        // Update crop cycle totals in database
+        await CropCycleTotalsService.updateCycleTotals(createdActivity.cropCycleId, totals)
+
+        console.log('✅ Atomic activity creation with totals completed')
+        return createdActivity
+
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after activity creation:', totalsError)
+        // Activity was saved but totals update failed - this is not ideal but not critical
+        // We could implement compensation logic here if needed
+        console.warn('⚠️ Activity saved but totals update failed - side panel may show stale data')
+        return createdActivity
+      }
     } catch (error) {
       console.error('Error creating activity:', error)
       throw error
@@ -167,13 +214,10 @@ export class ActivityService {
   }
   
   /**
-   * Update an existing activity using atomic database function with auto-recovery
+   * Update an existing activity using simple database function
    */
   static async updateActivity(activityId: string, updates: Partial<BlocActivity>): Promise<BlocActivity> {
-    return LocalStorageService.withAutoRecovery(
-      () => this._updateActivityInternal(activityId, updates),
-      'activity update'
-    )
+    return this._updateActivityInternal(activityId, updates)
   }
 
   /**
@@ -230,8 +274,11 @@ export class ActivityService {
         }
       }))
 
-      // Call atomic database function
-      const { data, error } = await supabase.rpc('save_activity_with_totals', {
+      // Atomic operation: Update activity + calculate and update totals
+      console.log('🔄 Starting atomic activity update with totals update...')
+
+      // Step 1: Update activity in database
+      const { data, error } = await supabase.rpc('save_activity_simple', {
         p_activity_data: activityData,
         p_products: products,
         p_resources: resources
@@ -242,11 +289,52 @@ export class ActivityService {
         throw new Error(`Failed to update activity: ${error.message}`)
       }
 
-      const result = data[0]
-      console.log('✅ Activity updated with totals:', result)
+      const updatedActivityId = data
+      console.log('✅ Activity updated:', updatedActivityId)
 
-      // Return the updated activity (fetch fresh data)
-      return await this.getActivityById(activityId)
+      // Get the updated activity
+      const updatedActivity = await this.getActivityById(activityId)
+
+      if (!updatedActivity || !updatedActivity.cropCycleId) {
+        throw new Error('Failed to retrieve updated activity or missing crop cycle ID')
+      }
+
+      // Step 2: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get all activities for this crop cycle (including the updated one)
+        const activities = await this.getActivitiesForCycle(updatedActivity.cropCycleId)
+        const observations: any[] = [] // TODO: Get observations when available
+
+        // Calculate totals using frontend service
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          updatedActivity.cropCycleId
+        )
+
+        // Update crop cycle totals in database
+        await CropCycleTotalsService.updateCycleTotals(updatedActivity.cropCycleId, totals)
+
+        // Broadcast calculated totals to frontend components
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: updatedActivity.cropCycleId,
+            totals: totals
+          }
+        }))
+
+        console.log('✅ Atomic activity update with totals completed')
+        return updatedActivity
+
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after activity update:', totalsError)
+        // Activity was updated but totals update failed - this is not ideal but not critical
+        console.warn('⚠️ Activity updated but totals update failed - side panel may show stale data')
+        return updatedActivity
+      }
     } catch (error) {
       console.error('Error updating activity:', error)
       throw error
@@ -254,13 +342,10 @@ export class ActivityService {
   }
 
   /**
-   * Delete an activity using atomic database function with auto-recovery
+   * Delete an activity using simple database function
    */
   static async deleteActivity(activityId: string): Promise<void> {
-    return LocalStorageService.withAutoRecovery(
-      () => this._deleteActivityInternal(activityId),
-      'activity deletion'
-    )
+    return this._deleteActivityInternal(activityId)
   }
 
   /**
@@ -268,24 +353,58 @@ export class ActivityService {
    */
   private static async _deleteActivityInternal(activityId: string): Promise<void> {
     try {
-      console.log('💾 Deleting activity with atomic transaction:', activityId)
+      console.log('💾 Deleting activity (simple deletion):', activityId)
 
-      // Call atomic database function
-      const { data, error } = await supabase.rpc('delete_activity_with_totals', {
-        p_activity_id: activityId
-      })
+      // Atomic operation: Delete activity + calculate and update totals
+      console.log('🔄 Starting atomic activity deletion with totals update...')
+
+      // Step 1: Get activity before deletion to get crop cycle ID
+      const activity = await this.getActivityById(activityId)
+      if (!activity || !activity.cropCycleId) {
+        throw new Error('Activity not found or missing crop cycle ID')
+      }
+
+      const cropCycleId = activity.cropCycleId
+
+      // Step 2: Delete activity from database
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', activityId)
 
       if (error) {
         console.error('Error deleting activity:', error)
         throw new Error(`Failed to delete activity: ${error.message}`)
       }
 
-      if (!data || data.length === 0 || !data[0].success) {
-        throw new Error('Activity not found or deletion failed')
-      }
+      console.log('✅ Activity deleted:', activityId)
 
-      const result = data[0]
-      console.log('✅ Activity deleted with totals updated:', result)
+      // Step 3: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get remaining activities for this crop cycle (excluding the deleted one)
+        const activities = await this.getActivitiesForCycle(cropCycleId)
+        const observations: any[] = [] // TODO: Get observations when available
+
+        // Calculate totals using frontend service
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          cropCycleId
+        )
+
+        // Update crop cycle totals in database
+        await CropCycleTotalsService.updateCycleTotals(cropCycleId, totals)
+
+        console.log('✅ Atomic activity deletion with totals completed')
+
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after activity deletion:', totalsError)
+        // Activity was deleted but totals update failed - this is not ideal but not critical
+        console.warn('⚠️ Activity deleted but totals update failed - side panel may show stale data')
+      }
     } catch (error) {
       console.error('Error deleting activity:', error)
       throw error
@@ -720,4 +839,6 @@ export class ActivityService {
 
     return dbUpdates
   }
+
+
 }

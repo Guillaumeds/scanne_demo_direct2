@@ -42,31 +42,33 @@ export class CropCycleCalculationService {
   static async getAuthoritativeTotals(cropCycleId: string): Promise<CropCycleTotals | null> {
     try {
       console.log('📊 Fetching authoritative totals from database for cycle:', cropCycleId)
-      
-      const { data, error } = await supabase.rpc('calculate_crop_cycle_totals', {
-        cycle_id: cropCycleId
-      })
+
+      // Get the crop cycle record directly from the database
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .select('estimated_total_cost, actual_total_cost, sugarcane_actual_yield_tons_ha, total_revenue, profit_per_hectare')
+        .eq('id', cropCycleId)
+        .single()
 
       if (error) {
         console.error('❌ Error fetching crop cycle totals:', error)
-        throw new Error(`Failed to calculate crop cycle totals: ${error.message}`)
+        throw new Error(`Failed to fetch crop cycle totals: ${error.message}`)
       }
 
-      if (!data || data.length === 0) {
+      if (!data) {
         console.log('⚠️ No data returned for crop cycle:', cropCycleId)
-        return null
+        return null;
       }
 
-      const result = data[0]
-      console.log('✅ Authoritative totals calculated:', result)
+      console.log('✅ Authoritative totals fetched:', data)
 
       return {
-        estimatedTotalCost: Number(result.estimated_total_cost) || 0,
-        actualTotalCost: Number(result.actual_total_cost) || 0,
-        sugarcaneYieldTonnesPerHectare: Number(result.sugarcane_yield_tonnes_per_hectare) || 0,
-        intercropYieldTonnesPerHectare: Number(result.intercrop_yield_tonnes_per_hectare) || 0,
-        totalRevenue: Number(result.total_revenue) || 0,
-        profitPerHectare: Number(result.profit_per_hectare) || 0
+        estimatedTotalCost: Number(data.estimated_total_cost) || 0,
+        actualTotalCost: Number(data.actual_total_cost) || 0,
+        sugarcaneYieldTonnesPerHectare: Number(data.sugarcane_actual_yield_tons_ha) || 0,
+        intercropYieldTonnesPerHectare: 0, // Intercrop yield not stored in crop_cycles table
+        totalRevenue: Number(data.total_revenue) || 0,
+        profitPerHectare: Number(data.profit_per_hectare) || 0
       }
 
     } catch (error) {
@@ -78,55 +80,16 @@ export class CropCycleCalculationService {
   /**
    * 🔄 TRIGGER: Recalculate totals after data changes
    * Call this after saving activities, observations, or other data that affects totals
+   * Note: This now uses frontend calculations instead of database functions
    */
   static async triggerRecalculation(cropCycleId: string): Promise<CropCycleTotals | null> {
     try {
       console.log('🔄 Triggering recalculation for crop cycle:', cropCycleId)
 
-      // Call the database function to recalculate and update totals
-      const { data, error } = await supabase.rpc('calculate_crop_cycle_totals', {
-        cycle_id: cropCycleId
-      })
-
-      if (error) {
-        console.error('❌ Database recalculation error:', error)
-        throw error
-      }
-
-      if (data && data.length > 0) {
-        const result = data[0]
-        console.log('✅ Recalculation completed:', result)
-
-        // Update the crop cycle record with the calculated totals
-        const { error: updateError } = await supabase
-          .from('crop_cycles')
-          .update({
-            estimated_total_cost: result.estimated_total_cost,
-            actual_total_cost: result.actual_total_cost,
-            sugarcane_actual_yield_tons_ha: result.sugarcane_yield_tonnes_per_hectare,
-            total_revenue: result.total_revenue,
-            net_profit: result.total_revenue - result.actual_total_cost,
-            profit_per_hectare: result.profit_per_hectare,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', cropCycleId)
-
-        if (updateError) {
-          console.error('❌ Error updating crop cycle totals:', updateError)
-          throw updateError
-        }
-
-        return {
-          estimatedTotalCost: result.estimated_total_cost,
-          actualTotalCost: result.actual_total_cost,
-          sugarcaneYieldTonnesPerHectare: result.sugarcane_yield_tonnes_per_hectare,
-          intercropYieldTonnesPerHectare: result.intercrop_yield_tonnes_per_hectare,
-          totalRevenue: result.total_revenue,
-          profitPerHectare: result.profit_per_hectare
-        }
-      }
-
-      return null
+      // For now, just return the current totals from the database
+      // The actual recalculation should be done by the frontend calculation service
+      // when activities or observations are saved
+      return await this.getAuthoritativeTotals(cropCycleId)
     } catch (error) {
       console.error('❌ Error triggering recalculation:', error)
       throw error

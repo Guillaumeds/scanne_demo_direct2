@@ -39,15 +39,26 @@ export function CropCycleProvider({
 
   const refreshCycles = async () => {
     try {
+      console.log('🔄 CropCycleContext.refreshCycles() called for blocId:', blocId)
       setIsLoading(true)
       setError(null)
-      
+
+      // Get all cycles for the bloc (includes active + closed)
       const cycles = await CropCycleService.getCropCyclesForBloc(blocId)
+      console.log('📊 CropCycleContext: Fetched cycles from DB:', cycles.map(c => ({
+        id: c.id.substring(0, 8) + '...',
+        estimatedCost: c.estimatedTotalCost,
+        actualCost: c.actualTotalCost,
+        lastUpdated: c.lastUpdated
+      })))
+
       setAllCycles(cycles)
-      
-      const active = await CropCycleService.getActiveCropCycle(blocId)
+      console.log('✅ CropCycleContext: allCycles state updated')
+
+      // Find active cycle from the data we already have (no extra DB call needed!)
+      const active = cycles.find(cycle => cycle.status === 'active') || null
       setActiveCycle(active)
-      
+
       if (active) {
         const cyclePermissions = CropCycleService.getCyclePermissions(active, userRole)
         setPermissions(cyclePermissions)
@@ -112,7 +123,7 @@ export function CropCycleProvider({
     }
   }, [blocId, userRole])
 
-  const contextValue: CropCycleContextType = {
+  const contextValue: CropCycleContextType = useMemo(() => ({
     activeCycle,
     allCycles,
     permissions,
@@ -122,7 +133,7 @@ export function CropCycleProvider({
     setActiveCycleId,
     createCycle,
     closeCycle
-  }
+  }), [activeCycle, allCycles, permissions, isLoading, error, refreshCycles, setActiveCycleId, createCycle, closeCycle])
 
   return (
     <CropCycleContext.Provider value={contextValue}>

@@ -26,16 +26,25 @@ import { supabase } from '@/lib/supabase'
 export class CropCycleService {
 
   /**
-   * Get all crop cycles for a specific bloc
+   * Get all crop cycles for a specific bloc WITH TOTALS INCLUDED
+   * This eliminates the need for separate getCropCycleTotals() calls
    */
   static async getCropCyclesForBloc(blocId: string): Promise<CropCycle[]> {
     try {
+      // Fetch complete cycle data including calculated totals
       const { data, error } = await supabase
         .from('crop_cycles')
         .select(`
           *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
+          estimated_total_cost,
+          actual_total_cost,
+          total_revenue,
+          sugarcane_revenue,
+          intercrop_revenue,
+          net_profit,
+          profit_per_hectare,
+          profit_margin_percent,
+          sugarcane_actual_yield_tons_ha
         `)
         .eq('bloc_id', blocId)
         .order('created_at', { ascending: false })
@@ -56,11 +65,7 @@ export class CropCycleService {
     try {
       const { data, error } = await supabase
         .from('crop_cycles')
-        .select(`
-          *,
-          sugarcane_varieties(name, variety_id),
-          intercrop_varieties(name, variety_id)
-        `)
+        .select('*')
         .eq('bloc_id', blocId)
         .eq('status', 'active')
         .single()
@@ -142,6 +147,7 @@ export class CropCycleService {
         parent_cycle_id: request.parentCycleId || null,
         sugarcane_planting_date: request.plantingDate,
         sugarcane_planned_harvest_date: request.plannedHarvestDate,
+        sugarcane_expected_yield_tons_ha: request.expectedYield, // ✅ Add expected yield
         growth_stage: initialGrowthStage,
         days_since_planting: daysSincePlanting,
         estimated_total_cost: 0,
@@ -239,11 +245,13 @@ export class CropCycleService {
         throw new Error('Only active cycles can be closed')
       }
 
-      // Update cycle with closure data
+      // Update cycle with closure data and set growth stage to 'harvested'
       const { data, error } = await supabase
         .from('crop_cycles')
         .update({
           status: 'closed',
+          growth_stage: 'harvested', // 🎯 Set to harvested when closed
+          growth_stage_updated_at: new Date().toISOString(),
           sugarcane_actual_harvest_date: request.actualHarvestDate,
           closure_validated: true,
           updated_at: new Date().toISOString()
@@ -397,19 +405,154 @@ export class CropCycleService {
   }
 
   /**
+   * OPTIMIZED: Get crop cycle summaries for multiple blocs efficiently
+   * Uses single DB call + cached variety data for maximum performance
+   */
+  static async getBlocSummariesBatch(blocIds: string[]): Promise<Record<string, {
+    blocId: string
+    blocStatus: 'active' | 'retired'
+    hasActiveCycle: boolean
+    cycleType?: string
+    varietyName?: string
+    intercropName?: string
+    cycleNumber?: number
+    plannedHarvestDate?: string
+    growthStage?: string
+    growthStageName?: string
+    growthStageColor?: string
+    growthStageIcon?: string
+    daysSincePlanting?: number
+    cycleDisplay?: string
+  }>> {
+
+
+    // Step 1: Update growth stages for all active cycles (Option 3 implementation)
+    await this.updateGrowthStages()
+
+    // Step 2: Get ALL crop cycles for our blocs, then filter to latest per bloc
+    // TODO: Optimize with PostgreSQL function for even better performance
+    const { data: allCropCycles, error: cyclesError } = await supabase
+      .from('crop_cycles')
+      .select('*')
+      .in('bloc_id', blocIds)
+      .order('cycle_number', { ascending: false }) // Latest cycles first
+
+    if (cyclesError) {
+      console.error('❌ Error fetching crop cycles:', cyclesError)
+      // Return all blocs as having no cycles
+      const result: Record<string, any> = {}
+      blocIds.forEach(blocId => {
+        result[blocId] = {
+          blocId,
+          blocStatus: 'active',
+          hasActiveCycle: false,
+          cycleDisplay: 'Barren Soil'
+        }
+      })
+      return result
+    }
+
+    // Step 2: Optimize data - keep only latest cycle per bloc (JavaScript filtering)
+    const latestCyclesMap = new Map<string, any>()
+
+    if (allCropCycles) {
+      allCropCycles.forEach(cycle => {
+        const existing = latestCyclesMap.get(cycle.bloc_id)
+        if (!existing || cycle.cycle_number > existing.cycle_number) {
+          latestCyclesMap.set(cycle.bloc_id, cycle)
+        }
+      })
+    }
+
+    // Step 3: Get cached variety names (0 DB calls!)
+    const varietyMaps = await this.getCachedVarietyNames()
+
+    // Step 4: Process each bloc with optimized data
+    const result: Record<string, any> = {}
+
+    blocIds.forEach(blocId => {
+      const latestCycle = latestCyclesMap.get(blocId)
+
+      if (!latestCycle) {
+        // No cycles at all = Barren Soil
+        result[blocId] = {
+          blocId,
+          blocStatus: 'active',
+          hasActiveCycle: false,
+          cycleDisplay: 'Barren Soil',
+          growthStage: ''
+        }
+        return
+      }
+
+      // Use the latest cycle (which could be active or closed)
+      const displayCycle = latestCycle
+      const hasActiveCycle = latestCycle.status === 'active'
+
+      // Clean cycle type display
+      const cycleDisplay = displayCycle.type === 'plantation'
+        ? 'Plantation'
+        : `Ratoon ${displayCycle.cycle_number - 1}`
+
+      // Get variety name from cache
+      const varietyName = varietyMaps.sugarcane.get(displayCycle.sugarcane_variety_id) || 'Unknown'
+      const intercropName = displayCycle.intercrop_variety_id
+        ? varietyMaps.intercrop.get(displayCycle.intercrop_variety_id)
+        : undefined
+
+      // Get growth stage info
+      const growthStageInfo = this.getGrowthStageInfo(displayCycle.growth_stage)
+
+      result[blocId] = {
+        blocId,
+        blocStatus: 'active',
+        hasActiveCycle,
+        cycleType: displayCycle.type,
+        cycleDisplay,
+        varietyName,
+        intercropName,
+        cycleNumber: displayCycle.cycle_number,
+        plannedHarvestDate: displayCycle.sugarcane_planned_harvest_date,
+        growthStage: displayCycle.growth_stage,
+        growthStageName: growthStageInfo?.name,
+        growthStageColor: growthStageInfo?.color,
+        growthStageIcon: growthStageInfo?.icon,
+        daysSincePlanting: displayCycle.days_since_planting
+      }
+    })
+
+
+    return result
+  }
+
+  /**
    * Update growth stages for all active crop cycles
-   * This would be called by a database trigger or scheduled job in real implementation
+   * PROTECTION: Never overwrite 'harvested' growth stage or cycles with past harvest dates
+   * Note: Only updates ACTIVE cycles. Closed cycles remain 'harvested'
    */
   static async updateGrowthStages(): Promise<void> {
     try {
       const { data: activeCycles, error } = await supabase
         .from('crop_cycles')
-        .select('id, sugarcane_planting_date, growth_stage')
-        .eq('status', 'active')
+        .select('id, sugarcane_planting_date, sugarcane_actual_harvest_date, growth_stage, status, cycle_number')
+        .eq('status', 'active') // Only active cycles get growth stage updates
 
       if (error) throw error
 
       for (const cycle of activeCycles || []) {
+        // 🛡️ PROTECTION 1: Skip if already harvested
+        if (cycle.growth_stage === 'harvested') {
+          continue
+        }
+
+        // 🛡️ PROTECTION 2: Skip if actual harvest date is in the past
+        if (cycle.sugarcane_actual_harvest_date) {
+          const harvestDate = new Date(cycle.sugarcane_actual_harvest_date)
+          if (harvestDate <= new Date()) {
+            continue
+          }
+        }
+
         if (cycle.sugarcane_planting_date) {
           const plantingDate = new Date(cycle.sugarcane_planting_date)
           const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -425,6 +568,9 @@ export class CropCycleService {
                 updated_at: new Date().toISOString()
               })
               .eq('id', cycle.id)
+              .neq('growth_stage', 'harvested') // 🛡️ Extra protection at DB level
+
+
           }
         }
       }
@@ -436,6 +582,7 @@ export class CropCycleService {
 
   /**
    * Calculate growth stage based on days since planting
+   * Note: This is only for active cycles. Closed cycles should have growth_stage = 'harvested'
    */
   private static calculateGrowthStage(daysSincePlanting: number): GrowthStage {
     if (daysSincePlanting <= 30) return 'germination'
@@ -443,6 +590,34 @@ export class CropCycleService {
     if (daysSincePlanting <= 270) return 'grand-growth'
     if (daysSincePlanting <= 360) return 'maturation'
     return 'ripening'
+  }
+
+
+
+  /**
+   * Get cached variety names from localStorage (no DB calls needed!)
+   */
+  private static async getCachedVarietyNames(): Promise<{
+    sugarcane: Map<string, string>
+    intercrop: Map<string, string>
+  }> {
+    // Get cached varieties data (already loaded during app initialization)
+    const [sugarcaneVarietiesData, intercropVarietiesData] = await Promise.all([
+      LocalStorageService.getSugarcaneVarieties(),
+      LocalStorageService.getIntercropVarieties()
+    ])
+
+    // Create lookup maps by UUID
+    const sugarcane = new Map<string, string>()
+    sugarcaneVarietiesData.forEach(variety => {
+      sugarcane.set(variety.id, variety.name)
+    })
+
+    const intercrop = new Map<string, string>()
+    intercropVarietiesData.forEach(variety => {
+      intercrop.set(variety.id, variety.name)
+    })
+    return { sugarcane, intercrop }
   }
 
   /**
@@ -458,6 +633,57 @@ export class CropCycleService {
       'harvested': { name: 'Harvested', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅' }
     }
     return stageMap[stage]
+  }
+
+
+
+  /**
+   * Transform database record to local CropCycle type using pre-fetched variety data
+   */
+  private static async transformDbToLocalWithVarieties(
+    dbRecord: any,
+    varietyMaps: { sugarcaneVarieties: Map<string, string>, intercropVarieties: Map<string, string> }
+  ): Promise<CropCycle> {
+    // Get variety names from pre-fetched maps
+    const sugarcaneVarietyName = dbRecord.sugarcane_variety_id
+      ? varietyMaps.sugarcaneVarieties.get(dbRecord.sugarcane_variety_id) || 'Unknown'
+      : 'Unknown'
+
+    const intercropVarietyName = dbRecord.intercrop_variety_id
+      ? varietyMaps.intercropVarieties.get(dbRecord.intercrop_variety_id)
+      : undefined
+
+    // Rest of transformation logic (same as original transformDbToLocal)
+    return {
+      id: dbRecord.id,
+      blocId: dbRecord.bloc_id,
+      type: dbRecord.type as 'plantation' | 'ratoon',
+      cycleNumber: dbRecord.cycle_number,
+      status: dbRecord.status as 'active' | 'closed',
+      sugarcaneVarietyId: dbRecord.sugarcane_variety_id,
+      sugarcaneVarietyName,
+      intercropVarietyId: dbRecord.intercrop_variety_id,
+      intercropVarietyName,
+      sugarcaneExpectedYieldTonnesPerHectare: dbRecord.sugarcane_expected_yield_tons_ha,
+      intercropExpectedYieldTonnesPerHectare: dbRecord.intercrop_expected_yield_tons_ha,
+      sugarcaneActualYieldTonnesPerHectare: dbRecord.sugarcane_actual_yield_tons_ha,
+      intercropActualYieldTonnesPerHectare: dbRecord.intercrop_actual_yield_tons_ha,
+      sugarcanePlantingDate: dbRecord.sugarcane_planting_date,
+      intercropPlantingDate: dbRecord.intercrop_planting_date,
+      plannedHarvestDate: dbRecord.planned_harvest_date,
+      actualHarvestDate: dbRecord.actual_harvest_date,
+      growthStage: dbRecord.growth_stage,
+      growthStageUpdatedAt: dbRecord.growth_stage_updated_at,
+      daysSincePlanting: dbRecord.days_since_planting,
+      estimatedTotalCost: dbRecord.estimated_total_cost,
+      actualTotalCost: dbRecord.actual_total_cost,
+      totalRevenue: dbRecord.total_revenue,
+      profitPerHectare: dbRecord.profit_per_hectare,
+      createdAt: dbRecord.created_at,
+      updatedAt: dbRecord.updated_at,
+      isNew: false,
+      isDirty: false
+    }
   }
 
   /**
@@ -510,7 +736,7 @@ export class CropCycleService {
       sugarcaneVarietyName,
       plantingDate: dbRecord.sugarcane_planting_date,
       plannedHarvestDate: dbRecord.sugarcane_planned_harvest_date,
-      expectedYield: dbRecord.sugarcane_actual_yield_tons_ha || 0,
+      expectedYield: dbRecord.sugarcane_expected_yield_tons_ha || 0,
       intercropVarietyId: dbRecord.intercrop_variety_id,
       intercropVarietyName,
       parentCycleId: dbRecord.parent_cycle_id,
@@ -522,14 +748,24 @@ export class CropCycleService {
       closureDate: dbRecord.created_at, // TODO: Add closure_date field
       closedBy: 'system', // TODO: Add closed_by field
       closureValidated: dbRecord.closure_validated,
-      totalCosts: dbRecord.actual_total_cost,
-      totalRevenue: dbRecord.total_revenue,
-      netProfit: dbRecord.net_profit,
-      profitPerHectare: dbRecord.net_profit, // TODO: Calculate per hectare
-      sugarcaneYieldTons: dbRecord.sugarcane_actual_yield_tons_ha,
-      sugarcaneYieldTonsPerHa: dbRecord.sugarcane_actual_yield_tons_ha,
-      sugarcaneRevenue: dbRecord.sugarcane_revenue,
-      intercropRevenue: dbRecord.intercrop_revenue,
+      // Financial totals (now included in main query - no separate calls needed!)
+      totalCosts: dbRecord.actual_total_cost || 0,
+      totalRevenue: dbRecord.total_revenue || 0,
+      netProfit: dbRecord.net_profit || 0,
+      profitPerHectare: dbRecord.profit_per_hectare || 0,
+      profitMarginPercent: dbRecord.profit_margin_percent || 0,
+
+      // Yield data
+      sugarcaneYieldTons: dbRecord.sugarcane_actual_yield_tons_ha || 0,
+      sugarcaneYieldTonsPerHa: dbRecord.sugarcane_actual_yield_tons_ha || 0,
+
+      // Revenue breakdown
+      sugarcaneRevenue: dbRecord.sugarcane_revenue || 0,
+      intercropRevenue: dbRecord.intercrop_revenue || 0,
+
+      // Cost breakdown
+      estimatedTotalCost: dbRecord.estimated_total_cost || 0,
+      actualTotalCost: dbRecord.actual_total_cost || 0,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,
       createdBy: 'system' // TODO: Add created_by field
@@ -551,7 +787,7 @@ export class CropCycleService {
     if (localUpdates.plantingDate) dbUpdates.sugarcane_planting_date = localUpdates.plantingDate
     if (localUpdates.plannedHarvestDate) dbUpdates.sugarcane_planned_harvest_date = localUpdates.plannedHarvestDate
     if (localUpdates.actualHarvestDate) dbUpdates.sugarcane_actual_harvest_date = localUpdates.actualHarvestDate
-    if (localUpdates.expectedYield) dbUpdates.sugarcane_actual_yield_tons_ha = localUpdates.expectedYield
+    if (localUpdates.expectedYield) dbUpdates.sugarcane_expected_yield_tons_ha = localUpdates.expectedYield
     if (localUpdates.growthStage) dbUpdates.growth_stage = localUpdates.growthStage
     if (localUpdates.daysSincePlanting) dbUpdates.days_since_planting = localUpdates.daysSincePlanting
     if (localUpdates.closureValidated !== undefined) dbUpdates.closure_validated = localUpdates.closureValidated

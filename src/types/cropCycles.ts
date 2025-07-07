@@ -106,11 +106,14 @@ export interface CropCycle {
   closedBy?: string
   closureValidated: boolean
   
-  // Financial summary (calculated on closure)
+  // Financial summary (now included in main query - no separate calls needed!)
   totalCosts?: number
   totalRevenue?: number
   netProfit?: number
   profitPerHectare?: number
+  profitMarginPercent?: number
+  estimatedTotalCost?: number
+  actualTotalCost?: number
   
   // Yield summary (calculated on closure)
   sugarcaneYieldTons?: number
