@@ -13,7 +13,7 @@ import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
 import { CropCycleProvider, useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation, useCropCycle } from '@/contexts/CropCycleContext'
 import { SelectedCropCycleProvider } from '@/contexts/SelectedCropCycleContext'
 import { CropVariety } from '@/types/varieties'
-import { DrawnArea } from '@/types/drawnArea'
+import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { FormCommitRef } from '@/hooks/useFormWithAutoCommit'
 import { useAllVarieties } from '@/hooks/useLocalStorageData'
 
@@ -79,6 +79,17 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   const [activeTab, setActiveTab] = useState('general')
   const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
   const [showIntercropSelector, setShowIntercropSelector] = useState(false)
+
+  // Convert DrawnArea to legacy format expected by tab components
+  const legacyBloc = {
+    id: DrawnAreaUtils.getEntityKey(bloc), // Use entity key as id for compatibility
+    type: bloc.type,
+    coordinates: bloc.coordinates,
+    area: bloc.area,
+    name: bloc.name,
+    isHarvested: false, // Default values for legacy properties
+    ratoonHarvestDates: []
+  }
 
   // Form refs for auto-commit functionality
   const cropCycleFormRef = useRef<FormCommitRef>(null)
@@ -224,7 +235,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
       // Archive bloc by updating its status in database
       try {
         // TODO: Implement bloc archiving in database
-        console.log('Archiving bloc:', bloc.id)
+        console.log('Archiving bloc:', DrawnAreaUtils.getDisplayName(bloc), 'UUID:', bloc.uuid)
         onBack() // Return to main view after archiving
       } catch (error) {
         console.error('Error archiving bloc:', error)
@@ -238,9 +249,9 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
     if (confirmText === 'delete this bloc') {
       const finalConfirm = window.confirm('Are you absolutely sure? This will permanently delete the bloc and ALL related data including activities, products, resources, observations, and attachments. This action cannot be undone.')
       if (finalConfirm) {
-        console.log('Deleting bloc:', bloc.id)
+        console.log('Deleting bloc:', DrawnAreaUtils.getDisplayName(bloc), 'UUID:', bloc.uuid)
         if (onDelete) {
-          onDelete(bloc.id) // Call the delete function passed from parent
+          onDelete(DrawnAreaUtils.getEntityKey(bloc)) // Use entity key for deletion
         }
         onBack() // Return to main view after deletion
       }
@@ -254,7 +265,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
     if (confirmText === 'retire this bloc') {
       const finalConfirm = window.confirm('Are you sure you want to retire this bloc? It will be marked as retired but data will be preserved.')
       if (finalConfirm) {
-        console.log('Retiring bloc:', bloc.id)
+        console.log('Retiring bloc:', DrawnAreaUtils.getDisplayName(bloc), 'UUID:', bloc.uuid)
         // TODO: Implement bloc retirement logic - update status from active to retired
         // This should call a service to update the bloc status in the database
         alert('Bloc retirement functionality will be implemented with database integration.')
@@ -656,27 +667,27 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
           )}
 
           {activeTab === 'satellite-soil' && (
-            <SoilDataTab bloc={bloc} />
+            <SoilDataTab bloc={legacyBloc} />
           )}
 
           {activeTab === 'satellite-vegetation' && (
-            <VegetationDataTab bloc={bloc} />
+            <VegetationDataTab bloc={legacyBloc} />
           )}
 
           {activeTab === 'weather' && (
-            <WeatherDashboard drawnAreas={[bloc]} />
+            <WeatherDashboard drawnAreas={[legacyBloc]} />
           )}
 
           {activeTab === 'activities' && (
-            <ActivitiesTab bloc={bloc} />
+            <ActivitiesTab bloc={legacyBloc} />
           )}
 
           {activeTab === 'observations' && (
-            <ObservationsTab bloc={bloc} />
+            <ObservationsTab bloc={legacyBloc} />
           )}
 
           {activeTab === 'attachments' && (
-            <AttachmentsTab bloc={bloc} />
+            <AttachmentsTab bloc={legacyBloc} />
           )}
 
         </div>

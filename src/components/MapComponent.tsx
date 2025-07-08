@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
-import { FieldData } from '@/types/field'
+
 import DrawingManager from './DrawingManager'
 import LayerSelector from './LayerSelector'
 import DrawingProgress from './DrawingProgress'
@@ -19,11 +19,7 @@ L.Icon.Default.mergeOptions({
 
 interface MapComponentProps {
   className?: string
-  fields: FieldData[]
-  // Field selection removed - parcelles are background only
-  // selectedField: string | null
-  // hoveredField?: string | null
-  // onFieldSelect: (fieldId: string) => void
+  // Field functionality removed - blocs are the primary entities
   activeTool?: string | null
   drawnAreas?: any[]
   savedAreas?: any[]
@@ -39,8 +35,7 @@ interface MapComponentProps {
 
 export default function MapComponent({
   className = '',
-  fields,
-  // Field selection removed - parcelles are background only
+  // Field functionality removed - blocs are the primary entities
   activeTool,
   drawnAreas = [],
   savedAreas = [],
@@ -55,9 +50,7 @@ export default function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
-  const fieldLayersRef = useRef<L.LayerGroup | null>(null)
-  const fieldPolygonsRef = useRef<Map<string, L.Polygon>>(new Map())
-  const fieldLabelsRef = useRef<Map<string, L.Marker>>(new Map())
+  // Field functionality removed - blocs are the primary entities
   const [mapReady, setMapReady] = useState(false)
   const [mapKey, setMapKey] = useState(0)
   const [currentLayer, setCurrentLayer] = useState('satellite')
@@ -232,54 +225,7 @@ export default function MapComponent({
     document.dispatchEvent(escEvent)
   }
 
-  // Function to update field labels on zoom
-  const updateFieldLabels = () => {
-    const map = mapInstanceRef.current
-    if (!map) return
-
-    fieldPolygonsRef.current.forEach((polygon, fieldId) => {
-      const fieldData = (polygon as any)._fieldData
-      if (!fieldData) return
-
-      const center = calculatePolygonCentroid(fieldData.coordinates)
-      const currentZoom = map.getZoom()
-      const bounds = polygon.getBounds()
-      const shapeWidthInPixels = map.distance(bounds.getSouthWest(), bounds.getSouthEast()) * Math.pow(2, currentZoom - 10) / 100
-      const maxFontSize = Math.max(8, Math.min(16, shapeWidthInPixels / fieldData.field_id.length * 0.8))
-
-      const existingLabel = fieldLabelsRef.current.get(fieldId)
-      if (existingLabel) {
-        map.removeLayer(existingLabel)
-      }
-
-      const fieldLabel = L.divIcon({
-        html: `<div style="
-          font-family: Arial, sans-serif;
-          font-size: ${maxFontSize}px;
-          font-weight: bold;
-          color: #000000;
-          text-align: center;
-          text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8), 1px -1px 2px rgba(255,255,255,0.8), -1px 1px 2px rgba(255,255,255,0.8);
-          pointer-events: none;
-          white-space: nowrap;
-          position: absolute;
-          transform: translate(-50%, -50%);
-          top: 0;
-          left: 0;
-          max-width: ${shapeWidthInPixels * 0.9}px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        ">${fieldData.field_id}</div>`,
-        className: 'field-label',
-        iconSize: [1, 1],
-        iconAnchor: [0, 0]
-      })
-
-      const labelMarker = L.marker(center, { icon: fieldLabel })
-      labelMarker.addTo(map)
-      fieldLabelsRef.current.set(fieldId, labelMarker)
-    })
-  }
+  // Field functionality removed - blocs are the primary entities
 
   // Calculate polygon centroid for better label positioning
   const calculatePolygonCentroid = (coordinates: [number, number][]): L.LatLng => {

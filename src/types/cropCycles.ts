@@ -134,6 +134,7 @@ export interface CropCycle {
   // Metadata
   createdAt: string
   updatedAt: string
+  lastUpdated?: string        // Alternative field name for updatedAt
   createdBy: string
 }
 

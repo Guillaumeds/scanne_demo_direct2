@@ -13,11 +13,11 @@ export interface DrawnArea extends EntityWithIdentifiers {
   type: string                        // 'polygon', 'rectangle', etc.
   coordinates: [number, number][]     // Array of [lng, lat] coordinates
   area: number                        // Area in hectares
-  
+
   // Display properties
   name?: string                       // Optional human-readable name
   description?: string                // Optional description
-  
+
   // Status properties (inherited from EntityWithIdentifiers)
   // localId: string                  // Frontend display ID (e.g., "bloc-1")
   // uuid?: string                    // Database UUID (only when saved)
@@ -40,7 +40,7 @@ export class DrawnAreaUtils {
   ): DrawnArea {
     const now = new Date().toISOString()
     const localId = `bloc-${Date.now().toString(36)}`
-    
+
     return {
       localId,
       uuid: undefined,
@@ -50,7 +50,8 @@ export class DrawnAreaUtils {
       isSaved: false,
       isDirty: true,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      get id() { return this.uuid || this.localId }
     }
   }
   

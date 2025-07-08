@@ -31,7 +31,7 @@ export type Updates<T extends keyof Database['public']['Tables']> = Database['pu
 // Specific table types for easy import (operational tables only)
 export type Company = Tables<'companies'>
 export type Farm = Tables<'farms'>
-export type Field = Tables<'fields'>
+// Field functionality removed - blocs are the primary entities
 export type Bloc = Tables<'blocs'>
 export type CropCycle = Tables<'crop_cycles'>
 export type Activity = Tables<'activities'>

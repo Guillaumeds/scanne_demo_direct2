@@ -10,15 +10,11 @@ import PolygonInfoModal from './PolygonInfoModal'
 
 import BlocDataScreen from './BlocDataScreen'
 import FloatingInfoBox from './FloatingInfoBox'
-import { FieldData } from '@/types/field'
 import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
-import { loadFieldData } from '@/utils/csvParser'
-import { loadBelleVueFields, hasFieldsInDatabase } from '@/services/fieldService'
 import { LocalStorageService } from '@/services/localStorageService'
 
 export default function FarmGISLayout() {
-  const [fields, setFields] = useState<FieldData[]>([])
-  // Field selection removed - parcelles are background only
+  // Field functionality removed - blocs are the primary entities
   // const [selectedField, setSelectedField] = useState<string | null>(null)
   // const [hoveredField, setHoveredField] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,7 +80,7 @@ export default function FarmGISLayout() {
 
         // Set empty fields array for demo
         console.log('📊 Field loading disabled - using empty fields array')
-        setFields([])
+        // Field functionality removed - blocs are the primary entities
 
       } catch (error) {
         console.error('❌ Failed to initialize app:', error)
@@ -208,7 +204,7 @@ export default function FarmGISLayout() {
 
   const handleBlocCardClick = (areaId: string) => {
     // Find the bloc in either drawn or saved areas
-    const bloc = [...drawnAreas, ...savedAreas].find(area => area.id === areaId)
+    const bloc = [...drawnAreas, ...savedAreas].find(area => DrawnAreaUtils.getEntityKey(area) === areaId)
     if (!bloc) return
 
     // Calculate bounds from coordinates
@@ -242,7 +238,7 @@ export default function FarmGISLayout() {
   }
 
   const handlePolygonDelete = (areaId: string) => {
-    setDrawnAreas(prev => prev.filter(area => area.id !== areaId))
+    setDrawnAreas(prev => prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaId))
     setSelectedPolygon(null)
     setSelectedAreaId(null)
     console.log('Area deleted:', areaId)
@@ -356,7 +352,6 @@ export default function FarmGISLayout() {
         <div className="flex-1 relative">
           {/* Map Component - Always mounted to preserve state */}
           <MapComponent
-            fields={fields}
             activeTool={activeTool}
             drawnAreas={drawnAreas}
             savedAreas={savedAreas}
@@ -389,7 +384,7 @@ export default function FarmGISLayout() {
           {!showDataScreen && (
             <div className="absolute bottom-4 left-4 bg-white px-3 py-2 rounded-lg shadow-lg z-[1000]">
               <p className="text-sm text-gray-600">
-                {fields.length} parcelles • {drawnAreas.length + savedAreas.length} blocs
+                {drawnAreas.length + savedAreas.length} blocs
                 {activeTool && <span className="ml-2 text-blue-600">• Drawing mode: {activeTool}</span>}
               </p>
             </div>

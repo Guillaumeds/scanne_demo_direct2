@@ -82,23 +82,23 @@ export default function DrawingManager({
     // Layer-specific coloring
     if (currentLayer === 'crop_cycles') {
       // TODO: Get actual crop cycle data from area
-      // For now, use mock data based on area ID
-      const cyclePhase = getCropCyclePhase(area.id)
+      // For now, use mock data based on area entity key
+      const cyclePhase = getCropCyclePhase(DrawnAreaUtils.getEntityKey(area))
       return getCropCycleColor(cyclePhase)
     } else if (currentLayer === 'variety') {
       // TODO: Get actual variety data from area
-      // For now, use mock data based on area ID
-      const varietyType = getVarietyType(area.id)
+      // For now, use mock data based on area entity key
+      const varietyType = getVarietyType(DrawnAreaUtils.getEntityKey(area))
       return getVarietyColor(varietyType)
     } else if (currentLayer === 'growth_stages') {
       // TODO: Get actual growth stage data from area
-      // For now, use mock data based on area ID
-      const growthStage = getGrowthStage(area.id)
+      // For now, use mock data based on area entity key
+      const growthStage = getGrowthStage(DrawnAreaUtils.getEntityKey(area))
       return getGrowthStageColor(growthStage)
     } else if (currentLayer === 'harvest_planning') {
       // TODO: Get actual harvest planning data from area
-      // For now, use mock data based on area ID
-      const harvestTiming = getHarvestTiming(area.id)
+      // For now, use mock data based on area entity key
+      const harvestTiming = getHarvestTiming(DrawnAreaUtils.getEntityKey(area))
       return getHarvestPlanningColor(harvestTiming)
     }
 
@@ -481,11 +481,11 @@ export default function DrawingManager({
 
   // Handle area deletion - remove from map when deleted from state
   useEffect(() => {
-    const currentAreaIds = new Set([...drawnAreas.map(a => a.id), ...savedAreas.map(a => a.id)])
+    const currentAreaIds = new Set([...drawnAreas.map(a => DrawnAreaUtils.getEntityKey(a)), ...savedAreas.map(a => DrawnAreaUtils.getEntityKey(a))])
 
     console.log('🗂️ Area management effect:', {
-      drawnAreaIds: drawnAreas.map(a => a.id),
-      savedAreaIds: savedAreas.map(a => a.id),
+      drawnAreaIds: drawnAreas.map(a => DrawnAreaUtils.getEntityKey(a)),
+      savedAreaIds: savedAreas.map(a => DrawnAreaUtils.getEntityKey(a)),
       layerMapKeys: Array.from(layerMapRef.current.keys()),
       currentAreaIds: Array.from(currentAreaIds)
     })
@@ -810,12 +810,12 @@ export default function DrawingManager({
     // Check overlap with saved areas (cultivation areas)
     // Only block if point is STRICTLY INSIDE, not just touching boundary
     for (const savedArea of savedAreas) {
-      const savedLayer = layerMapRef.current.get(savedArea.id)
+      const savedLayer = layerMapRef.current.get(DrawnAreaUtils.getEntityKey(savedArea))
       if (savedLayer && savedLayer.getBounds().contains(point)) {
         // More precise check - point STRICTLY inside polygon (not on boundary)
         const latlngs = savedLayer.getLatLngs()[0] as L.LatLng[]
         if (isPointStrictlyInsidePolygon(point, latlngs)) {
-          console.log('❌ POINT INSIDE saved bloc:', savedArea.id)
+          console.log('❌ POINT INSIDE saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
           return { isOverlap: true, reason: 'Cannot draw inside saved blocs' }
         } else {
           console.log('✅ Point touching boundary of saved bloc - allowed')
@@ -826,12 +826,12 @@ export default function DrawingManager({
     // Check overlap with drawn areas (unsaved blocs)
     // Only block if point is STRICTLY INSIDE, not just touching boundary
     for (const drawnArea of drawnAreas) {
-      const drawnLayer = layerMapRef.current.get(drawnArea.id)
+      const drawnLayer = layerMapRef.current.get(DrawnAreaUtils.getEntityKey(drawnArea))
       if (drawnLayer && drawnLayer.getBounds().contains(point)) {
         // More precise check - point STRICTLY inside polygon (not on boundary)
         const latlngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
         if (isPointStrictlyInsidePolygon(point, latlngs)) {
-          console.log('❌ POINT INSIDE drawn bloc:', drawnArea.id)
+          console.log('❌ POINT INSIDE drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
           return { isOverlap: true, reason: 'Cannot draw inside existing blocs' }
         } else {
           console.log('✅ Point touching boundary of drawn bloc - allowed')
@@ -851,43 +851,45 @@ export default function DrawingManager({
 
     // Check overlap with saved areas
     for (const savedArea of savedAreas) {
-      console.log('🔍 Checking overlap with saved area:', savedArea.id)
-      const savedLayer = layerMapRef.current.get(savedArea.id)
+      const areaKey = DrawnAreaUtils.getEntityKey(savedArea)
+      console.log('🔍 Checking overlap with saved area:', DrawnAreaUtils.getDisplayName(savedArea))
+      const savedLayer = layerMapRef.current.get(areaKey)
       if (savedLayer) {
         const savedLatLngs = savedLayer.getLatLngs()[0] as L.LatLng[]
         console.log('🔍 Saved area coordinates:', savedLatLngs.length, 'points')
 
         const hasOverlap = polygonsOverlap(polygonLatLngs, savedLatLngs)
-        console.log('🔍 Overlap result with saved area', savedArea.id, ':', hasOverlap)
+        console.log('🔍 Overlap result with saved area', DrawnAreaUtils.getDisplayName(savedArea), ':', hasOverlap)
 
         if (hasOverlap) {
-          console.log('❌ POLYGON OVERLAP with saved bloc:', savedArea.id)
+          console.log('❌ POLYGON OVERLAP with saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
           return { isOverlap: true, reason: 'New bloc overlaps with saved bloc' }
         }
       } else {
-        console.log('⚠️ No layer found for saved area:', savedArea.id)
+        console.log('⚠️ No layer found for saved area:', DrawnAreaUtils.getDisplayName(savedArea))
       }
     }
 
     // Check overlap with drawn areas (excluding current drawing)
     for (const drawnArea of drawnAreas) {
-      console.log('🔍 Checking overlap with drawn area:', drawnArea.id)
-      const drawnLayer = layerMapRef.current.get(drawnArea.id)
-      if (drawnLayer && drawnArea.id !== currentPolygonId) {
+      const areaKey = DrawnAreaUtils.getEntityKey(drawnArea)
+      console.log('🔍 Checking overlap with drawn area:', DrawnAreaUtils.getDisplayName(drawnArea))
+      const drawnLayer = layerMapRef.current.get(areaKey)
+      if (drawnLayer && areaKey !== currentPolygonId) {
         const drawnLatLngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
         console.log('🔍 Drawn area coordinates:', drawnLatLngs.length, 'points')
 
         const hasOverlap = polygonsOverlap(polygonLatLngs, drawnLatLngs)
-        console.log('🔍 Overlap result with drawn area', drawnArea.id, ':', hasOverlap)
+        console.log('🔍 Overlap result with drawn area', DrawnAreaUtils.getDisplayName(drawnArea), ':', hasOverlap)
 
         if (hasOverlap) {
-          console.log('❌ POLYGON OVERLAP with drawn bloc:', drawnArea.id)
+          console.log('❌ POLYGON OVERLAP with drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
           return { isOverlap: true, reason: 'New bloc overlaps with existing bloc' }
         }
       } else if (!drawnLayer) {
-        console.log('⚠️ No layer found for drawn area:', drawnArea.id)
+        console.log('⚠️ No layer found for drawn area:', DrawnAreaUtils.getDisplayName(drawnArea))
       } else {
-        console.log('🔍 Skipping current polygon:', drawnArea.id)
+        console.log('🔍 Skipping current polygon:', DrawnAreaUtils.getDisplayName(drawnArea))
       }
     }
 

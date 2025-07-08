@@ -8,6 +8,8 @@
  * - Utility types for common patterns
  */
 
+import { BlocAttachment } from '@/types/attachments'
+
 // Branded types for better type safety
 export type ObservationId = string & { readonly __brand: unique symbol }
 export type CropCycleId = string & { readonly __brand: unique symbol }
@@ -53,6 +55,20 @@ export interface BlocObservation {
 
   // Category-specific data
   data: ObservationData
+
+  // Yield calculation properties (from database schema)
+  yieldTonsHa?: number        // Maps to yield_tons_ha in database
+  areaHectares?: number       // Maps to area_hectares in database
+  totalYieldTons?: number     // Maps to total_yield_tons in database
+
+  // Revenue properties (from database schema)
+  sugarcaneRevenue?: number   // Maps to sugarcane_revenue in database
+  intercropRevenue?: number   // Maps to intercrop_revenue in database
+  revenuePerHectare?: number  // Maps to revenue_per_hectare in database
+  pricePerTonne?: number      // Maps to price_per_tonne in database
+
+  // Attachments (from application usage)
+  attachments?: BlocAttachment[]  // Associated attachments
 
   // Metadata
   createdAt: string
@@ -158,6 +174,11 @@ export interface SugarcaneYieldQualityData {
   ccs?: number // Commercial Cane Sugar percentage
   fiberContent?: number // %
   moistureContent?: number // %
+
+  // Revenue properties (from database schema)
+  totalRevenue?: number       // Total revenue from sugarcane
+  pricePerTonne?: number      // Price per tonne
+  revenuePerHa?: number       // Revenue per hectare
   trashPercentage?: number // %
   qualityGrade?: 'A' | 'B' | 'C' | 'D'
 
@@ -213,6 +234,7 @@ export interface IntercropYieldQualityData {
   // Revenue data (MANDATORY)
   intercropRevenue: number // Total revenue from intercrop sales (MUR)
   intercropPrice: number // Price per ton (MUR)
+  pricePerTonne?: number // Alternative price per tonne field
 
   // Additional data
   harvestMethod?: 'manual' | 'mechanical' | 'mixed'

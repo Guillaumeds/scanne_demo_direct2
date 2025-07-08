@@ -1,4 +1,5 @@
-import { FieldData, GeoJSONFeatureCollection, GeoJSONFeature } from '@/types/field'
+// Field functionality removed - blocs are the primary entities
+// import { FieldData, GeoJSONFeatureCollection, GeoJSONFeature } from '@/types/field'
 
 /**
  * Parse CSV field data into FieldData objects
