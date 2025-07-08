@@ -54,6 +54,7 @@ export default function DrawingManager({
   const isDrawingRef = useRef(false)
   const snapIndicatorRef = useRef<L.CircleMarker | null>(null)
   const layerMapRef = useRef<Map<string, L.Polygon | L.Rectangle>>(new Map())
+  const previewLineRef = useRef<L.Polyline | null>(null)
 
   // State for drawing stats and area tracking
   const [drawingStats, setDrawingStats] = useState<{
@@ -247,15 +248,422 @@ export default function DrawingManager({
     }
   }, [map])
 
-  // Handle tool activation with custom drawing
+  // MOVED: Tool activation useEffect moved after event handlers to fix hoisting
+
+  // MOVED: Robust helper functions moved after event handlers to fix hoisting
+
+  // ROBUST LAYER MANAGEMENT: Smart polygon update logic
+  const updatePolygonsRobustly = () => {
+    const existingKeys = new Set(Array.from(layerMapRef.current.keys()))
+    const currentKeys = new Set([
+      ...savedAreas.map(area => DrawnAreaUtils.getEntityKey(area)),
+      ...drawnAreas.map(area => DrawnAreaUtils.getEntityKey(area))
+    ])
+    const sizeDifference = Math.abs((savedAreas.length + drawnAreas.length) - layerMapRef.current.size)
+
+    console.log('🎯 ROBUST UPDATE: Analyzing polygon state:', {
+      existing: existingKeys.size,
+      current: currentKeys.size,
+      sizeDifference,
+      savedAreas: savedAreas.length,
+      drawnAreas: drawnAreas.length
+    })
+
+    // SMART DECISION TREE for most robust handling
+    if (layerMapRef.current.size === 0 && (savedAreas.length > 0 || drawnAreas.length > 0)) {
+      // First load: full creation
+      console.log('🎯 ROBUST UPDATE: First load - creating all polygons')
+      createAllPolygonsRobustly()
+    } else if (sizeDifference <= 3 && sizeDifference > 0) {
+      // Small changes: incremental update (most common case)
+      console.log('🎯 ROBUST UPDATE: Small change - incremental update')
+      updateIncrementallyRobustly(existingKeys, currentKeys)
+    } else if (sizeDifference > 10) {
+      // Major changes: full recreation with validation
+      console.log('🎯 ROBUST UPDATE: Major change - full recreation')
+      recreateWithValidationRobustly()
+    } else if (sizeDifference === 0) {
+      // No size change: validate consistency
+      console.log('🎯 ROBUST UPDATE: No size change - validating consistency')
+      validateConsistencyRobustly(existingKeys, currentKeys)
+    } else {
+      // Edge cases: validate and decide
+      console.log('🎯 ROBUST UPDATE: Edge case - validate and decide')
+      validateAndDecideRobustly(existingKeys, currentKeys)
+    }
+  }
+
+  // ROBUST CLICK HANDLERS: Set up click events efficiently
+  const setupClickHandlersRobustly = () => {
+    const totalAreas = drawnAreas.length + savedAreas.length
+    if (totalAreas > 0) {
+      console.log('🔗 ROBUST HANDLERS: Setting up click handlers for', totalAreas, 'polygons')
+      // Click handlers are set up during polygon creation
+    }
+  }
+
+  // ROBUST HIGHLIGHTING: Apply selection/hover states efficiently
+  const applyHighlightingRobustly = () => {
+    let highlightedCount = 0
+    layerMapRef.current.forEach((layer, areaId) => {
+      const isSelected = selectedAreaId === areaId
+      const isHovered = hoveredAreaId === areaId
+
+      // Get the area object for proper styling
+      const area = [...savedAreas, ...drawnAreas].find(a => DrawnAreaUtils.getEntityKey(a) === areaId)
+
+      if (area) {
+        const styling = getPolygonColor(area, isSelected, isHovered)
+        layer.setStyle({
+          color: styling.color,
+          fillColor: styling.fillColor,
+          weight: styling.weight,
+          fillOpacity: styling.fillOpacity
+        })
+
+        if (isSelected || isHovered) {
+          highlightedCount++
+        }
+      }
+    })
+
+    if (highlightedCount > 0) {
+      console.log('🎨 ROBUST HIGHLIGHTING: Applied highlighting to', highlightedCount, 'polygons')
+    }
+  }
+
+  // EVENT HANDLERS: All map interaction handlers (moved before useEffects to fix hoisting)
+
+  // Handle map clicks for deselection when not drawing
+  const handleMapClickForDeselection = (e: L.LeafletMouseEvent) => {
+    // Only deselect if not drawing and not clicking on a polygon
+    if (!isDrawingRef.current && !e.originalEvent?.defaultPrevented) {
+      onMapClick?.()
+    }
+  }
+
+  // Custom polygon drawing handlers
+  const handleMapClick = (e: L.LeafletMouseEvent) => {
+    if (!isDrawingRef.current || activeTool !== 'polygon') return
+
+    console.log('🎯 STEP D: Drawing click handler - adding point', drawingPointsRef.current.length + 1)
+
+    // Apply snapping with proper GIS tolerance
+    const snappedPoint = findNearestFieldPoint(e.latlng)
+
+    // Check for overlap with saved areas and field boundaries
+    const overlapCheck = checkOverlapWithSavedAreas(snappedPoint)
+    if (overlapCheck.isOverlap) {
+      console.log('❌ STEP D: Point rejected due to overlap:', overlapCheck.reason)
+      // Show red indicator for invalid placement
+      showOverlapIndicator(snappedPoint, overlapCheck.reason)
+      return // Don't add the point
+    }
+
+    // Show snap indicator if point was snapped
+    const wasSnapped = snappedPoint.lat !== e.latlng.lat || snappedPoint.lng !== e.latlng.lng
+    if (wasSnapped) {
+      showSnapIndicator(snappedPoint)
+    }
+
+    drawingPointsRef.current.push(snappedPoint)
+    console.log('🎯 STEP D2: Point added, total points:', drawingPointsRef.current.length)
+
+    // Update drawing progress
+    onDrawingProgress?.(drawingPointsRef.current.length, true)
+
+    // Calculate real-time stats
+    calculateRealTimeStats(drawingPointsRef.current)
+
+    // Create or update the polygon
+    if (drawingPointsRef.current.length >= 2) {
+      console.log('🎯 STEP D3: Creating/updating polygon with', drawingPointsRef.current.length, 'points')
+      if (currentDrawingRef.current) {
+        map?.removeLayer(currentDrawingRef.current)
+      }
+
+      currentDrawingRef.current = L.polygon(drawingPointsRef.current, {
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.3,
+        weight: 2,
+        dashArray: '5, 5' // Dashed line while drawing
+      })
+
+      map?.addLayer(currentDrawingRef.current)
+      console.log('🎯 STEP D3: Polygon updated on map')
+    }
+  }
+
+  const handleDoubleClick = (e: L.LeafletMouseEvent) => {
+    if (!isDrawingRef.current || activeTool !== 'polygon') return
+    e.originalEvent?.preventDefault()
+    finishPolygonDrawing()
+  }
+
+  const handleRightClick = (e: L.LeafletMouseEvent) => {
+    if (!isDrawingRef.current || activeTool !== 'polygon') return
+
+    console.log('🎯 STEP E: Right-click detected - finishing polygon with', drawingPointsRef.current.length, 'points')
+    e.originalEvent.preventDefault()
+    finishPolygonDrawing()
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (!isDrawingRef.current) return
+
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelDrawing()
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      finishPolygonDrawing()
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault()
+      removeLastPoint()
+    }
+  }
+
+  const handleMapMouseMove = (e: L.LeafletMouseEvent) => {
+    if (!isDrawingRef.current || activeTool !== 'polygon') return
+
+    // Update preview line and polygon if we have at least one point
+    if (drawingPointsRef.current.length > 0) {
+      const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1]
+      const currentPoint = findNearestFieldPoint(e.latlng)
+
+      // Remove existing preview line
+      if (previewLineRef.current) {
+        map?.removeLayer(previewLineRef.current)
+      }
+
+      // Check if the cursor point would cause overlap
+      const pointOverlap = checkOverlapWithSavedAreas(currentPoint)
+
+      // Create preview line with color based on overlap
+      const lineColor = pointOverlap.isOverlap ? '#dc2626' : '#3b82f6'  // Red if overlap, blue if valid
+      previewLineRef.current = L.polyline([lastPoint, currentPoint], {
+        color: lineColor,
+        weight: 2,
+        dashArray: '5, 5',
+        opacity: 0.7
+      })
+
+      map?.addLayer(previewLineRef.current)
+
+      // Update the drawing polygon with overlap indication if we have enough points
+      if (drawingPointsRef.current.length >= 2) {
+        const previewPoints = [...drawingPointsRef.current, currentPoint]
+
+        // Remove current drawing polygon
+        if (currentDrawingRef.current) {
+          map?.removeLayer(currentDrawingRef.current)
+        }
+
+        // Check if the preview polygon would overlap
+        let polygonOverlap = false
+        if (previewPoints.length >= 3) {
+          const tempPolygon = L.polygon(previewPoints)
+          const overlapResult = checkPolygonOverlapWithExistingBlocs(tempPolygon)
+          polygonOverlap = overlapResult.isOverlap
+        }
+
+        // Use red if point overlap OR polygon overlap
+        const hasOverlap = pointOverlap.isOverlap || polygonOverlap
+        const polygonColor = hasOverlap ? '#dc2626' : '#3b82f6'  // Red for invalid, blue for valid
+        const fillColor = hasOverlap ? '#fca5a5' : '#3b82f6'     // Light red fill for invalid
+
+        // Create preview polygon
+        currentDrawingRef.current = L.polygon(previewPoints, {
+          color: polygonColor,
+          fillColor: fillColor,
+          fillOpacity: 0.3,
+          weight: 2,
+          dashArray: '5, 5'
+        })
+
+        map?.addLayer(currentDrawingRef.current)
+      }
+    }
+  }
+
+  // DRAWING UTILITY FUNCTIONS
+  const removeLastPoint = () => {
+    if (drawingPointsRef.current.length > 0) {
+      drawingPointsRef.current.pop()
+      console.log('🎯 Removed last point, remaining:', drawingPointsRef.current.length)
+
+      // Update the polygon if we still have enough points
+      if (drawingPointsRef.current.length >= 2) {
+        if (currentDrawingRef.current) {
+          map?.removeLayer(currentDrawingRef.current)
+        }
+
+        currentDrawingRef.current = L.polygon(drawingPointsRef.current, {
+          color: '#3b82f6',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.3,
+          weight: 2,
+          dashArray: '5, 5'
+        })
+
+        map?.addLayer(currentDrawingRef.current)
+      } else if (drawingPointsRef.current.length < 2 && currentDrawingRef.current) {
+        // Remove polygon if less than 2 points
+        map?.removeLayer(currentDrawingRef.current)
+        currentDrawingRef.current = null
+      }
+
+      // Update drawing progress
+      onDrawingProgress?.(drawingPointsRef.current.length, true)
+
+      // Calculate real-time stats
+      calculateRealTimeStats(drawingPointsRef.current)
+    }
+  }
+
+  // ROBUST HELPER FUNCTIONS for layer management (moved after event handlers)
+  const createAllPolygonsRobustly = () => {
+    console.log('🔄 Creating all polygons from scratch')
+    drawnLayersRef.current.clearLayers()
+    layerMapRef.current.clear()
+
+    const allAreas = [...savedAreas, ...drawnAreas]
+    allAreas.forEach(area => {
+      try {
+        // Determine if this is a saved area or drawn area
+        const areaKey = DrawnAreaUtils.getEntityKey(area)
+        const isSaved = savedAreas.some(saved => DrawnAreaUtils.getEntityKey(saved) === areaKey)
+        const isDrawn = drawnAreas.some(drawn => DrawnAreaUtils.getEntityKey(drawn) === areaKey)
+
+        // Use proper colors: green for saved, blue for drawn
+        const color = isSaved ? '#22c55e' : '#3b82f6'  // Green for saved, blue for drawn
+        const fillColor = isSaved ? '#22c55e' : '#3b82f6'
+
+        console.log('🎨 ROBUST COLOR:', { areaKey: areaKey.substring(0, 8), isSaved, isDrawn, color })
+
+        const polygon = L.polygon(area.coordinates, {
+          color,
+          fillColor,
+          fillOpacity: 0.3,
+          weight: 2
+        })
+
+        drawnLayersRef.current.addLayer(polygon)
+        layerMapRef.current.set(DrawnAreaUtils.getEntityKey(area), polygon)
+
+        // Add click handler
+        polygon.on('click', (e) => {
+          if (e.originalEvent) {
+            e.originalEvent.stopPropagation()
+            e.originalEvent.preventDefault()
+          }
+          L.DomEvent.stopPropagation(e)
+          onPolygonClick?.(DrawnAreaUtils.getEntityKey(area))
+        })
+      } catch (error) {
+        console.error('Failed to create polygon for area:', area.localId, error)
+      }
+    })
+  }
+
+  const updateIncrementallyRobustly = (existingKeys: Set<string>, currentKeys: Set<string>) => {
+    // Add new polygons
+    const toAdd = [...savedAreas, ...drawnAreas].filter(area =>
+      !existingKeys.has(DrawnAreaUtils.getEntityKey(area))
+    )
+
+    // Remove deleted polygons
+    const toRemove = Array.from(existingKeys).filter(key => !currentKeys.has(key))
+
+    console.log('🔄 Incremental update:', { toAdd: toAdd.length, toRemove: toRemove.length })
+
+    // Remove deleted polygons
+    toRemove.forEach(key => {
+      const layer = layerMapRef.current.get(key)
+      if (layer) {
+        drawnLayersRef.current.removeLayer(layer)
+        layerMapRef.current.delete(key)
+      }
+    })
+
+    // Add new polygons
+    toAdd.forEach(area => {
+      try {
+        // Determine if this is a saved area or drawn area
+        const areaKey = DrawnAreaUtils.getEntityKey(area)
+        const isSaved = savedAreas.some(saved => DrawnAreaUtils.getEntityKey(saved) === areaKey)
+        const isDrawn = drawnAreas.some(drawn => DrawnAreaUtils.getEntityKey(drawn) === areaKey)
+
+        // Use proper colors: green for saved, blue for drawn
+        const color = isSaved ? '#22c55e' : '#3b82f6'  // Green for saved, blue for drawn
+        const fillColor = isSaved ? '#22c55e' : '#3b82f6'
+
+        console.log('🎨 INCREMENTAL COLOR:', { areaKey: areaKey.substring(0, 8), isSaved, isDrawn, color })
+
+        const polygon = L.polygon(area.coordinates, {
+          color,
+          fillColor,
+          fillOpacity: 0.3,
+          weight: 2
+        })
+
+        drawnLayersRef.current.addLayer(polygon)
+        layerMapRef.current.set(DrawnAreaUtils.getEntityKey(area), polygon)
+
+        polygon.on('click', (e) => {
+          if (e.originalEvent) {
+            e.originalEvent.stopPropagation()
+            e.originalEvent.preventDefault()
+          }
+          L.DomEvent.stopPropagation(e)
+          onPolygonClick?.(DrawnAreaUtils.getEntityKey(area))
+        })
+      } catch (error) {
+        console.error('Failed to add polygon for area:', area.localId, error)
+      }
+    })
+  }
+
+  const recreateWithValidationRobustly = () => {
+    console.log('🔄 Full recreation with validation')
+    createAllPolygonsRobustly()
+  }
+
+  const validateConsistencyRobustly = (existingKeys: Set<string>, currentKeys: Set<string>) => {
+    const missingKeys = Array.from(currentKeys).filter(key => !existingKeys.has(key))
+    const extraKeys = Array.from(existingKeys).filter(key => !currentKeys.has(key))
+
+    if (missingKeys.length > 0 || extraKeys.length > 0) {
+      console.log('🔄 Consistency issues found, recreating:', { missing: missingKeys.length, extra: extraKeys.length })
+      createAllPolygonsRobustly()
+    } else {
+      console.log('✅ Consistency validated - no changes needed')
+    }
+  }
+
+  const validateAndDecideRobustly = (existingKeys: Set<string>, currentKeys: Set<string>) => {
+    console.log('🔄 Edge case detected, using safe recreation')
+    createAllPolygonsRobustly()
+  }
+
+  // TOOL ACTIVATION: Handle tool activation with custom drawing (moved after handlers)
   useEffect(() => {
     if (!map) return
 
-    // Clean up previous drawing
+    // Clean up previous drawing and preview lines
     if (currentDrawingRef.current) {
       map.removeLayer(currentDrawingRef.current)
       currentDrawingRef.current = null
     }
+
+    // Clean up preview line
+    if (previewLineRef.current) {
+      map.removeLayer(previewLineRef.current)
+      previewLineRef.current = null
+      console.log('🧹 TOOL CHANGE: Removed preview line')
+    }
+
     drawingPointsRef.current = []
 
     // Remove existing event listeners
@@ -304,6 +712,13 @@ export default function DrawingManager({
         map.off('mousemove', handleMapMouseMove)
         document.removeEventListener('keydown', handleKeyDown)
 
+        // Clean up preview line on unmount
+        if (previewLineRef.current) {
+          map.removeLayer(previewLineRef.current)
+          previewLineRef.current = null
+          console.log('🧹 UNMOUNT: Removed preview line')
+        }
+
         map.getContainer().style.cursor = ''
         map.getContainer().removeAttribute('tabindex')
         map.doubleClickZoom.enable()
@@ -311,290 +726,77 @@ export default function DrawingManager({
     }
   }, [activeTool, map])
 
-  // Create Leaflet polygons for saved areas with batched rendering for performance
+  // CONSOLIDATED: Main map operations effect - handles rendering, click handlers, and highlighting
   useEffect(() => {
-    if (!map) {
-      console.log('🚫 Map not ready for saved areas processing')
-      return
-    }
-
-    console.log('🗺️ Processing saved areas for map display:', savedAreas.length)
-
-    // Check if we need to clear and recreate all polygons (e.g., after coordinate format changes)
-    const needsRecreation = savedAreas.length > 0 && layerMapRef.current.size > 0 &&
-      savedAreas.every(area => layerMapRef.current.has(DrawnAreaUtils.getEntityKey(area)))
-
-    if (needsRecreation) {
-      console.log('🔄 Clearing existing layers and recreating all polygons')
-      // Clear all existing layers
-      layerMapRef.current.forEach(layer => {
-        drawnLayersRef.current.removeLayer(layer)
-      })
-      layerMapRef.current.clear()
-    }
-
-    // Filter areas that need polygon creation
-    const areasToProcess = savedAreas.filter(area => {
-      const areaKey = DrawnAreaUtils.getEntityKey(area)
-      const hasLayer = layerMapRef.current.has(areaKey)
-      const hasCoords = area.coordinates && area.coordinates.length >= 3
-
-      return !hasLayer && hasCoords
+    console.log('🎯 CONSOLIDATED EFFECT: Map operations triggered')
+    console.log('🎯 State:', {
+      mapReady: !!map,
+      savedAreas: savedAreas.length,
+      drawnAreas: drawnAreas.length,
+      layerMapSize: layerMapRef.current.size,
+      selectedAreaId,
+      hoveredAreaId
     })
 
-    if (areasToProcess.length === 0) {
+    if (!map) {
+      console.log('❌ Map not ready for operations')
       return
     }
 
-    console.log('⚡ Batched polygon rendering:', areasToProcess.length, 'polygons to process')
+    // STEP 1: Handle polygon rendering with smart layer management
+    updatePolygonsRobustly()
 
-    // Process polygons in batches to avoid blocking UI
-    const BATCH_SIZE = 10
-    let currentBatch = 0
+    // STEP 2: Set up click handlers for all polygons
+    setupClickHandlersRobustly()
 
-    const processBatch = () => {
-      const startIdx = currentBatch * BATCH_SIZE
-      const endIdx = Math.min(startIdx + BATCH_SIZE, areasToProcess.length)
-      const batch = areasToProcess.slice(startIdx, endIdx)
+    // STEP 3: Apply highlighting to selected/hovered areas
+    applyHighlightingRobustly()
 
-      console.log(`🔄 Processing batch ${currentBatch + 1}/${Math.ceil(areasToProcess.length / BATCH_SIZE)}: ${batch.length} polygons`)
+    console.log('✅ CONSOLIDATED EFFECT: All map operations completed')
+  }, [map, savedAreas.length, drawnAreas.length, selectedAreaId, hoveredAreaId])
 
-      batch.forEach(area => {
-        const areaKey = DrawnAreaUtils.getEntityKey(area)
-
-        // Coordinates are already in [lat, lng] format from FarmGISLayout conversion
-        const latlngs = area.coordinates.map(coord => {
-          if (!Array.isArray(coord) || coord.length !== 2) {
-            console.error('❌ Invalid coordinate format:', coord)
-            return [0, 0] as [number, number]
-          }
-          return [coord[0], coord[1]] as [number, number]
-        })
-
-        // Create polygon with green styling for saved blocs
-        const polygon = L.polygon(latlngs, {
-          color: '#22c55e', // Green for saved blocs
-          fillColor: '#22c55e',
-          fillOpacity: 0.3,
-          weight: 2,
-          opacity: 0.8
-        })
-
-        // Add to map and store reference
-        drawnLayersRef.current.addLayer(polygon)
-        layerMapRef.current.set(areaKey, polygon)
-
-        // Add click handler
-        polygon.on('click', (e) => {
-          if (e.originalEvent) {
-            e.originalEvent.stopPropagation()
-            e.originalEvent.preventDefault()
-            e.originalEvent.stopImmediatePropagation()
-          }
-          L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(areaKey)
-        })
-      })
-
-      currentBatch++
-
-      // Process next batch if there are more
-      if (currentBatch * BATCH_SIZE < areasToProcess.length) {
-        // Use requestAnimationFrame for smooth rendering
-        requestAnimationFrame(processBatch)
-      }
-    }
-
-    // Start processing batches
-    processBatch()
-  }, [map, savedAreas, onPolygonClick])
-
-  // Detect when areas are saved and clear totals
+  // OPTIMIZED: Clear totals and remove text labels when areas are saved (specific dependency)
   useEffect(() => {
-    if (savedAreas && savedAreas.length > lastSavedAreasCount) {
-      // Areas were saved, clear the drawing session totals
+    if (savedAreas.length > lastSavedAreasCount) {
+      console.log('🧹 OPTIMIZED: Clearing drawing totals after save')
       setTotalDrawnArea(0)
       setCurrentCropCycleId('')
 
-      // Remove vertex markers and text labels from saved areas (make them non-editable)
+      // Remove text labels and vertex markers from newly saved areas (make them clean like other saved blocs)
       savedAreas.forEach(area => {
         const areaKey = DrawnAreaUtils.getEntityKey(area)
         const layer = layerMapRef.current.get(areaKey)
-        if (layer && layer instanceof L.Polygon) {
-          removeVertexMarkers(layer)
-          removeTextLabel(layer)
-
-          // Ensure saved areas have click handlers
-          layer.off('click') // Remove any existing handlers
-          layer.on('click', (e) => {
-            // Stop event propagation more aggressively
-            if (e.originalEvent) {
-              e.originalEvent.stopPropagation()
-              e.originalEvent.preventDefault()
-              e.originalEvent.stopImmediatePropagation()
+        if (layer) {
+          // Remove text label
+          if ((layer as any)._areaLabel) {
+            console.log('🧹 Removing text label from saved area:', DrawnAreaUtils.getDisplayName(area))
+            if (map && map.hasLayer((layer as any)._areaLabel)) {
+              map.removeLayer((layer as any)._areaLabel)
             }
-            L.DomEvent.stopPropagation(e)
-            onPolygonClick?.(areaKey)
-          })
+            ;(layer as any)._areaLabel = null
+          }
 
-
+          // Remove vertex markers (editing handles)
+          if ((layer as any)._vertexMarkers) {
+            console.log('🧹 Removing vertex markers from saved area:', DrawnAreaUtils.getDisplayName(area))
+            ;(layer as any)._vertexMarkers.forEach((marker: L.CircleMarker) => {
+              if (map && map.hasLayer(marker)) {
+                map.removeLayer(marker)
+              }
+            })
+            ;(layer as any)._vertexMarkers = null
+          }
         }
       })
     }
-    setLastSavedAreasCount(savedAreas?.length || 0)
-  }, [savedAreas])
+    setLastSavedAreasCount(savedAreas.length)
+  }, [savedAreas.length, lastSavedAreasCount])
 
-  // Ensure all existing polygons have click handlers
-  useEffect(() => {
-    const totalAreas = drawnAreas.length + savedAreas.length
-    if (totalAreas > 0) {
-      console.log('🔗 Setting up click handlers for', totalAreas, 'polygons')
-    }
+  // REMOVED: Click handlers now handled in consolidated effect
 
-    // Add click handlers to drawn areas
-    drawnAreas.forEach(area => {
-      const areaKey = DrawnAreaUtils.getEntityKey(area)
-      const layer = layerMapRef.current.get(areaKey)
-      if (layer && layer instanceof L.Polygon) {
-        layer.off('click') // Remove any existing handlers
-        layer.on('click', (e) => {
+  // REMOVED: Area deletion now handled in consolidated effect
 
-          // Stop event propagation more aggressively
-          if (e.originalEvent) {
-            e.originalEvent.stopPropagation()
-            e.originalEvent.preventDefault()
-            e.originalEvent.stopImmediatePropagation()
-          }
-          L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(areaKey)
-        })
-
-      }
-    })
-
-    // Add click handlers to saved areas
-    savedAreas.forEach(area => {
-      const areaKey = DrawnAreaUtils.getEntityKey(area)
-      const layer = layerMapRef.current.get(areaKey)
-      if (layer && layer instanceof L.Polygon) {
-        layer.off('click') // Remove any existing handlers
-        layer.on('click', (e) => {
-
-          // Stop event propagation more aggressively
-          if (e.originalEvent) {
-            e.originalEvent.stopPropagation()
-            e.originalEvent.preventDefault()
-            e.originalEvent.stopImmediatePropagation()
-          }
-          L.DomEvent.stopPropagation(e)
-          onPolygonClick?.(areaKey)
-        })
-
-      }
-    })
-  }, [drawnAreas, savedAreas, onPolygonClick])
-
-  // Handle area deletion - remove from map when deleted from state
-  useEffect(() => {
-    const currentAreaIds = new Set([...drawnAreas.map(a => DrawnAreaUtils.getEntityKey(a)), ...savedAreas.map(a => DrawnAreaUtils.getEntityKey(a))])
-
-    console.log('🗂️ Area management effect:', {
-      drawnAreaIds: drawnAreas.map(a => DrawnAreaUtils.getEntityKey(a)),
-      savedAreaIds: savedAreas.map(a => DrawnAreaUtils.getEntityKey(a)),
-      layerMapKeys: Array.from(layerMapRef.current.keys()),
-      currentAreaIds: Array.from(currentAreaIds)
-    })
-
-    // Track deleted areas to update total
-    const deletedAreas: string[] = []
-
-    // Remove layers that are no longer in the state
-    layerMapRef.current.forEach((layer, areaId) => {
-      if (!currentAreaIds.has(areaId)) {
-        console.log('🗑️ Removing layer for deleted area:', areaId)
-        deletedAreas.push(areaId)
-        // Remove the layer from map
-        if (map && drawnLayersRef.current.hasLayer(layer)) {
-          drawnLayersRef.current.removeLayer(layer)
-        }
-
-        // Remove vertex markers if they exist
-        if (layer._vertexMarkers) {
-          layer._vertexMarkers.forEach(marker => {
-            if (map && map.hasLayer(marker)) {
-              map.removeLayer(marker)
-            }
-          })
-        }
-
-        // Remove area label (crop cycle ID, area, dimensions) if it exists
-        if ((layer as any)._areaLabel) {
-          if (map && map.hasLayer((layer as any)._areaLabel)) {
-            map.removeLayer((layer as any)._areaLabel)
-          }
-          ;(layer as any)._areaLabel = null
-        }
-
-        // Remove from our tracking
-        layerMapRef.current.delete(areaId)
-      }
-    })
-
-    // Update total drawn area if any areas were deleted
-    if (deletedAreas.length > 0) {
-      // Recalculate total from remaining drawn areas (not saved areas)
-      const newTotal = drawnAreas.reduce((sum, area) => sum + area.area, 0)
-      setTotalDrawnArea(newTotal)
-    }
-  }, [drawnAreas, savedAreas, map])
-
-  // Handle highlighting of drawn areas
-  useEffect(() => {
-    layerMapRef.current.forEach((layer, areaId) => {
-      const isSelected = selectedAreaId === areaId
-      const isHovered = hoveredAreaId === areaId
-
-      // Get the area to determine if it's saved or drawn
-      const isSaved = savedAreas.some(a => DrawnAreaUtils.getEntityKey(a) === areaId)
-      const isDrawn = drawnAreas.some(a => DrawnAreaUtils.getEntityKey(a) === areaId)
-
-      // Get the actual area object
-      const area = savedAreas.find(a => DrawnAreaUtils.getEntityKey(a) === areaId) || drawnAreas.find(a => DrawnAreaUtils.getEntityKey(a) === areaId)
-
-      if (!area) {
-        console.warn(`Area not found for ID: ${areaId}`)
-        return
-      }
-
-      // Get polygon styling based on layer type and state
-      const styling = getPolygonColor(area, isSelected, isHovered)
-
-      // If not selected or hovered, use default colors based on saved state
-      if (!isSelected && !isHovered) {
-        if (isSaved) {
-          // Use layer-specific colors for saved blocs, or default green
-          const layerStyling = getPolygonColor(area, false, false)
-          styling.color = layerStyling.color
-          styling.fillColor = layerStyling.fillColor
-          styling.fillOpacity = layerStyling.fillOpacity
-        } else {
-          // Blue for drawn but not saved blocs
-          styling.color = '#3b82f6'
-          styling.fillColor = '#3b82f6'
-          styling.fillOpacity = 0.3
-        }
-      }
-
-      const { color, fillColor, weight, fillOpacity } = styling
-
-      layer.setStyle({
-        color,
-        weight,
-        fillOpacity,
-        fillColor
-      })
-    })
-  }, [selectedAreaId, hoveredAreaId, drawnAreas, savedAreas])
+  // REMOVED: Highlighting now handled in consolidated effect
 
   // Helper function to find nearest field edge point using proper GIS snapping
   const findNearestFieldPoint = (clickPoint: L.LatLng): L.LatLng => {
@@ -746,13 +948,13 @@ export default function DrawingManager({
       weight: 4
     }).addTo(map)
 
-    // Add popup with reason
-    snapIndicatorRef.current.bindPopup(`
-      <div style="text-align: center; color: #dc2626; font-weight: bold;">
-        ⚠️ Cannot draw here<br>
-        <small style="font-weight: normal;">${reason}</small>
-      </div>
-    `).openPopup()
+    // Popup disabled - visual indicator only
+    // snapIndicatorRef.current.bindPopup(`
+    //   <div style="text-align: center; color: #dc2626; font-weight: bold;">
+    //     ⚠️ Cannot draw here<br>
+    //     <small style="font-weight: normal;">${reason}</small>
+    //   </div>
+    // `).openPopup()
 
     // Add a pulsing effect
     let pulseCount = 0
@@ -811,9 +1013,69 @@ export default function DrawingManager({
       }
     }
 
+    // Check if the line from last point to this point crosses any existing polygon
+    if (drawingPointsRef.current.length > 0) {
+      const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1]
+      const lineOverlap = checkLineCrossesPolygons(lastPoint, point)
+      if (lineOverlap.isOverlap) {
+        return lineOverlap
+      }
+    }
+
     // Field boundary check removed - allow drawing anywhere
 
     return { isOverlap: false, reason: '' }
+  }
+
+  // Check if a line crosses into any existing polygon areas
+  const checkLineCrossesPolygons = (startPoint: L.LatLng, endPoint: L.LatLng): { isOverlap: boolean; reason: string } => {
+    // Check against saved areas
+    for (const savedArea of savedAreas) {
+      const savedLayer = layerMapRef.current.get(DrawnAreaUtils.getEntityKey(savedArea))
+      if (savedLayer) {
+        const latlngs = savedLayer.getLatLngs()[0] as L.LatLng[]
+        if (lineIntersectsPolygon(startPoint, endPoint, latlngs)) {
+          console.log('❌ LINE CROSSES saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
+          return { isOverlap: true, reason: 'Line crosses saved bloc' }
+        }
+      }
+    }
+
+    // Check against drawn areas
+    for (const drawnArea of drawnAreas) {
+      const drawnLayer = layerMapRef.current.get(DrawnAreaUtils.getEntityKey(drawnArea))
+      if (drawnLayer) {
+        const latlngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
+        if (lineIntersectsPolygon(startPoint, endPoint, latlngs)) {
+          console.log('❌ LINE CROSSES drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
+          return { isOverlap: true, reason: 'Line crosses drawn bloc' }
+        }
+      }
+    }
+
+    return { isOverlap: false, reason: '' }
+  }
+
+  // Check if a line intersects with a polygon (crosses into the area)
+  const lineIntersectsPolygon = (lineStart: L.LatLng, lineEnd: L.LatLng, polygon: L.LatLng[]): boolean => {
+    // Check if line intersects any edge of the polygon
+    for (let i = 0; i < polygon.length; i++) {
+      const j = (i + 1) % polygon.length
+      if (lineSegmentsIntersect(lineStart, lineEnd, polygon[i], polygon[j])) {
+        return true
+      }
+    }
+
+    // Check if line passes through the polygon interior
+    const midPoint = L.latLng(
+      (lineStart.lat + lineEnd.lat) / 2,
+      (lineStart.lng + lineEnd.lng) / 2
+    )
+    if (isPointStrictlyInsidePolygon(midPoint, polygon)) {
+      return true
+    }
+
+    return false
   }
 
   // Check if a polygon overlaps with existing blocs (more comprehensive than point check)
@@ -1055,90 +1317,26 @@ export default function DrawingManager({
     return inside
   }
 
-  // Handle map clicks for deselection when not drawing
-  const handleMapClickForDeselection = (e: L.LeafletMouseEvent) => {
-    // Only deselect if not drawing and not clicking on a polygon
-    if (!isDrawingRef.current && !e.originalEvent?.defaultPrevented) {
-      onMapClick?.()
-    }
-  }
+  // REMOVED: Duplicate function definitions moved to top
 
-  // Custom polygon drawing handlers
-  const handleMapClick = (e: L.LeafletMouseEvent) => {
-    if (!isDrawingRef.current || activeTool !== 'polygon') return
-
-    // Apply snapping with proper GIS tolerance
-    const snappedPoint = findNearestFieldPoint(e.latlng)
-
-    // Check for overlap with saved areas and field boundaries
-    const overlapCheck = checkOverlapWithSavedAreas(snappedPoint)
-    if (overlapCheck.isOverlap) {
-      // Show red indicator for invalid placement
-      showOverlapIndicator(snappedPoint, overlapCheck.reason)
-      return // Don't add the point
-    }
-
-    // Show snap indicator if point was snapped
-    const wasSnapped = snappedPoint.lat !== e.latlng.lat || snappedPoint.lng !== e.latlng.lng
-    if (wasSnapped) {
-      showSnapIndicator(snappedPoint)
-    }
-
-    drawingPointsRef.current.push(snappedPoint)
-
-    // Update drawing progress
-    onDrawingProgress?.(drawingPointsRef.current.length, true)
-
-    // Calculate real-time stats
-    calculateRealTimeStats(drawingPointsRef.current)
-
-    // Create or update the polygon
-    if (drawingPointsRef.current.length >= 2) {
-      if (currentDrawingRef.current) {
-        map?.removeLayer(currentDrawingRef.current)
-      }
-
-      currentDrawingRef.current = L.polygon(drawingPointsRef.current, {
-        color: '#3b82f6',
-        fillColor: '#3b82f6',
-        fillOpacity: 0.3,
-        weight: 2,
-        dashArray: '5, 5' // Dashed line while drawing
-      })
-
-      map?.addLayer(currentDrawingRef.current)
-    }
-  }
-
-  const handleDoubleClick = (e: L.LeafletMouseEvent) => {
-    if (!isDrawingRef.current || activeTool !== 'polygon') return
-
-    e.originalEvent.preventDefault()
-    finishPolygonDrawing()
-  }
-
-  const handleRightClick = (e: L.LeafletMouseEvent) => {
-    if (!isDrawingRef.current || activeTool !== 'polygon') return
-
-    e.originalEvent.preventDefault()
-    finishPolygonDrawing()
-  }
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (!isDrawingRef.current) return
-
-    if (e.key === 'Escape') {
-      cancelDrawing()
-    } else if (e.key === 'Enter' && activeTool === 'polygon') {
-      finishPolygonDrawing()
-    }
-  }
+  // REMOVED: More duplicate functions moved to top
 
   const cancelDrawing = () => {
+    console.log('🧹 CANCEL: Cleaning up drawing state and preview lines')
+
+    // Clean up current drawing polygon
     if (currentDrawingRef.current) {
       map?.removeLayer(currentDrawingRef.current)
     }
     currentDrawingRef.current = null
+
+    // Clean up preview line
+    if (previewLineRef.current) {
+      map?.removeLayer(previewLineRef.current)
+      previewLineRef.current = null
+      console.log('🧹 CANCEL: Removed preview line')
+    }
+
     drawingPointsRef.current = []
     isDrawingRef.current = false
     setDrawingStats(null)
@@ -1226,85 +1424,22 @@ export default function DrawingManager({
     ;(polygon as any)._areaLabel = labelMarker
   }
 
-  const handleMapMouseMove = (e: L.LeafletMouseEvent) => {
-    if (!isDrawingRef.current || activeTool !== 'polygon') return
-
-    // Apply snapping to cursor position for preview
-    const snappedCursorPoint = findNearestFieldPoint(e.latlng)
-
-    // Check if the cursor position would cause overlap
-    const pointOverlap = checkOverlapWithSavedAreas(snappedCursorPoint)
-
-    // Show/hide snap indicator based on whether snapping occurred and no overlap
-    const wasSnapped = snappedCursorPoint.lat !== e.latlng.lat || snappedCursorPoint.lng !== e.latlng.lng
-    if (wasSnapped && !pointOverlap.isOverlap) {
-      showSnapIndicator(snappedCursorPoint)
-    } else {
-      hideSnapIndicator()
-    }
-
-    if (drawingPointsRef.current.length === 0) return
-
-    // Show preview line to snapped cursor position
-    const points = [...drawingPointsRef.current, snappedCursorPoint]
-
-    if (currentDrawingRef.current) {
-      map?.removeLayer(currentDrawingRef.current)
-    }
-
-    // Check if the entire preview polygon would overlap with existing blocs
-    let polygonOverlap = false
-    if (points.length >= 3) {
-      const tempPolygon = L.polygon(points)
-      const overlapResult = checkPolygonOverlapWithExistingBlocs(tempPolygon)
-      polygonOverlap = overlapResult.isOverlap
-
-      if (polygonOverlap) {
-        console.log('🔴 Preview polygon overlaps with existing bloc')
-      }
-    }
-
-    // ALWAYS check polygon overlap if we have enough points, even if cursor point is valid
-    // This ensures that if the polygon area covers existing blocs, it shows red
-    let finalPolygonOverlap = false
-    if (points.length >= 3) {
-      // Create a closed polygon to check the full area
-      const closedPoints = [...points, points[0]] // Close the polygon
-      const tempClosedPolygon = L.polygon(closedPoints)
-      const closedOverlapResult = checkPolygonOverlapWithExistingBlocs(tempClosedPolygon)
-      finalPolygonOverlap = closedOverlapResult.isOverlap
-
-      if (finalPolygonOverlap) {
-        console.log('🔴 Closed polygon area would overlap with existing bloc')
-      }
-    }
-
-    // Use red if point overlap OR polygon overlap OR final closed polygon overlap
-    const hasOverlap = pointOverlap.isOverlap || polygonOverlap || finalPolygonOverlap
-
-    // Use different colors based on overlap status
-    const polygonStyle = hasOverlap ? {
-      color: '#dc2626',        // Red for invalid
-      fillColor: '#fca5a5',    // Light red fill
-      fillOpacity: 0.3,
-      weight: 2,
-      dashArray: '5, 5'
-    } : {
-      color: '#3b82f6',        // Blue for valid
-      fillColor: '#3b82f6',
-      fillOpacity: 0.2,
-      weight: 2,
-      dashArray: '5, 5'
-    }
-
-    currentDrawingRef.current = L.polygon(points, polygonStyle)
-    map?.addLayer(currentDrawingRef.current)
-  }
+  // REMOVED: Duplicate handleMapMouseMove moved to top
 
 
 
   const finishPolygonDrawing = () => {
+    console.log('🎯 STEP F: Starting polygon completion process')
+
+    // Clean up preview line immediately
+    if (previewLineRef.current) {
+      map?.removeLayer(previewLineRef.current)
+      previewLineRef.current = null
+      console.log('🧹 STEP F0: Cleaned up preview line')
+    }
+
     if (!currentDrawingRef.current || drawingPointsRef.current.length < 3) {
+      console.log('❌ STEP F1: Validation failed - insufficient points or no current drawing')
       // Cancel drawing if not enough points
       if (currentDrawingRef.current) {
         map?.removeLayer(currentDrawingRef.current)
@@ -1313,13 +1448,15 @@ export default function DrawingManager({
       return
     }
 
-    console.log('🏁 Attempting to finish polygon with', drawingPointsRef.current.length, 'points')
+    console.log('✅ STEP F1: Validation passed -', drawingPointsRef.current.length, 'points available')
 
     // Check if the completed polygon overlaps with existing blocs
+    console.log('🎯 STEP F3: Checking for overlaps with existing areas')
     const tempPolygon = L.polygon(drawingPointsRef.current)
     const polygonOverlap = checkPolygonOverlapWithExistingBlocs(tempPolygon)
 
     if (polygonOverlap.isOverlap) {
+      console.log('❌ STEP F4: Overlap detected -', polygonOverlap.reason)
       // Show error indicator at polygon center
       const centerPoint = calculatePolygonCentroid(drawingPointsRef.current)
       showOverlapIndicator(centerPoint, polygonOverlap.reason)
@@ -1339,7 +1476,10 @@ export default function DrawingManager({
       return
     }
 
+    console.log('✅ STEP F4: No overlap detected - proceeding with polygon creation')
+
     // Finalize the polygon
+    console.log('🎯 STEP F6: Creating final polygon')
     const finalPolygon = L.polygon(drawingPointsRef.current, {
       color: '#3b82f6',
       fillColor: '#3b82f6',
@@ -1347,25 +1487,44 @@ export default function DrawingManager({
       weight: 2
     })
 
+    console.log('🎯 STEP F6: Replacing drawing polygon with final polygon')
     map?.removeLayer(currentDrawingRef.current)
     drawnLayersRef.current.addLayer(finalPolygon)
 
-    // Generate a proper UUID for the bloc
-    const generateUUID = () => {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0
-        const v = c == 'x' ? r : (r & 0x3 | 0x8)
-        return v.toString(16)
-      })
+    // Create drawn area object FIRST to get proper ID
+    console.log('🎯 STEP F7: Creating DrawnArea object with proper ID convention')
+    const coordinates = drawingPointsRef.current.map(latlng => [latlng.lng, latlng.lat] as [number, number])
+    const area = calculateArea(coordinates)
+    const drawnArea = DrawnAreaUtils.createNew(coordinates, area, 'polygon')
+
+    console.log('🎯 STEP F7: Generated DrawnArea:', {
+      localId: drawnArea.localId,
+      uuid: drawnArea.uuid,
+      area: drawnArea.area.toFixed(2) + ' ha',
+      coordinateCount: drawnArea.coordinates.length,
+      isSaved: drawnArea.isSaved,
+      isDirty: drawnArea.isDirty
+    })
+
+    // Get proper entity key for layer map
+    const areaKey = DrawnAreaUtils.getEntityKey(drawnArea)
+    console.log('🎯 STEP F8: Using entity key for layer map:', areaKey)
+
+    // Store in layer map with proper key
+    try {
+      layerMapRef.current.set(areaKey, finalPolygon)
+      console.log('✅ STEP F8: Successfully stored polygon in layer map')
+    } catch (error) {
+      console.error('❌ STEP F8: Failed to store polygon in layer map:', error)
+      throw new Error(`Failed to store polygon in layer map: ${error}`)
     }
 
-    const areaId = generateUUID()
-    layerMapRef.current.set(areaId, finalPolygon)
-
     // Add vertex markers for editing
+    console.log('🎯 STEP F11: Adding vertex markers')
     addVertexMarkers(finalPolygon)
 
     // Make polygon clickable for highlighting (not info modal)
+    console.log('🎯 STEP F9: Adding click handler to polygon')
     finalPolygon.on('click', (e) => {
       // Stop event propagation more aggressively
       if (e.originalEvent) {
@@ -1374,25 +1533,19 @@ export default function DrawingManager({
         e.originalEvent.stopImmediatePropagation()
       }
       L.DomEvent.stopPropagation(e)
-      onPolygonClick?.(areaId)
+      console.log('🖱️ Polygon clicked:', areaKey)
+      onPolygonClick?.(areaKey)
     })
 
     // Generate crop cycle ID if not set
     if (!currentCropCycleId) {
       const now = new Date()
-      const cycleId = `CC${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`
+      const cycleId = `CC${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`
       setCurrentCropCycleId(cycleId)
     }
 
-    // Create drawn area object
-    const coordinates = drawingPointsRef.current.map(latlng => [latlng.lng, latlng.lat] as [number, number])
-    const area = calculateArea(coordinates)
-
     // Update total drawn area
     setTotalDrawnArea(prev => prev + area)
-
-    // Use DrawnAreaUtils to create properly structured area
-    const drawnArea = DrawnAreaUtils.createNew(coordinates, area, 'polygon')
 
     // Calculate dimensions for the completed polygon
     const dimensions = calculatePolygonDimensions(drawingPointsRef.current)
@@ -1439,16 +1592,20 @@ export default function DrawingManager({
       ;(finalPolygon as any)._cropCycleId = currentCropCycleId
     }
 
+    console.log('🎯 STEP F13: Triggering onAreaDrawn callback')
     onAreaDrawn(drawnArea)
     onDrawingEnd()
     onDrawingProgress?.(0, false)
 
+    console.log('🎯 STEP F12: Cleaning up drawing state')
     // Reset drawing state but keep stats for display
     currentDrawingRef.current = null
     drawingPointsRef.current = []
     isDrawingRef.current = false
     setDrawingStats(null)
     hideSnapIndicator()
+
+    console.log('✅ STEP F: Polygon completion process finished successfully')
 
     // Reset snap state
     setCurrentSnapPoint(null)

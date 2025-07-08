@@ -21,7 +21,7 @@ export class BlocService {
   /**
    * Save a drawn area as a bloc in the database
    */
-  static async saveDrawnAreaAsBloc(drawnArea: DrawnArea): Promise<Bloc> {
+  static async saveDrawnAreaAsBloc(drawnArea: DrawnArea, farmId?: string): Promise<Bloc> {
     try {
       // Validate drawn area can be saved
       DrawnAreaUtils.validateForSave(drawnArea)
@@ -55,15 +55,20 @@ export class BlocService {
         totalCoords: drawnArea.coordinates.length
       })
 
-      // Save bloc directly to database without field association
-      console.log('💾 Saving bloc to database:', drawnArea.localId)
+      // Validate farm_id is provided
+      if (!farmId) {
+        throw new Error('farm_id is required to save bloc')
+      }
 
-      // Insert bloc without field_id (column has been removed)
+      // Save bloc directly to database without field association
+      console.log('💾 Saving bloc to database:', drawnArea.localId, 'to farm:', farmId)
+
+      // Insert bloc - submit localId as bloc.name, let DB generate UUID
       const { data, error } = await supabase
         .from('blocs')
         .insert({
-          farm_id: '550e8400-e29b-41d4-a716-446655440001', // Demo Farm ID
-          name: DrawnAreaUtils.getDisplayName(drawnArea),
+          farm_id: farmId,
+          name: drawnArea.localId, // Submit localId as bloc.name
           coordinates: polygonWKT, // PostGIS will handle the SRID
           area_hectares: drawnArea.area,
           status: 'active'
@@ -90,13 +95,13 @@ export class BlocService {
   /**
    * Save multiple drawn areas as blocs
    */
-  static async saveMultipleDrawnAreas(drawnAreas: DrawnArea[]): Promise<Bloc[]> {
+  static async saveMultipleDrawnAreas(drawnAreas: DrawnArea[], farmId: string): Promise<Bloc[]> {
     try {
       const savedBlocs: Bloc[] = []
 
       for (const drawnArea of drawnAreas) {
         try {
-          const bloc = await this.saveDrawnAreaAsBloc(drawnArea)
+          const bloc = await this.saveDrawnAreaAsBloc(drawnArea, farmId)
           savedBlocs.push(bloc)
         } catch (error) {
           console.error(`Failed to save bloc ${drawnArea.localId}:`, error)
@@ -118,14 +123,7 @@ export class BlocService {
     try {
       console.log('🔍 Fetching blocs from database...')
 
-      // First try simple query to see if blocs table is accessible
-      const { data: simpleData, error: simpleError } = await supabase
-        .from('blocs')
-        .select('id, name, area_hectares')
-
-      console.log('🔍 Simple blocs query result:', { data: simpleData, error: simpleError })
-
-      // Use RPC function to get blocs with WKT coordinates for easier parsing
+      // Use RPC function to get blocs with complete data including WKT coordinates
       const { data, error } = await supabase.rpc('get_blocs_with_wkt')
 
       console.log('🔍 RPC blocs query result:', { data, error })
@@ -141,6 +139,52 @@ export class BlocService {
       return data
     } catch (error) {
       console.error('Failed to fetch blocs:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get all farms for bloc creation
+   */
+  static async getFarms() {
+    try {
+      const { data, error } = await supabase
+        .from('farms')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('❌ Error fetching farms:', error)
+        throw error
+      }
+
+      console.log('✅ Farms loaded:', data?.length || 0)
+      return data || []
+    } catch (error) {
+      console.error('❌ Error fetching farms:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get all companies for reference
+   */
+  static async getCompanies() {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('❌ Error fetching companies:', error)
+        throw error
+      }
+
+      console.log('✅ Companies loaded:', data?.length || 0)
+      return data || []
+    } catch (error) {
+      console.error('❌ Error fetching companies:', error)
       return []
     }
   }

@@ -29,6 +29,7 @@ export default function FarmGISLayout() {
   const [scrollToBlocId, setScrollToBlocId] = useState<string | null>(null)
   const [showDataScreen, setShowDataScreen] = useState(false)
   const [dataScreenBloc, setDataScreenBloc] = useState<DrawnArea | null>(null)
+  const [defaultFarmId, setDefaultFarmId] = useState<string | null>(null)
 
 
   // Debug savedAreas changes
@@ -93,21 +94,43 @@ export default function FarmGISLayout() {
     initializeApp()
   }, [])
 
-  // Load saved blocs from database on component mount with deferred polygon rendering
+  // Load initial data: blocs, farms, and companies in one atomic operation
   useEffect(() => {
-    const loadSavedBlocs = async () => {
+    const loadInitialData = async () => {
       try {
         const { BlocService } = await import('@/services/blocService')
-        const savedBlocsData = await BlocService.getAllBlocs()
+
+        console.log('📍 Loading initial data: blocs, farms, and companies...')
+
+        // Load all required data in one atomic operation
+        const [blocsData, farmsData, companiesData] = await Promise.all([
+          BlocService.getAllBlocs(),
+          BlocService.getFarms(),
+          BlocService.getCompanies()
+        ])
+
+        // Validate data integrity
+        if (!farmsData || farmsData.length === 0) {
+          throw new Error('No farms found - database setup required')
+        }
+
+        // Store farm data for bloc creation
+        const defaultFarm = farmsData[0]
+        console.log('✅ Default farm loaded:', defaultFarm.name, 'ID:', defaultFarm.id)
+        setDefaultFarmId(defaultFarm.id)
+
+        if (!blocsData || blocsData.length === 0) {
+          console.log('📍 No blocs found in database')
+          setSavedAreas([])
+          return
+        }
 
         // Transform database objects to DrawnArea format
-        const savedBlocs: DrawnArea[] = savedBlocsData.map(bloc => {
+        const savedBlocs: DrawnArea[] = blocsData.map(bloc => {
           // Parse WKT coordinates using the existing utility function (returns [lng, lat] format)
           const wktCoordinates = DrawnAreaUtils.parseWKTToCoordinates(bloc.coordinates_wkt || '')
           // Keep [lng, lat] format - no swap needed for Leaflet
           const coordinates: [number, number][] = wktCoordinates.map(([lng, lat]) => [lng, lat])
-
-
 
           return {
             uuid: bloc.id,
@@ -124,17 +147,22 @@ export default function FarmGISLayout() {
 
         // Set blocs immediately for card display (without waiting for polygon rendering)
         setSavedAreas(savedBlocs)
-        console.log('✅ Loaded', savedBlocs.length, 'blocs with coordinates for map display')
-
-
+        console.log('✅ Initial data loaded successfully:', {
+          blocs: savedBlocs.length,
+          farms: farmsData.length,
+          companies: companiesData.length,
+          defaultFarmId: defaultFarm.id
+        })
 
       } catch (error) {
-        console.warn('⚠️ Could not load saved blocs from database:', error)
-        // Don't fail the app if blocs can't be loaded
+        console.error('❌ Failed to load initial data:', error)
+        // Graceful degradation - don't crash the app
+        setSavedAreas([])
+        setDefaultFarmId(null)
       }
     }
 
-    loadSavedBlocs()
+    loadInitialData()
   }, [])
 
   // Field selection handlers removed - parcelles are background only
@@ -163,15 +191,27 @@ export default function FarmGISLayout() {
   }
 
   const handleAreaDrawn = (area: DrawnArea) => {
-    console.log('Area drawn:', area)
-    setDrawnAreas(prev => [...prev, area])
+    console.log('🎯 STEP G: FarmGISLayout.handleAreaDrawn called')
+    console.log('🎯 STEP G1: Adding area to drawnAreas state - area:', area.area.toFixed(2), 'ha')
+    setDrawnAreas(prev => {
+      const newAreas = [...prev, area]
+      console.log('🎯 STEP G1: Total drawn areas now:', newAreas.length)
+      return newAreas
+    })
 
+    console.log('✅ STEP G: Area successfully added to state')
     // Show success message
   }
 
   const handleAreaDelete = (areaKey: string) => {
-    setDrawnAreas(prev => prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaKey))
-    console.log('Area deleted:', areaKey)
+    console.log('🎯 STEP J: Area deletion requested for:', areaKey)
+    console.log('🎯 STEP J1: Removing from drawnAreas state')
+    setDrawnAreas(prev => {
+      const filtered = prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaKey)
+      console.log('🎯 STEP J1: Drawn areas count:', prev.length, '→', filtered.length)
+      return filtered
+    })
+    console.log('✅ STEP J: Area deletion completed')
   }
 
   const handleAreaSelect = (areaKey: string) => {
@@ -262,14 +302,20 @@ export default function FarmGISLayout() {
   const handleSaveAll = async () => {
     if (drawnAreas.length === 0) return
 
+    // Validate farm ID is available
+    if (!defaultFarmId) {
+      console.error('❌ Cannot save blocs: No farm ID available')
+      return
+    }
+
     try {
       console.log('💾 Saving blocs to database...', drawnAreas)
 
       // Import BlocService dynamically to avoid import issues
       const { BlocService } = await import('@/services/blocService')
 
-      // Save all drawn areas to database
-      const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas)
+      // Save all drawn areas to database with farm ID
+      const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas, defaultFarmId)
       console.log('✅ Blocs saved successfully:', savedBlocs)
 
       // Move to saved areas in local state
