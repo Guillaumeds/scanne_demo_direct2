@@ -6,22 +6,51 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './database.types'
 
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Environment variables with runtime validation
+function getSupabaseConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Create Supabase client with proper typing
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
+  // Debug logging for production troubleshooting
+  if (typeof window !== 'undefined') {
+    console.log('🔍 Supabase Config Debug:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 20) + '...' : 'undefined',
+      keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'undefined'
+    })
+  }
+
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
+  }
+
+  if (!supabaseAnonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  }
+
+  return { supabaseUrl, supabaseAnonKey }
+}
+
+// Create Supabase client with proper typing and runtime validation
+function createSupabaseClient() {
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
+
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
     },
-  },
-})
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  })
+}
+
+// Export the client - will be created on first access
+export const supabase = createSupabaseClient()
 
 // Helper types for easy access to database types
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
