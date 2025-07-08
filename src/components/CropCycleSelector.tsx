@@ -44,39 +44,15 @@ export default function CropCycleSelector() {
           ))}
         </select>
 
-        {/* Selected Cycle Info */}
-        {selectedCycleInfo && (
-          <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Status:</span>
-              <span className={`font-medium ${
-                selectedCycleInfo.status === 'active' ? 'text-green-600' : 'text-gray-600'
-              }`}>
-                {selectedCycleInfo.status.toUpperCase()}
-              </span>
+        {/* Selected Cycle Info - Status/Variety info removed, only show read-only warning */}
+        {selectedCycleInfo && selectedCycleInfo.status === 'closed' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="flex items-center space-x-1 text-yellow-800">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+              </svg>
+              <span className="text-xs">Read-only: Cycle is closed</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Variety:</span>
-              <span className="font-medium text-gray-900">{selectedCycleInfo.sugarcaneVariety}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Intercrop:</span>
-              <span className="font-medium text-gray-900">
-                {selectedCycleInfo.intercropVariety === 'None' || !selectedCycleInfo.intercropVariety
-                  ? 'None'
-                  : selectedCycleInfo.intercropVariety}
-              </span>
-            </div>
-            {selectedCycleInfo.status === 'closed' && (
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
-                <div className="flex items-center space-x-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                  </svg>
-                  <span className="text-xs">Read-only: Cycle is closed</span>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

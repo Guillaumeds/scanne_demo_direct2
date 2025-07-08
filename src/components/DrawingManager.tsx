@@ -355,8 +355,8 @@ export default function DrawingManager({
     const overlapCheck = checkOverlapWithSavedAreas(snappedPoint)
     if (overlapCheck.isOverlap) {
       console.log('❌ STEP D: Point rejected due to overlap:', overlapCheck.reason)
-      // Show red indicator for invalid placement
-      showOverlapIndicator(snappedPoint, overlapCheck.reason)
+      // Red polygon indication is sufficient - no need for big red circle
+      // showOverlapIndicator(snappedPoint, overlapCheck.reason)
       return // Don't add the point
     }
 
@@ -525,6 +525,14 @@ export default function DrawingManager({
   // ROBUST HELPER FUNCTIONS for layer management (moved after event handlers)
   const createAllPolygonsRobustly = () => {
     console.log('🔄 Creating all polygons from scratch')
+
+    // Clean up vertex markers before clearing layers
+    drawnLayersRef.current.eachLayer((layer) => {
+      if (layer instanceof L.Polygon) {
+        removeVertexMarkers(layer)
+      }
+    })
+
     drawnLayersRef.current.clearLayers()
     layerMapRef.current.clear()
 
@@ -582,6 +590,10 @@ export default function DrawingManager({
     toRemove.forEach(key => {
       const layer = layerMapRef.current.get(key)
       if (layer) {
+        // Clean up vertex markers before removing the polygon
+        if (layer instanceof L.Polygon) {
+          removeVertexMarkers(layer)
+        }
         drawnLayersRef.current.removeLayer(layer)
         layerMapRef.current.delete(key)
       }
@@ -928,55 +940,7 @@ export default function DrawingManager({
     }
   }
 
-  // Show red indicator when trying to draw in invalid location
-  const showOverlapIndicator = (point: L.LatLng, reason: string = 'Invalid location') => {
-    if (!map) return
-
-
-
-    // Remove previous indicator
-    if (snapIndicatorRef.current) {
-      map.removeLayer(snapIndicatorRef.current)
-    }
-
-    // Create overlap indicator (red) - make it more visible
-    snapIndicatorRef.current = L.circleMarker(point, {
-      radius: 12,
-      color: '#dc2626',
-      fillColor: '#fca5a5',
-      fillOpacity: 0.9,
-      weight: 4
-    }).addTo(map)
-
-    // Popup disabled - visual indicator only
-    // snapIndicatorRef.current.bindPopup(`
-    //   <div style="text-align: center; color: #dc2626; font-weight: bold;">
-    //     ⚠️ Cannot draw here<br>
-    //     <small style="font-weight: normal;">${reason}</small>
-    //   </div>
-    // `).openPopup()
-
-    // Add a pulsing effect
-    let pulseCount = 0
-    const pulseInterval = setInterval(() => {
-      if (snapIndicatorRef.current && pulseCount < 6) {
-        const radius = pulseCount % 2 === 0 ? 12 : 16
-        snapIndicatorRef.current.setRadius(radius)
-        pulseCount++
-      } else {
-        clearInterval(pulseInterval)
-      }
-    }, 200)
-
-    // Remove indicator after longer delay
-    setTimeout(() => {
-      if (snapIndicatorRef.current && map) {
-        map.removeLayer(snapIndicatorRef.current)
-        snapIndicatorRef.current = null
-      }
-      clearInterval(pulseInterval)
-    }, 3000)
-  }
+  // Function removed - red polygon indication is sufficient for overlap feedback
 
   // Check if a point overlaps with existing blocs (saved or drawn) OR is outside field boundaries
   const checkOverlapWithSavedAreas = (point: L.LatLng): { isOverlap: boolean; reason: string } => {
@@ -1457,9 +1421,9 @@ export default function DrawingManager({
 
     if (polygonOverlap.isOverlap) {
       console.log('❌ STEP F4: Overlap detected -', polygonOverlap.reason)
-      // Show error indicator at polygon center
-      const centerPoint = calculatePolygonCentroid(drawingPointsRef.current)
-      showOverlapIndicator(centerPoint, polygonOverlap.reason)
+      // Red polygon indication is sufficient - no need for big red circle
+      // const centerPoint = calculatePolygonCentroid(drawingPointsRef.current)
+      // showOverlapIndicator(centerPoint, polygonOverlap.reason)
 
       // Cancel the drawing - make it disappear
       if (currentDrawingRef.current) {
@@ -1666,9 +1630,9 @@ export default function DrawingManager({
       const polygonOverlap = checkPolygonOverlapWithExistingBlocs(tempPolygon)
 
       if (polygonOverlap.isOverlap) {
-        // Revert the change and show red indicator
+        // Revert the change - red polygon indication is sufficient
         latlngs[vertexIndex] = originalPoint
-        showOverlapIndicator(snappedPoint, polygonOverlap.reason)
+        // showOverlapIndicator(snappedPoint, polygonOverlap.reason)
 
         // Change polygon color to red to indicate invalid state
         polygon.setStyle({
@@ -1711,10 +1675,8 @@ export default function DrawingManager({
       const polygonOverlap = checkPolygonOverlapWithExistingBlocs(polygon)
 
       if (polygonOverlap.isOverlap) {
-        // Show error and revert to original position or delete
-        const latlngs = polygon.getLatLngs()[0] as L.LatLng[]
-        const centerPoint = calculatePolygonCentroid(latlngs)
-        showOverlapIndicator(centerPoint, 'Bloc overlaps with existing bloc - removing')
+        // Remove the polygon entirely - no need for red circle indicator
+        console.log('🗑️ Removed overlapping polygon after vertex edit')
 
         // Remove the polygon entirely
         const polygonId = L.stamp(polygon).toString()
@@ -1730,11 +1692,6 @@ export default function DrawingManager({
             map.removeLayer((polygon as any)._areaLabel)
           }
         }
-
-      // Final update of the label after dragging completes
-      updatePolygonLabel(polygon, latlngs)
-
-        console.log('🗑️ Removed overlapping polygon after vertex edit')
         return
       }
 

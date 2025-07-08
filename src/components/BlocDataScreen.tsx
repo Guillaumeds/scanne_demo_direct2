@@ -703,25 +703,23 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         />
       )}
 
-        {/* Persistent Side Panel - Hidden on General tab */}
-        {activeTab !== 'general' && (
-          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Crop Cycle Summary</h3>
-              <CropCycleGeneralInfo
-                bloc={bloc}
-                onSave={async (data) => {
-                  try {
-                    console.log('Crop cycle data saved:', data)
-                  } catch (error) {
-                    console.error('Error handling crop cycle save:', error)
-                  }
-                }}
-                sidePanel={true}
-              />
-            </div>
+        {/* Persistent Side Panel - Visible on all tabs */}
+        <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+          <div className="p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Crop Cycle Summary</h3>
+            <CropCycleGeneralInfo
+              bloc={bloc}
+              onSave={async (data) => {
+                try {
+                  console.log('Crop cycle data saved:', data)
+                } catch (error) {
+                  console.error('Error handling crop cycle save:', error)
+                }
+              }}
+              sidePanel={true}
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Intercrop Variety Selector Modal */}

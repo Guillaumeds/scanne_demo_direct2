@@ -85,9 +85,9 @@ export class ObservationService {
         notes: observation.notes
       }
 
-      // Call atomic database function
-      const { data, error } = await supabase.rpc('save_observation_with_totals' as any, {
-        p_observation_data: observationData
+      // Call simple database function (calculations done frontend-side)
+      const { data: observationId, error } = await supabase.rpc('save_observation_simple', {
+        p_observation_data: observationData as any
       })
 
       if (error) {
@@ -95,15 +95,19 @@ export class ObservationService {
         throw new Error(`Failed to create observation: ${error.message}`)
       }
 
-      if (!data || (data as any).length === 0) {
-        throw new Error('No data returned from observation creation')
+      if (!observationId) {
+        throw new Error('No observation ID returned from creation')
       }
 
-      const result = (data as any)[0]
-      console.log('✅ Observation created with totals:', result)
+      console.log('✅ Observation created:', observationId)
+
+      // Trigger crop cycle totals recalculation
+      if (observation.cropCycleId) {
+        await CropCycleCalculationService.triggerRecalculation(observation.cropCycleId)
+      }
 
       // Return the created observation (fetch fresh data)
-      const savedObservation = await this.getObservationById(result.observation_id)
+      const savedObservation = await this.getObservationById(observationId)
       if (!savedObservation) {
         throw new Error('Failed to retrieve saved observation')
       }
@@ -150,17 +154,22 @@ export class ObservationService {
 
       console.log('💾 Observation data for atomic update:', observationData)
 
-      // Call atomic database function
-      const { data, error } = await supabase.rpc('save_observation_with_totals' as any, {
-        p_observation_data: observationData
+      // Call simple database function (calculations done frontend-side)
+      const { data: updatedObservationId, error } = await supabase.rpc('save_observation_simple', {
+        p_observation_data: observationData as any
       })
 
       if (error) {
-        console.error('❌ Error in atomic observation update:', error)
+        console.error('❌ Error in observation update:', error)
         throw new Error(`Failed to update observation: ${error.message}`)
       }
 
-      console.log('✅ Observation updated with totals:', data)
+      console.log('✅ Observation updated:', updatedObservationId)
+
+      // Trigger crop cycle totals recalculation
+      if (mergedObservation.cropCycleId) {
+        await CropCycleCalculationService.triggerRecalculation(mergedObservation.cropCycleId)
+      }
 
       // Return the updated observation
       return await this.getObservationById(observationId) || mergedObservation

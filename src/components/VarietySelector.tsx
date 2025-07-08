@@ -20,18 +20,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
   // Use localStorage for varieties data
   const { data: allVarieties, loading, error } = useAllVarieties()
 
-  // Debug: Test direct ConfigurationService call
-  const testDirectCall = async () => {
-    try {
-      console.log('🧪 Testing direct ConfigurationService call...')
-      const { ConfigurationService } = await import('@/services/configurationService')
-      console.log('✅ ConfigurationService imported:', ConfigurationService)
-      const varieties = await ConfigurationService.getSugarcaneVarieties()
-      console.log('✅ Direct call successful:', varieties.length, 'varieties')
-    } catch (error) {
-      console.error('❌ Direct call failed:', error)
-    }
-  }
+  // Test DB functionality removed
 
   // Filter base varieties by type
   const baseVarieties = varietyType === 'all'
@@ -111,7 +100,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
         <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading varieties...</p>
@@ -139,7 +128,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
@@ -182,14 +171,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              onClick={testDirectCall}
-              className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-              title="Test direct database call"
-            >
-              Test DB
-            </button>
+            {/* Test DB button removed */}
             <button
               type="button"
               onClick={onClose}

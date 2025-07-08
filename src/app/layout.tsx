@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Comfortaa } from 'next/font/google'
 import './globals.css'
+import '@/utils/debugUtils' // Initialize debug utilities
 
 const inter = Inter({ subsets: ['latin'] })
 const comfortaa = Comfortaa({ subsets: ['latin'], variable: '--font-comfortaa' })

@@ -213,13 +213,16 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
               </svg>
             </button>
 
-            {/* Modern Sort Icons */}
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            {/* Sort Controls */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">Sort:</span>
               <button
                 type="button"
                 onClick={() => setSortBy('date')}
-                className={`p-2 rounded-md transition-colors ${
-                  sortBy === 'date' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                className={`p-2 rounded-lg transition-colors ${
+                  sortBy === 'date'
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
                 title="Sort by date"
               >
@@ -233,8 +236,10 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
               <button
                 type="button"
                 onClick={() => setSortBy('name')}
-                className={`p-2 rounded-md transition-colors ${
-                  sortBy === 'name' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                className={`p-2 rounded-lg transition-colors ${
+                  sortBy === 'name'
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
                 title="Sort by name"
               >
@@ -245,8 +250,10 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
               <button
                 type="button"
                 onClick={() => setSortBy('size')}
-                className={`p-2 rounded-md transition-colors ${
-                  sortBy === 'size' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                className={`p-2 rounded-lg transition-colors ${
+                  sortBy === 'size'
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
                 title="Sort by size"
               >
@@ -254,23 +261,6 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
                   <path d="M21 16V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/>
                   <path d="M16 12H8"/>
                 </svg>
-              </button>
-              <div className="w-px h-6 bg-gray-300 mx-1"></div>
-              <button
-                type="button"
-                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="p-2 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
-                title={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
-              >
-                {sortOrder === 'asc' ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M7 14l5-5 5 5"/>
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M7 10l5 5 5-5"/>
-                  </svg>
-                )}
               </button>
             </div>
           </div>

@@ -41,6 +41,7 @@ import { ActivityService } from '@/services/activityService'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import CropCycleSelector from './CropCycleSelector'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
+import SubmitButton, { SaveButton, CancelButton } from '@/components/ui/SubmitButton'
 
 interface DrawnArea {
   id: string
@@ -127,24 +128,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange, acti
             <div className="flex items-center space-x-2 mb-1">
               <span className="text-lg">{phaseInfo?.icon}</span>
               <h4 className="font-semibold text-gray-900 truncate">{activity.name}</h4>
-              {/* Status Indicators */}
-              <div className="flex items-center space-x-1">
-                {activity.status === 'completed' && (
-                  <span className="text-green-600" title="Completed">✅</span>
-                )}
-                {overdueStatus && (
-                  <span className="text-red-600" title="Overdue">⚠️</span>
-                )}
-                {activity.status === 'in-progress' && (
-                  <span className="text-yellow-600" title="In Progress">⏳</span>
-                )}
-                {activity.status === 'planned' && !overdueStatus && (
-                  <span className="text-blue-600" title="Planned">📅</span>
-                )}
-                {activity.status === 'cancelled' && (
-                  <span className="text-gray-600" title="Cancelled">❌</span>
-                )}
-              </div>
+              {/* Status displayed in right panel only */}
             </div>
             <p className="text-sm text-gray-600 line-clamp-2">{activity.description}</p>
           </div>
@@ -160,23 +144,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, onStatusChange, acti
 
           {/* Actions */}
           <div className="flex items-center space-x-1">
-            {/* Completion checkbox */}
-            <button
-              type="button"
-              onClick={() => onStatusChange(activity.id, activity.status === 'completed' ? 'planned' : 'completed')}
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                activity.status === 'completed'
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-gray-300 hover:border-green-400'
-              }`}
-              title={activity.status === 'completed' ? 'Mark as planned' : 'Mark as completed'}
-            >
-              {activity.status === 'completed' && (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20,6 9,17 4,12"></polyline>
-                </svg>
-              )}
-            </button>
+            {/* Status management in right panel only */}
 
             {/* Edit button */}
             <button
@@ -215,7 +183,6 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const permissions = useCropCyclePermissions()
   const { getActiveCycleInfo, allCycles } = useCropCycleInfo()
   const validation = useCropCycleValidation()
-  const { refreshCycles } = useCropCycle()
 
   // Selected crop cycle context
   const { getSelectedCycleInfo, canEditSelectedCycle } = useSelectedCropCycle()
@@ -232,10 +199,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showActivitySelector, setShowActivitySelector] = useState(false)
   const [editingActivity, setEditingActivity] = useState<BlocActivity | null>(null)
-  const [globalMetrics, setGlobalMetrics] = useState<{
-    totalEstimatedCosts: number
-    totalActualCosts: number
-  }>({ totalEstimatedCosts: 0, totalActualCosts: 0 })
+  // Global metrics removed - displayed in right panel only
   const [sortBy, setSortBy] = useState<'date' | 'date-desc' | 'phase' | 'status'>('date')
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
@@ -280,30 +244,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     setConfigLoading(false)
   }, [])
 
-  // Load global metrics from context data (no API calls needed!)
-  const loadGlobalMetrics = () => {
-    if (!selectedCycleInfo?.id) {
-      setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
-      return
-    }
-
-    // Find the selected cycle in allCycles context data (no API call needed!)
-    const selectedCycle = allCycles.find(cycle => cycle.id === selectedCycleInfo.id)
-
-    if (selectedCycle) {
-      setGlobalMetrics({
-        totalEstimatedCosts: selectedCycle.estimatedTotalCost || 0,
-        totalActualCosts: selectedCycle.actualTotalCost || 0
-      })
-    } else {
-      setGlobalMetrics({ totalEstimatedCosts: 0, totalActualCosts: 0 })
-    }
-  }
-
-  // Load metrics when activities change
-  useEffect(() => {
-    loadGlobalMetrics()
-  }, [activities, selectedCycleInfo?.id])
+  // Global metrics removed - displayed in right panel only
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -329,9 +270,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         activity.id === id ? updatedActivity : activity
       ))
 
-      // Wait for database transaction to commit, then refresh
-      await new Promise(resolve => setTimeout(resolve, 300))
-      await refreshCycles()
+      // Side panel will auto-refresh via context
     } catch (error) {
       console.error('Error updating activity status:', error)
     }
@@ -344,9 +283,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         await ActivityService.deleteActivity(id)
         setActivities(prev => prev.filter(activity => activity.id !== id))
 
-        // Wait for database transaction to commit, then refresh
-        await new Promise(resolve => setTimeout(resolve, 300))
-        await refreshCycles()
+        // Side panel will auto-refresh via context
       } catch (error) {
         console.error('Error deleting activity:', error)
       }
@@ -454,20 +391,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
       }
     })
 
-  const getPhaseStats = () => {
-    const stats = activityPhases.map(phase => {
-      const phaseActivities = activities.filter(a => a.phase === phase.id)
-      const completed = phaseActivities.filter(a => a.status === 'completed').length
-      const total = phaseActivities.length
-      return {
-        ...phase,
-        completed,
-        total,
-        progress: total > 0 ? (completed / total) * 100 : 0
-      }
-    })
-    return stats
-  }
+  // Phase stats removed - displayed in right panel only
 
   const getTotalEstimatedCost = () => {
     return filteredActivities.reduce((total, activity) => {
@@ -481,28 +405,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
     }, 0)
   }
 
-  // Helper function to format cost without decimals
-  const formatCostWithoutDecimals = (cost: number) => {
-    return Math.round(cost).toLocaleString()
-  }
-
-  const getCropCycles = () => {
-    const cycles = ['planted']
-
-    // Add ratoon cycles based on bloc data
-    if (bloc.ratoonHarvestDates) {
-      bloc.ratoonHarvestDates.forEach((ratoon) => {
-        cycles.push(`ratoon-${ratoon.ratoonNumber}`)
-      })
-    }
-
-    return cycles.map(cycle => ({
-      id: cycle,
-      name: cycle === 'planted' ? 'Planted Cycle' : `Ratoon ${cycle.split('-')[1]}`,
-      isHarvested: cycle === 'planted' ? bloc.isHarvested :
-        bloc.ratoonHarvestDates?.find(r => `ratoon-${r.ratoonNumber}` === cycle)?.isHarvested || false
-    }))
-  }
+  // Cost formatting removed - displayed in right panel only
 
   return (
     <div className="flex h-full bg-gray-50">
@@ -511,32 +414,10 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <span className="text-2xl mr-3">📋</span>
-                Activities
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowActivitySelector(true)}
-                disabled={!permissions.canAddActivities}
-                className={`px-3 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 text-sm ${
-                  permissions.canAddActivities
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>Add</span>
-              </button>
-            </div>
-            <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <div>Est Cost: <span className="font-medium text-green-600">Rs {formatCostWithoutDecimals(globalMetrics.totalEstimatedCosts)}</span></div>
-              <div>Actual Cost: <span className="font-medium text-blue-600">Rs {formatCostWithoutDecimals(globalMetrics.totalActualCosts)}</span></div>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center">
+              <span className="text-2xl mr-3">📋</span>
+              Activities
+            </h2>
           </div>
 
           {/* Validation Warnings */}
@@ -561,57 +442,34 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
         {/* Crop Cycle Selector */}
         <CropCycleSelector />
 
-        {/* Phase Selection Blocks */}
+        {/* Categories */}
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Phases</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Categories</h3>
           <div className="space-y-2">
             <button
+              type="button"
               onClick={() => setSelectedPhase('all')}
-              className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors border ${
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
                 selectedPhase === 'all'
                   ? 'bg-green-100 text-green-800 border-green-200'
                   : 'hover:bg-gray-50 text-gray-700 border-gray-200'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="text-lg mr-2">🌾</span>
-                  <span className="font-medium">All Phases</span>
-                </div>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  {activities.length}
-                </span>
-              </div>
+              <span className="font-medium">All Categories</span>
             </button>
 
-            {getPhaseStats().map((phase) => (
+            {activityPhases.map((phase) => (
               <button
                 key={phase.id}
+                type="button"
                 onClick={() => setSelectedPhase(phase.id)}
-                className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors border ${
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
                   selectedPhase === phase.id
                     ? 'bg-green-100 text-green-800 border-green-200'
                     : 'hover:bg-gray-50 text-gray-700 border-gray-200'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <span className="text-lg mr-2">{phase.icon}</span>
-                    <span className="font-medium">{phase.name}</span>
-                  </div>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    {phase.total}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">{phase.completed}/{phase.total} completed</span>
-                  <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                    <div
-                      className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${phase.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <span className="font-medium">{phase.icon} {phase.name}</span>
               </button>
             ))}
           </div>
@@ -801,10 +659,8 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 setActivities(prev => [...prev, savedActivity])
               }
 
-              // Refresh side panel with latest data (database transactions are atomic)
-              console.log('🔄 Refreshing crop cycle data for side panel...')
-              await refreshCycles()
-              console.log('✅ Activity saved and side panel refreshed')
+              // Side panel will auto-refresh via context
+              console.log('✅ Activity saved - side panel will auto-refresh')
 
               setShowAddModal(false)
               setEditingActivity(null)
@@ -843,9 +699,10 @@ function AddActivityModal({
   activity: BlocActivity | null
   blocArea: number
   activeCycleInfo: any // Type from useCropCycleInfo hook
-  onSave: (activity: BlocActivity) => void
+  onSave: (activity: BlocActivity) => Promise<void>
   onCancel: () => void
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<Partial<BlocActivity>>(() => {
     console.log('🎯 Initializing form with activity:', activity?.id, activity?.name)
     console.log('📦 Initial products:', activity?.products?.length || 0, 'products')
@@ -944,8 +801,10 @@ function AddActivityModal({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmitting) return // Prevent double submission
 
     console.log('Form submit - activity:', activity?.id, 'formData.id:', formData.id)
 
@@ -953,6 +812,8 @@ function AddActivityModal({
       alert('No active crop cycle found. Please create a crop cycle first.')
       return
     }
+
+    setIsSubmitting(true)
 
     // Calculate costs before saving
     const tempActivity: BlocActivity = {
@@ -989,7 +850,14 @@ function AddActivityModal({
       totalActualCost: costs.totalActualCost
     }
 
-    onSave(newActivity)
+    try {
+      await onSave(newActivity)
+    } catch (error) {
+      console.error('Error saving activity:', error)
+      alert(`Error saving activity: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -1363,19 +1231,19 @@ function AddActivityModal({
 
           {/* Footer */}
           <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-            <button
-              type="button"
+            <CancelButton
               onClick={onCancel}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              disabled={isSubmitting}
             >
               Annuler
-            </button>
-            <button
+            </CancelButton>
+            <SaveButton
               type="submit"
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              disabled={isSubmitting}
+              loadingText="Enregistrement..."
             >
               Enregistrer
-            </button>
+            </SaveButton>
           </div>
         </form>
       </div>

@@ -45,6 +45,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     const [closureValidation, setClosureValidation] = useState<CycleClosureValidation | null>(null)
     const [validationErrors, setValidationErrors] = useState<string[]>([])
     const [isValidating, setIsValidating] = useState(false)
+  const [isUpdatingCycle, setIsUpdatingCycle] = useState(false)
     const [isCreatingCycle, setIsCreatingCycle] = useState(false)
 
     // Delete/Retire confirmation states
@@ -86,6 +87,12 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     // Use totals already included in allCycles - no database calls needed!
     for (const cycle of allCycles) {
       try {
+        // Check for missing data and show appropriate messages
+        const hasEstCost = cycle.estimatedTotalCost && cycle.estimatedTotalCost > 0
+        const hasActCost = cycle.actualTotalCost && cycle.actualTotalCost > 0
+        const hasSugarcaneRevenue = cycle.sugarcaneRevenue && cycle.sugarcaneRevenue > 0
+        const hasTotalRevenue = cycle.totalRevenue && cycle.totalRevenue > 0
+
         // Calculate derived values from included totals
         const netProfit = (cycle.totalRevenue || 0) - (cycle.actualTotalCost || 0)
         const profitMargin = (cycle.totalRevenue || 0) > 0 ?
@@ -93,22 +100,22 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
         metricsData[cycle.id] = {
           costs: {
-            estimated: `Rs ${(cycle.estimatedTotalCost || 0).toLocaleString()}`,
-            actual: `Rs ${(cycle.actualTotalCost || 0).toLocaleString()}`
+            estimated: hasEstCost ? `Rs ${cycle.estimatedTotalCost?.toLocaleString() || '0'}` : 'No activity cost',
+            actual: hasActCost ? `Rs ${cycle.actualTotalCost?.toLocaleString() || '0'}` : 'No activity cost'
           },
           yield: {
             sugarcane: `${(cycle.sugarcaneYieldTonsPerHa || 0).toFixed(1)} t/ha`,
             intercrop: `${(cycle.intercropYieldTons || 0).toFixed(1)} t/ha`
           },
           revenue: {
-            total: `Rs ${(cycle.totalRevenue || 0).toLocaleString()}`,
-            sugarcane: `Rs ${(cycle.sugarcaneRevenue || 0).toLocaleString()}`,
+            total: hasTotalRevenue ? `Rs ${cycle.totalRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
+            sugarcane: hasSugarcaneRevenue ? `Rs ${cycle.sugarcaneRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
             intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
           },
           profit: {
-            total: `Rs ${netProfit.toLocaleString()}`,
-            perHa: `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}`,
-            margin: `${profitMargin.toFixed(1)}%`
+            total: (hasActCost && hasSugarcaneRevenue) ? `Rs ${netProfit.toLocaleString()}` : 'Missing cost/revenue',
+            perHa: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}` : 'Missing cost/revenue',
+            margin: (hasActCost && hasSugarcaneRevenue) ? `${profitMargin.toFixed(1)}%` : 'Missing cost/revenue'
           }
         }
       } catch (error) {
@@ -155,24 +162,30 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
       for (const cycle of allCycles) {
         try {
+          // Check for missing data and show appropriate messages
+          const hasEstCost = cycle.estimatedTotalCost && cycle.estimatedTotalCost > 0
+          const hasActCost = cycle.actualTotalCost && cycle.actualTotalCost > 0
+          const hasSugarcaneRevenue = cycle.sugarcaneRevenue && cycle.sugarcaneRevenue > 0
+          const hasTotalRevenue = cycle.totalRevenue && cycle.totalRevenue > 0
+
           metricsData[cycle.id] = {
             costs: {
-              estimated: `Rs ${(cycle.estimatedTotalCost || 0).toLocaleString()}`,
-              actual: `Rs ${(cycle.actualTotalCost || 0).toLocaleString()}`
+              estimated: hasEstCost ? `Rs ${cycle.estimatedTotalCost?.toLocaleString() || '0'}` : 'No activity cost',
+              actual: hasActCost ? `Rs ${cycle.actualTotalCost?.toLocaleString() || '0'}` : 'No activity cost'
             },
             yield: {
               sugarcane: `${(cycle.sugarcaneActualYieldTonsHa || 0).toFixed(1)} t/ha`,
               intercrop: `0.0 t/ha`
             },
             revenue: {
-              total: `Rs ${(cycle.totalRevenue || 0).toLocaleString()}`,
-              sugarcane: `Rs ${(cycle.sugarcaneRevenue || 0).toLocaleString()}`,
+              total: hasTotalRevenue ? `Rs ${cycle.totalRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
+              sugarcane: hasSugarcaneRevenue ? `Rs ${cycle.sugarcaneRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
               intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
             },
             profit: {
-              total: `Rs ${(cycle.netProfit || 0).toLocaleString()}`,
-              perHa: `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}`,
-              margin: `${(cycle.profitMarginPercent || 0).toFixed(1)}%`
+              total: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.netProfit || 0).toLocaleString()}` : 'Missing cost/revenue',
+              perHa: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}` : 'Missing cost/revenue',
+              margin: (hasActCost && hasSugarcaneRevenue) ? `${(cycle.profitMarginPercent || 0).toFixed(1)}%` : 'Missing cost/revenue'
             }
           }
         } catch (error) {
@@ -191,10 +204,125 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     }
   }, [allCycles]) // Re-run when cycles change (from React Query invalidation)
 
-  // If this is a side panel, only show the metrics
+  // Helper functions
+  const canCloseCycle = () => {
+    return activeCycle && activeCycle.status === 'active'
+  }
+
+  const handleCloseCycle = async () => {
+    if (!activeCycle) return
+
+    setIsValidating(true)
+
+    try {
+      const validation = await CropCycleService.validateCycleForClosure(
+        activeCycle.id,
+        bloc.area
+      )
+
+      setClosureValidation(validation)
+      setShowClosureModal(true)
+    } catch (error) {
+      console.error('Error validating cycle for closure:', error)
+      alert('Error validating cycle. Please try again.')
+    } finally {
+      setIsValidating(false)
+    }
+  }
+
+  // If this is a side panel, show active cycle details and metrics
   if (sidePanel) {
     return (
       <div className="space-y-4">
+        {/* Active Cycle Details */}
+        {activeCycle && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-green-900">
+                Active {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`} Cycle
+              </h4>
+              {activeCycle.status === 'active' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditCycleData({
+                      plantingDate: activeCycle.plantingDate || '',
+                      plannedHarvestDate: activeCycle.plannedHarvestDate,
+                      expectedYield: activeCycle.expectedYield,
+                      sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
+                      sugarcaneVarietyName: activeCycle.sugarcaneVarietyName,
+                      intercropVarietyId: activeCycle.intercropVarietyId || '',
+                      intercropVarietyName: activeCycle.intercropVarietyName || ''
+                    })
+                    setShowEditCycle(true)
+                  }}
+                  className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                  title="Edit cycle details"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div>
+                <span className="text-green-700 font-medium">Sugarcane Variety:</span>
+                <p className="text-green-900">{activeCycle.sugarcaneVarietyName}</p>
+              </div>
+              <div>
+                <span className="text-green-700 font-medium">Plant Date:</span>
+                <p className="text-green-900">
+                  {activeCycle.type === 'plantation'
+                    ? (activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'TBC')
+                    : (activeCycle.ratoonPlantingDate ? new Date(activeCycle.ratoonPlantingDate).toLocaleDateString() : 'TBC')
+                  }
+                </p>
+              </div>
+              <div>
+                <span className="text-green-700 font-medium">Planned Harvest:</span>
+                <p className="text-green-900">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <span className="text-green-700 font-medium">Intercrop:</span>
+                <p className="text-green-900">
+                  {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
+                    ? 'None'
+                    : activeCycle.intercropVarietyName}
+                </p>
+              </div>
+              <div>
+                <span className="text-green-700 font-medium">Expected Yield:</span>
+                <p className="text-green-900">{activeCycle.expectedYield} tons/ha</p>
+              </div>
+              <div>
+                <span className="text-green-700 font-medium">Cycle Duration:</span>
+                <p className="text-green-900">
+                  {activeCycle.plantingDate || activeCycle.ratoonPlantingDate ?
+                    `${Math.ceil((new Date(activeCycle.plannedHarvestDate).getTime() -
+                      new Date(activeCycle.plantingDate || activeCycle.ratoonPlantingDate!).getTime()) /
+                      (1000 * 60 * 60 * 24))} days` : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {canCloseCycle() && (
+              <div className="mt-3 pt-3 border-t border-green-200">
+                <button
+                  type="button"
+                  onClick={handleCloseCycle}
+                  disabled={isValidating}
+                  className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isValidating ? 'Validating...' : '✓ Close Cycle'}
+                </button>
+                <p className="text-xs text-green-700 mt-1 text-center">
+                  Requires: All activities actual costs and all yield observations revenue
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cycle Metrics */}
         {allCycles.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             <p>No crop cycles yet</p>
@@ -403,26 +531,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     await handleCreateCycle()
   }
 
-  const handleCloseCycle = async () => {
-    if (!activeCycle) return
-
-    setIsValidating(true)
-
-    try {
-      const validation = await CropCycleService.validateCycleForClosure(
-        activeCycle.id,
-        bloc.area
-      )
-
-      setClosureValidation(validation)
-      setShowClosureModal(true)
-    } catch (error) {
-      console.error('Error validating cycle for closure:', error)
-      alert('Error validating cycle. Please try again.')
-    } finally {
-      setIsValidating(false)
-    }
-  }
+  // handleCloseCycle function moved above
 
   const handleSugarcaneVarietySelect = (variety: CropVariety) => {
     console.log('🌾 Sugarcane variety selected:', variety)
@@ -487,9 +596,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     return mostRecentCycle.status === 'closed'
   }
 
-  const canCloseCycle = () => {
-    return activeCycle && activeCycle.status === 'active'
-  }
+  // canCloseCycle function moved above
 
   // Delete and Retire handlers
   const handleDeleteBloc = async () => {
@@ -586,110 +693,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         </div>
       )}
 
-      {/* Current Active Cycle Display */}
-      {activeCycle && (
-        <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-green-900">
-              Active {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`} Cycle
-            </h3>
-            {activeCycle.status === 'active' && (
-              <button
-                type="button"
-                onClick={() => {
-                  // Initialize edit form with current cycle data
-                  setEditCycleData({
-                    plantingDate: activeCycle.plantingDate || '',
-                    plannedHarvestDate: activeCycle.plannedHarvestDate,
-                    expectedYield: activeCycle.expectedYield,
-                    sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
-                    sugarcaneVarietyName: activeCycle.sugarcaneVarietyName,
-                    intercropVarietyId: activeCycle.intercropVarietyId || '',
-                    intercropVarietyName: activeCycle.intercropVarietyName || ''
-                  })
-                  setShowEditCycle(true)
-                }}
-                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
-                title="Edit cycle details"
-              >
-                Edit
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-green-700 font-medium">Sugarcane Variety:</span>
-              <p className="text-green-900">{activeCycle.sugarcaneVarietyName}</p>
-            </div>
-            <div>
-              <span className="text-green-700 font-medium">Plant Date:</span>
-              <p className="text-green-900">
-                {activeCycle.type === 'plantation'
-                  ? (activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'TBC')
-                  : (activeCycle.ratoonPlantingDate ? new Date(activeCycle.ratoonPlantingDate).toLocaleDateString() : 'TBC')
-                }
-              </p>
-            </div>
-            <div>
-              <span className="text-green-700 font-medium">Planned Harvest:</span>
-              <p className="text-green-900">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <span className="text-green-700 font-medium">Intercrop:</span>
-              <p className="text-green-900">
-                {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
-                  ? 'None'
-                  : activeCycle.intercropVarietyName}
-              </p>
-            </div>
-            <div>
-              <span className="text-green-700 font-medium">Expected Yield:</span>
-              <p className="text-green-900">{activeCycle.expectedYield} tons/ha</p>
-            </div>
-            <div>
-              <span className="text-green-700 font-medium">Cycle Duration:</span>
-              <p className="text-green-900">
-                {activeCycle.plantingDate || activeCycle.ratoonPlantingDate ?
-                  `${Math.ceil((new Date(activeCycle.plannedHarvestDate).getTime() -
-                    new Date(activeCycle.plantingDate || activeCycle.ratoonPlantingDate!).getTime()) /
-                    (1000 * 60 * 60 * 24))} days` : 'N/A'}
-              </p>
-            </div>
-          </div>
-          
-          {canCloseCycle() && (
-            <div className="mt-4 pt-4 border-t border-green-200">
-              <button
-                type="button"
-                onClick={handleCloseCycle}
-                disabled={isValidating}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-                title="Validate and close this crop cycle"
-              >
-                {isValidating ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Validating...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Close Cycle</span>
-                  </>
-                )}
-              </button>
-              <p className="text-xs text-gray-600 mt-2">
-                Requires: All activities actual costs and all yield observations revenue
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Active cycle details moved to persistent right panel */}
 
       {/* Cycle Creation Form */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -844,28 +848,27 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
           </div>
         </div>
 
-        {/* Right Column - Cycle History */}
+        {/* Right Column - Cycle History (Closed Cycles Only) */}
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Cycle History</h3>
-            {allCycles.length === 0 ? (
+            {allCycles.filter(cycle => cycle.status === 'closed').length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p>No crop cycles created yet</p>
-                <p className="text-sm">Create your first plantation cycle to get started</p>
+                <p>No closed cycles yet</p>
+                <p className="text-sm">Close your first cycle to see history</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {allCycles.map((cycle) => (
+                {allCycles
+                  .filter(cycle => cycle.status === 'closed')
+                  .sort((a, b) => new Date(b.actualHarvestDate || b.plannedHarvestDate).getTime() - new Date(a.actualHarvestDate || a.plannedHarvestDate).getTime())
+                  .map((cycle) => (
                   <div
                     key={cycle.id}
-                    className={`p-3 rounded-lg ${
-                      cycle.status === 'active'
-                        ? 'border-2 border-green-500 bg-green-50'
-                        : 'border border-gray-200'
-                    }`}
+                    className="p-3 rounded-lg border border-gray-200"
                   >
                     <div className="mb-2">
                       <h4 className="font-medium text-gray-900">
@@ -954,7 +957,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
       {/* Edit Cycle Modal */}
       {showEditCycle && activeCycle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Edit Crop Cycle</h3>
@@ -972,6 +975,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
             <form onSubmit={async (e) => {
               e.preventDefault()
+              setIsUpdatingCycle(true)
               try {
                 const updatedCycle = await CropCycleService.updateCropCycle(activeCycle.id, {
                   plantingDate: editCycleData.plantingDate,
@@ -990,6 +994,8 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
               } catch (error) {
                 console.error('Error updating cycle:', error)
                 alert(`Error updating cycle: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              } finally {
+                setIsUpdatingCycle(false)
               }
             }} className="space-y-4">
 
@@ -1089,9 +1095,25 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={isUpdatingCycle}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {isUpdatingCycle ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

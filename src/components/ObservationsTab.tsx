@@ -231,19 +231,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
   const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
-  // Get crop cycle totals from context data (no API calls needed!)
-  const getSelectedCycleTotals = () => {
-    if (!selectedCycleInfo?.id) return null
-
-    const selectedCycle = allCycles.find(cycle => cycle.id === selectedCycleInfo.id)
-    return selectedCycle ? {
-      sugarcaneYieldTonnesPerHectare: selectedCycle.sugarcaneYieldTonsPerHa || 0,
-      totalRevenue: selectedCycle.totalRevenue || 0,
-      profitPerHectare: selectedCycle.profitPerHectare || 0
-    } : null
-  }
-
-  const cropCycleTotals = getSelectedCycleTotals()
+  // Totals are displayed in right panel only - no duplicate calculations needed
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -395,50 +383,13 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
               <span className="text-2xl mr-3">🔬</span>
               Observations
             </h2>
-            <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <div>Total: <span className="font-medium text-blue-600">{observations.length}</span></div>
-              <div>Completed: <span className="font-medium text-green-600">{observations.filter(o => o.status === 'completed').length}</span></div>
-            </div>
           </div>
         </div>
 
         {/* Crop Cycle Selector */}
         <CropCycleSelector />
 
-        {/* Yield and Revenue Summary */}
-        {selectedCycleInfo && (
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Yield & Revenue</h3>
-            <div className="space-y-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-blue-800">SC Yield/ha</span>
-                  <span className="text-sm font-bold text-blue-900">
-                    {(cropCycleTotals?.sugarcaneYieldTonnesPerHectare || 0) > 0
-                      ? `${cropCycleTotals?.sugarcaneYieldTonnesPerHectare?.toFixed(1) || '0'} t`
-                      : '0 t'}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-green-800">Total Revenue</span>
-                  <span className="text-sm font-bold text-green-900">
-                    Rs {(cropCycleTotals?.totalRevenue || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-purple-800">Profit/ha</span>
-                  <span className="text-sm font-bold text-purple-900">
-                    Rs {(cropCycleTotals?.profitPerHectare || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Totals displayed in right panel only */}
 
         {/* Category Selection */}
         <div className="p-6 border-b border-gray-200 flex-1 overflow-y-auto">
@@ -447,61 +398,29 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}
-              className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors border ${
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
                 selectedCategory === 'all'
                   ? 'bg-green-100 text-green-800 border-green-200'
                   : 'hover:bg-gray-50 text-gray-700 border-gray-200'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="text-lg mr-2">🔬</span>
-                  <span className="font-medium">All Categories</span>
-                </div>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  {observations.length}
-                </span>
-              </div>
+              <span className="font-medium">All Categories</span>
             </button>
 
-            {OBSERVATION_CATEGORIES.map((category) => {
-              const categoryObservations = observations.filter(o => o.category === category.id)
-              const completed = categoryObservations.filter(o => o.status === 'completed').length
-              const total = categoryObservations.length
-              const progress = total > 0 ? (completed / total) * 100 : 0
-
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors border ${
-                    selectedCategory === category.id
-                      ? 'bg-green-100 text-green-800 border-green-200'
-                      : 'hover:bg-gray-50 text-gray-700 border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      <span className="text-lg mr-2">{category.icon}</span>
-                      <span className="font-medium">{category.name}</span>
-                    </div>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                      {total}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">{completed}/{total} completed</span>
-                    <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+            {OBSERVATION_CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setSelectedCategory(category.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
+                  selectedCategory === category.id
+                    ? 'bg-green-100 text-green-800 border-green-200'
+                    : 'hover:bg-gray-50 text-gray-700 border-gray-200'
+                }`}
+              >
+                <span className="font-medium">{category.icon} {category.name}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -20,6 +20,7 @@ import { BlocAttachment, AttachmentCategory } from '@/types/attachments'
 import { useCropCyclePermissions, useCropCycleInfo, useCropCycleValidation } from '@/contexts/CropCycleContext'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
+import SubmitButton, { SaveButton, CancelButton } from '@/components/ui/SubmitButton'
 
 // Measurement guidelines for each observation category
 const MEASUREMENT_GUIDELINES = {
@@ -156,7 +157,7 @@ interface ObservationFormProps {
   observation: BlocObservation | null
   category?: ObservationCategory
   blocArea: number
-  onSave: (observation: BlocObservation) => void
+  onSave: (observation: BlocObservation) => Promise<void>
   onCancel: () => void
 }
 
@@ -206,14 +207,19 @@ export default function ObservationForm({
   const [attachments, setAttachments] = useState<BlocAttachment[]>(observation?.attachments || [])
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmitting) return // Prevent double submission
 
     if (!observation && !activeCycleInfo) {
       alert('No active crop cycle found. Please create a crop cycle first.')
       return
     }
+
+    setIsSubmitting(true)
 
     // Extract yield data from category-specific data
     const extractYieldData = () => {
@@ -273,7 +279,15 @@ export default function ObservationForm({
     }
 
     console.log('💾 Final observation object:', newObservation)
-    onSave(newObservation)
+
+    try {
+      await onSave(newObservation)
+    } catch (error) {
+      console.error('Error saving observation:', error)
+      alert(`Error saving observation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const updateDataField = (field: string, value: any) => {
@@ -554,19 +568,19 @@ export default function ObservationForm({
 
           {/* Footer */}
           <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-            <button
-              type="button"
+            <CancelButton
               onClick={onCancel}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              disabled={isSubmitting}
             >
               Cancel
-            </button>
-            <button
+            </CancelButton>
+            <SaveButton
               type="submit"
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              disabled={isSubmitting}
+              loadingText="Saving..."
             >
               Save Observation
-            </button>
+            </SaveButton>
           </div>
         </form>
       </div>
