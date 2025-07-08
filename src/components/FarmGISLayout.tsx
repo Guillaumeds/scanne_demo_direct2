@@ -31,10 +31,10 @@ export default function FarmGISLayout() {
   const [dataScreenBloc, setDataScreenBloc] = useState<DrawnArea | null>(null)
 
 
-  // Debug selectedAreaId changes
+  // Debug savedAreas changes
   useEffect(() => {
-    console.log('🔄 selectedAreaId changed to:', selectedAreaId)
-  }, [selectedAreaId])
+    // savedAreas updated
+  }, [savedAreas])
 
   // Auto-refresh cache and initialize
   useEffect(() => {
@@ -98,30 +98,35 @@ export default function FarmGISLayout() {
     const loadSavedBlocs = async () => {
       try {
         const { BlocService } = await import('@/services/blocService')
-
-        // Load bloc data without coordinates first (fast)
-        console.log('⚡ Loading bloc metadata first for instant display...')
         const savedBlocsData = await BlocService.getAllBlocs()
 
         // Transform database objects to DrawnArea format
-        const savedBlocs: DrawnArea[] = savedBlocsData.map(bloc => ({
-          uuid: bloc.id,
-          localId: bloc.name,
-          type: 'polygon' as const,
-          coordinates: bloc.coordinates as [number, number][],
-          area: bloc.area_hectares || 0,
-          isSaved: true,
-          isDirty: false,
-          createdAt: bloc.created_at,
-          updatedAt: bloc.updated_at
-        }))
+        const savedBlocs: DrawnArea[] = savedBlocsData.map(bloc => {
+          // Parse WKT coordinates using the existing utility function (returns [lng, lat] format)
+          const wktCoordinates = DrawnAreaUtils.parseWKTToCoordinates(bloc.coordinates_wkt || '')
+          // Keep [lng, lat] format - no swap needed for Leaflet
+          const coordinates: [number, number][] = wktCoordinates.map(([lng, lat]) => [lng, lat])
+
+
+
+          return {
+            uuid: bloc.id,
+            localId: bloc.name,
+            type: 'polygon' as const,
+            coordinates,
+            area: bloc.area_hectares || 0,
+            isSaved: true,
+            isDirty: false,
+            createdAt: bloc.created_at || new Date().toISOString(),
+            updatedAt: bloc.updated_at || new Date().toISOString()
+          }
+        })
 
         // Set blocs immediately for card display (without waiting for polygon rendering)
         setSavedAreas(savedBlocs)
-        console.log('✅ Bloc cards displayed instantly:', savedBlocs.length, 'blocs')
+        console.log('✅ Loaded', savedBlocs.length, 'blocs with coordinates for map display')
 
-        // Polygon rendering will happen in MapComponent when ready
-        console.log('🔄 Polygon rendering will be handled by MapComponent...')
+
 
       } catch (error) {
         console.warn('⚠️ Could not load saved blocs from database:', error)
@@ -162,7 +167,6 @@ export default function FarmGISLayout() {
     setDrawnAreas(prev => [...prev, area])
 
     // Show success message
-    console.log(`✅ ${area.type} drawn: ${area.area.toFixed(2)} ha`)
   }
 
   const handleAreaDelete = (areaKey: string) => {
@@ -185,7 +189,6 @@ export default function FarmGISLayout() {
 
   const handleMapClick = () => {
     // Deselect when clicking on empty map area
-    console.log('🗺️ Map click - deselecting area')
     setSelectedAreaId(null)
   }
 
@@ -205,7 +208,6 @@ export default function FarmGISLayout() {
       setSelectedAreaId(null)
       setScrollToBlocId(null)
     } else {
-      console.log('✅ Selecting area:', areaId)
       setSelectedAreaId(areaId)
       // Trigger scroll to the corresponding bloc card
       setScrollToBlocId(areaId)
@@ -247,7 +249,7 @@ export default function FarmGISLayout() {
       })
     }
 
-    console.log('🗺️ Navigating to bloc:', areaId, 'bounds:', paddedBounds)
+
   }
 
   const handlePolygonDelete = (areaId: string) => {

@@ -320,14 +320,29 @@ export default function DrawingManager({
 
     console.log('🗺️ Processing saved areas for map display:', savedAreas.length)
 
+    // Check if we need to clear and recreate all polygons (e.g., after coordinate format changes)
+    const needsRecreation = savedAreas.length > 0 && layerMapRef.current.size > 0 &&
+      savedAreas.every(area => layerMapRef.current.has(DrawnAreaUtils.getEntityKey(area)))
+
+    if (needsRecreation) {
+      console.log('🔄 Clearing existing layers and recreating all polygons')
+      // Clear all existing layers
+      layerMapRef.current.forEach(layer => {
+        drawnLayersRef.current.removeLayer(layer)
+      })
+      layerMapRef.current.clear()
+    }
+
     // Filter areas that need polygon creation
     const areasToProcess = savedAreas.filter(area => {
       const areaKey = DrawnAreaUtils.getEntityKey(area)
-      return !layerMapRef.current.has(areaKey) && area.coordinates && area.coordinates.length >= 3
+      const hasLayer = layerMapRef.current.has(areaKey)
+      const hasCoords = area.coordinates && area.coordinates.length >= 3
+
+      return !hasLayer && hasCoords
     })
 
     if (areasToProcess.length === 0) {
-      console.log('✅ All polygons already rendered')
       return
     }
 
@@ -347,7 +362,7 @@ export default function DrawingManager({
       batch.forEach(area => {
         const areaKey = DrawnAreaUtils.getEntityKey(area)
 
-        // Database stores coordinates as [lat, lng] which is what Leaflet expects
+        // Coordinates are already in [lat, lng] format from FarmGISLayout conversion
         const latlngs = area.coordinates.map(coord => {
           if (!Array.isArray(coord) || coord.length !== 2) {
             console.error('❌ Invalid coordinate format:', coord)
@@ -387,8 +402,6 @@ export default function DrawingManager({
       if (currentBatch * BATCH_SIZE < areasToProcess.length) {
         // Use requestAnimationFrame for smooth rendering
         requestAnimationFrame(processBatch)
-      } else {
-        console.log('✅ All polygons rendered successfully in', currentBatch, 'batches')
       }
     }
 
@@ -414,7 +427,6 @@ export default function DrawingManager({
           // Ensure saved areas have click handlers
           layer.off('click') // Remove any existing handlers
           layer.on('click', (e) => {
-            console.log('🖱️ Saved polygon clicked:', areaKey)
             // Stop event propagation more aggressively
             if (e.originalEvent) {
               e.originalEvent.stopPropagation()
@@ -425,7 +437,7 @@ export default function DrawingManager({
             onPolygonClick?.(areaKey)
           })
 
-          console.log('💾 Made area non-editable, removed text, and added click handler:', areaKey)
+
         }
       })
     }
@@ -434,7 +446,10 @@ export default function DrawingManager({
 
   // Ensure all existing polygons have click handlers
   useEffect(() => {
-    console.log('🔗 Setting up click handlers for existing areas')
+    const totalAreas = drawnAreas.length + savedAreas.length
+    if (totalAreas > 0) {
+      console.log('🔗 Setting up click handlers for', totalAreas, 'polygons')
+    }
 
     // Add click handlers to drawn areas
     drawnAreas.forEach(area => {
@@ -443,7 +458,7 @@ export default function DrawingManager({
       if (layer && layer instanceof L.Polygon) {
         layer.off('click') // Remove any existing handlers
         layer.on('click', (e) => {
-          console.log('🖱️ Drawn polygon clicked:', areaKey)
+
           // Stop event propagation more aggressively
           if (e.originalEvent) {
             e.originalEvent.stopPropagation()
@@ -453,7 +468,7 @@ export default function DrawingManager({
           L.DomEvent.stopPropagation(e)
           onPolygonClick?.(areaKey)
         })
-        console.log('🔗 Added click handler to drawn area:', areaKey)
+
       }
     })
 
@@ -464,7 +479,7 @@ export default function DrawingManager({
       if (layer && layer instanceof L.Polygon) {
         layer.off('click') // Remove any existing handlers
         layer.on('click', (e) => {
-          console.log('🖱️ Saved polygon clicked:', areaKey)
+
           // Stop event propagation more aggressively
           if (e.originalEvent) {
             e.originalEvent.stopPropagation()
@@ -474,7 +489,7 @@ export default function DrawingManager({
           L.DomEvent.stopPropagation(e)
           onPolygonClick?.(areaKey)
         })
-        console.log('🔗 Added click handler to saved area:', areaKey)
+
       }
     })
   }, [drawnAreas, savedAreas, onPolygonClick])
@@ -809,56 +824,35 @@ export default function DrawingManager({
     // Check overlap with saved areas
     for (const savedArea of savedAreas) {
       const areaKey = DrawnAreaUtils.getEntityKey(savedArea)
-      console.log('🔍 Checking overlap with saved area:', DrawnAreaUtils.getDisplayName(savedArea))
       const savedLayer = layerMapRef.current.get(areaKey)
       if (savedLayer) {
         const savedLatLngs = savedLayer.getLatLngs()[0] as L.LatLng[]
-        console.log('🔍 Saved area coordinates:', savedLatLngs.length, 'points')
-
         const hasOverlap = polygonsOverlap(polygonLatLngs, savedLatLngs)
-        console.log('🔍 Overlap result with saved area', DrawnAreaUtils.getDisplayName(savedArea), ':', hasOverlap)
 
         if (hasOverlap) {
-          console.log('❌ POLYGON OVERLAP with saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
           return { isOverlap: true, reason: 'New bloc overlaps with saved bloc' }
         }
-      } else {
-        console.log('⚠️ No layer found for saved area:', DrawnAreaUtils.getDisplayName(savedArea))
       }
     }
 
     // Check overlap with drawn areas (excluding current drawing)
     for (const drawnArea of drawnAreas) {
       const areaKey = DrawnAreaUtils.getEntityKey(drawnArea)
-      console.log('🔍 Checking overlap with drawn area:', DrawnAreaUtils.getDisplayName(drawnArea))
       const drawnLayer = layerMapRef.current.get(areaKey)
       if (drawnLayer && areaKey !== currentPolygonId) {
         const drawnLatLngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
-        console.log('🔍 Drawn area coordinates:', drawnLatLngs.length, 'points')
-
         const hasOverlap = polygonsOverlap(polygonLatLngs, drawnLatLngs)
-        console.log('🔍 Overlap result with drawn area', DrawnAreaUtils.getDisplayName(drawnArea), ':', hasOverlap)
 
         if (hasOverlap) {
-          console.log('❌ POLYGON OVERLAP with drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
           return { isOverlap: true, reason: 'New bloc overlaps with existing bloc' }
         }
-      } else if (!drawnLayer) {
-        console.log('⚠️ No layer found for drawn area:', DrawnAreaUtils.getDisplayName(drawnArea))
-      } else {
-        console.log('🔍 Skipping current polygon:', DrawnAreaUtils.getDisplayName(drawnArea))
       }
     }
-
-    console.log('✅ No polygon overlap detected')
     return { isOverlap: false, reason: '' }
   }
 
   // Helper function to check if two polygons have AREA overlap (not just touching)
   const polygonsOverlap = (poly1: L.LatLng[], poly2: L.LatLng[]): boolean => {
-    console.log('🔍 Checking polygon AREA overlap (not just touching)')
-    console.log('🔍 Poly1 has', poly1.length, 'vertices')
-    console.log('🔍 Poly2 has', poly2.length, 'vertices')
 
     // Only check if vertices are INSIDE the other polygon (not on edges)
     // This allows touching/sharing edges but blocks area coverage
@@ -866,12 +860,9 @@ export default function DrawingManager({
     let hasAreaOverlap = false
 
     // Check if any vertex of poly1 is INSIDE poly2 (not just on boundary)
-    console.log('🔍 Checking if poly1 vertices are inside poly2...')
     for (let i = 0; i < poly1.length; i++) {
       const isInside = isPointStrictlyInsidePolygon(poly1[i], poly2)
-      console.log(`🔍 Poly1 vertex ${i} (${poly1[i].lat.toFixed(6)}, ${poly1[i].lng.toFixed(6)}) inside poly2:`, isInside)
       if (isInside) {
-        console.log('✅ Area overlap detected: poly1 vertex', i, 'is inside poly2')
         hasAreaOverlap = true
         break
       }
@@ -879,12 +870,9 @@ export default function DrawingManager({
 
     // Check if any vertex of poly2 is INSIDE poly1 (not just on boundary)
     if (!hasAreaOverlap) {
-      console.log('🔍 Checking if poly2 vertices are inside poly1...')
       for (let i = 0; i < poly2.length; i++) {
         const isInside = isPointStrictlyInsidePolygon(poly2[i], poly1)
-        console.log(`🔍 Poly2 vertex ${i} (${poly2[i].lat.toFixed(6)}, ${poly2[i].lng.toFixed(6)}) inside poly1:`, isInside)
         if (isInside) {
-          console.log('✅ Area overlap detected: poly2 vertex', i, 'is inside poly1')
           hasAreaOverlap = true
           break
         }
@@ -893,7 +881,7 @@ export default function DrawingManager({
 
     // Additional check: if one polygon completely contains the other
     if (!hasAreaOverlap) {
-      console.log('🔍 Checking if one polygon contains the other...')
+
 
       // Check if poly1 completely contains poly2
       let allPoly2InsidePoly1 = true
@@ -904,7 +892,7 @@ export default function DrawingManager({
         }
       }
       if (allPoly2InsidePoly1 && poly2.length > 0) {
-        console.log('✅ Area overlap detected: poly1 completely contains poly2')
+
         hasAreaOverlap = true
       }
 
@@ -918,7 +906,7 @@ export default function DrawingManager({
           }
         }
         if (allPoly1InsidePoly2 && poly1.length > 0) {
-          console.log('✅ Area overlap detected: poly2 completely contains poly1')
+
           hasAreaOverlap = true
         }
       }
@@ -926,14 +914,14 @@ export default function DrawingManager({
       // Additional check: Use a more robust intersection test
       // Sample points within each polygon and check if they're in the other
       if (!hasAreaOverlap) {
-        console.log('🔍 Performing additional intersection sampling...')
+
         const samplePoints1 = generatePolygonSamplePoints(poly1, 10)
         const samplePoints2 = generatePolygonSamplePoints(poly2, 10)
 
         // Check if any sample points from poly1 are inside poly2
         for (const point of samplePoints1) {
           if (isPointStrictlyInsidePolygon(point, poly2)) {
-            console.log('✅ Area overlap detected: poly1 sample point inside poly2')
+
             hasAreaOverlap = true
             break
           }
@@ -943,7 +931,7 @@ export default function DrawingManager({
         if (!hasAreaOverlap) {
           for (const point of samplePoints2) {
             if (isPointStrictlyInsidePolygon(point, poly1)) {
-              console.log('✅ Area overlap detected: poly2 sample point inside poly1')
+
               hasAreaOverlap = true
               break
             }
@@ -952,11 +940,7 @@ export default function DrawingManager({
       }
     }
 
-    if (hasAreaOverlap) {
-      console.log('🔴 AREA OVERLAP detected - blocking')
-    } else {
-      console.log('✅ No area overlap - touching/sharing edges is allowed')
-    }
+
 
     return hasAreaOverlap
   }
@@ -1383,7 +1367,6 @@ export default function DrawingManager({
 
     // Make polygon clickable for highlighting (not info modal)
     finalPolygon.on('click', (e) => {
-      console.log('🖱️ Polygon clicked:', areaId)
       // Stop event propagation more aggressively
       if (e.originalEvent) {
         e.originalEvent.stopPropagation()

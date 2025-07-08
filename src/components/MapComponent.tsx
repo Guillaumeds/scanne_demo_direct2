@@ -473,13 +473,13 @@ export default function MapComponent({
       {/* Drawing Manager */}
       {mapInstanceRef.current && mapReady && (
         <DrawingManager
-          map={mapInstanceRef.current}
-          activeTool={activeTool || null}
-          drawnAreas={drawnAreas}
-          savedAreas={savedAreas}
-          selectedAreaId={selectedAreaId}
-          hoveredAreaId={hoveredAreaId}
-          currentLayer={currentLayer}
+            map={mapInstanceRef.current}
+            activeTool={activeTool || null}
+            drawnAreas={drawnAreas}
+            savedAreas={savedAreas}
+            selectedAreaId={selectedAreaId}
+            hoveredAreaId={hoveredAreaId}
+            currentLayer={currentLayer}
           onAreaDrawn={onAreaDrawn || (() => {})}
           onAreaUpdated={onAreaUpdated}
           onPolygonClick={onPolygonClick}

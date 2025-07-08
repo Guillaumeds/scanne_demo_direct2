@@ -88,7 +88,7 @@ export default function Home() {
 
 
       {/* Main Content */}
-      <div className="flex-1 h-0 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         <FarmGISLayout />
       </div>
 
