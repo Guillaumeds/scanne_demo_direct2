@@ -47,7 +47,6 @@ export default function FarmGISLayout() {
         setLoading(true)
 
         // Auto-refresh localStorage cache if stale
-        console.log('🔄 Checking and refreshing cache if needed...')
         await LocalStorageService.autoRefreshIfStale()
 
         // FIELD CREATION/LOADING DISABLED FOR DEMO
@@ -102,7 +101,6 @@ export default function FarmGISLayout() {
   useEffect(() => {
     const loadSavedBlocs = async () => {
       try {
-        console.log('🔄 Loading saved blocs from database...')
         const { BlocService } = await import('@/services/blocService')
 
         // Load bloc data without coordinates first (fast)

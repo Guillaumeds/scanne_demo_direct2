@@ -5,7 +5,6 @@ import { Sprout, Shield } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
-
 // Dynamically import the layout component to avoid SSR issues with Leaflet
 const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
   ssr: false,

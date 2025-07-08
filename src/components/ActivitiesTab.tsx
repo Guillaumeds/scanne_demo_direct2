@@ -801,12 +801,8 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 setActivities(prev => [...prev, savedActivity])
               }
 
-              // Wait for database transaction to fully commit before refreshing
-              console.log('⏳ Waiting for database transaction to commit...')
-              await new Promise(resolve => setTimeout(resolve, 500))
-
-              // Invalidate crop cycle queries to refresh side panel (React Query best practice)
-              console.log('🔄 Invalidating crop cycle queries to refresh side panel...')
+              // Refresh side panel with latest data (database transactions are atomic)
+              console.log('🔄 Refreshing crop cycle data for side panel...')
               await refreshCycles()
               console.log('✅ Activity saved and side panel refreshed')
 
