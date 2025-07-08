@@ -377,11 +377,7 @@ export default function MapComponent({
           console.log('✅ Tile layer added')
         }
 
-        // Create layer group for field polygons
-        const fieldLayerGroup = L.layerGroup()
-        fieldLayerGroup.addTo(map)
-        fieldLayersRef.current = fieldLayerGroup
-        console.log('✅ Field layer group created')
+        // Field functionality removed - blocs are the primary entities
 
         mapInstanceRef.current = map
 
@@ -445,159 +441,7 @@ export default function MapComponent({
     }
   }, [])
 
-  // Add field polygons to map
-  useEffect(() => {
-    console.log('Field effect triggered:', {
-      mapReady,
-      mapInstance: !!mapInstanceRef.current,
-      fieldLayers: !!fieldLayersRef.current,
-      fieldsCount: fields.length,
-      fields: fields.map(f => ({ id: f.field_id, coordsLength: f.coordinates?.length || 0 }))
-    })
-
-    if (!mapReady || !mapInstanceRef.current || !fieldLayersRef.current) {
-      console.log('Field effect early return - map not ready')
-      return
-    }
-
-    if (fields.length === 0) {
-      console.log('⚠️ No fields to display - map will show without field polygons')
-      // Don't return - let the map show even without fields
-    }
-
-    const map = mapInstanceRef.current
-    const fieldLayerGroup = fieldLayersRef.current
-
-    // Clear existing field layers
-    fieldLayerGroup.clearLayers()
-
-    // Clear existing field labels
-    fieldLabelsRef.current.forEach(label => {
-      if (map) {
-        map.removeLayer(label)
-      }
-    })
-    fieldLabelsRef.current.clear()
-
-    // If no fields, just ensure map is visible
-    if (fields.length === 0) {
-      console.log('📍 Map ready without field data')
-      return
-    }
-
-    // Add each field as a polygon
-    console.log('Adding fields to map:', fields.length)
-    fields.forEach((field, index) => {
-      console.log(`Processing field ${index + 1}/${fields.length}:`, {
-        id: field.field_id,
-        coordsLength: field.coordinates?.length || 0,
-        status: field.status
-      })
-
-      if (field.coordinates && field.coordinates.length > 0) {
-        console.log(`🔍 Field ${field.field_id} raw coordinates:`, field.coordinates)
-        console.log(`🔍 Field ${field.field_id} coordinates type:`, typeof field.coordinates, Array.isArray(field.coordinates))
-
-        // Validate coordinates before processing
-        const invalidCoords = field.coordinates.filter(coord =>
-          !coord || !Array.isArray(coord) || coord.length < 2 ||
-          typeof coord[0] !== 'number' || typeof coord[1] !== 'number'
-        )
-
-        if (invalidCoords.length > 0) {
-          console.error(`❌ Field ${field.field_id} has invalid coordinates:`, invalidCoords)
-          console.log(`❌ Skipping field ${field.field_id} - invalid coordinates`)
-          return
-        }
-
-        // Convert coordinates to Leaflet format [lat, lng]
-        const latlngs = field.coordinates.map(coord => [coord[1], coord[0]] as [number, number])
-        console.log(`✅ Field ${field.field_id} processed latlngs:`, latlngs)
-
-        // Create polygon with grey styling (all parcelles are inactive)
-        const polygon = L.polygon(latlngs, {
-          color: '#6b7280', // Grey for all parcelles
-          fillColor: '#6b7280',
-          fillOpacity: 0.3,
-          weight: 2,
-          opacity: 0.8
-        })
-
-        // No labels for parcelles (fields) - they are now background only
-        // const labelMarker = L.marker(center, { icon: fieldLabel })
-        // Labels removed as requested
-
-        // Parcelles are background-only - disable all interactions
-        // They should not be selectable since we're using BlocList instead of FieldList
-        polygon.on('click', (e) => {
-          // Always prevent field selection - parcelles are inactive background
-          e.originalEvent?.stopPropagation()
-          return false
-        })
-
-        // Disable all mouse interactions - parcelles are background only
-        polygon.on('mouseover', (e) => {
-          e.originalEvent?.stopPropagation()
-          return false
-        })
-
-        polygon.on('mouseout', (e) => {
-          e.originalEvent?.stopPropagation()
-          return false
-        })
-
-        // Store polygon reference for later styling updates
-        fieldPolygonsRef.current.set(field.field_id, polygon)
-
-        // Store field data for zoom updates
-        ;(polygon as any)._fieldData = field
-
-        // Add to layer group
-        fieldLayerGroup.addLayer(polygon)
-        console.log(`Added polygon for field ${field.field_id} to layer group`)
-      } else {
-        console.log(`Skipping field ${field.field_id} - no coordinates`)
-      }
-    })
-
-    console.log(`Finished processing ${fields.length} fields`)
-
-    // No field labels to update - parcelles are background only
-
-    // Keep original zoom level - don't auto-fit to fields
-    console.log('🗺️ Fields loaded but maintaining original zoom level')
-
-  }, [fields, mapReady])
-
-  // Handle field styling - parcelles are always grey and inactive
-  useEffect(() => {
-    fieldPolygonsRef.current.forEach((polygon, fieldId) => {
-      const field = fields.find(f => f.field_id === fieldId)
-      if (!field) return
-
-      const isDrawingMode = !!activeTool
-
-      // All parcelles (fields) are always inactive/grey - no selection/hover
-      const baseColor = '#6b7280' // Grey for all parcelles
-      const weight = 2
-      const fillOpacity = 0.3
-
-      // Always disable pointer events - parcelles are background only
-      const polygonElement = polygon.getElement() as HTMLElement
-      if (polygonElement) {
-        polygonElement.style.pointerEvents = 'none'
-        polygonElement.style.cursor = isDrawingMode ? 'crosshair' : 'default'
-      }
-
-      // Always apply the same grey styling - no selection/hover changes
-      polygon.setStyle({
-        color: baseColor,
-        weight,
-        fillOpacity,
-        fillColor: baseColor
-      })
-    })
-  }, [fields, activeTool]) // Removed selectedField and hoveredField dependencies
+  // Field functionality removed - blocs are the primary entities
 
   return (
     <div className="relative h-full w-full">
@@ -630,7 +474,6 @@ export default function MapComponent({
       {mapInstanceRef.current && mapReady && (
         <DrawingManager
           map={mapInstanceRef.current}
-          fieldPolygons={fieldPolygonsRef.current}
           activeTool={activeTool || null}
           drawnAreas={drawnAreas}
           savedAreas={savedAreas}

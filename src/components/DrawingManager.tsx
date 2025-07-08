@@ -15,7 +15,7 @@ declare module 'leaflet' {
 
 interface DrawingManagerProps {
   map: L.Map | null
-  fieldPolygons: Map<string, L.Polygon>
+  // Field functionality removed - blocs are the primary entities
   activeTool: string | null
   drawnAreas?: DrawnArea[]
   savedAreas?: DrawnArea[]
@@ -33,7 +33,7 @@ interface DrawingManagerProps {
 
 export default function DrawingManager({
   map,
-  fieldPolygons,
+  // Field functionality removed - blocs are the primary entities
   activeTool,
   drawnAreas = [],
   savedAreas = [],
@@ -619,51 +619,8 @@ export default function DrawingManager({
       }
     }
 
-    fieldPolygons.forEach((polygon) => {
-      const latlngs = polygon.getLatLngs()[0] as L.LatLng[]
-
-      // Check each vertex for new snapping opportunities
-      latlngs.forEach((vertex) => {
-        const distanceMeters = map.distance(clickPoint, vertex)
-
-        if (distanceMeters < minDistanceMeters && distanceMeters <= snapInToleranceMeters) {
-          minDistanceMeters = distanceMeters
-          nearestPoint = vertex
-          foundSnapPoint = vertex
-        }
-      })
-
-      // Check each edge for closest point on line segment (with more points)
-      for (let i = 0; i < latlngs.length - 1; i++) {
-        const start = latlngs[i]
-        const end = latlngs[i + 1]
-
-        // Check multiple points along the edge for better detection
-        for (let t = 0; t <= 1; t += 0.1) {
-          const edgePoint = L.latLng(
-            start.lat + t * (end.lat - start.lat),
-            start.lng + t * (end.lng - start.lng)
-          )
-
-          const distanceMeters = map.distance(clickPoint, edgePoint)
-          if (distanceMeters < minDistanceMeters && distanceMeters <= snapInToleranceMeters) {
-            minDistanceMeters = distanceMeters
-            nearestPoint = edgePoint
-            foundSnapPoint = edgePoint
-          }
-        }
-
-        // Also check the exact closest point on line segment
-        const closestPoint = getClosestPointOnLineSegment(clickPoint, start, end)
-        const distanceMeters = map.distance(clickPoint, closestPoint)
-
-        if (distanceMeters < minDistanceMeters && distanceMeters <= snapInToleranceMeters) {
-          minDistanceMeters = distanceMeters
-          nearestPoint = closestPoint
-          foundSnapPoint = closestPoint
-        }
-      }
-    })
+    // Field functionality removed - no field edge snapping available
+    // Future: Could implement bloc edge snapping here if needed
 
     // Update snap state if we found a new snap point
     if (foundSnapPoint && foundSnapPoint !== clickPoint) {
