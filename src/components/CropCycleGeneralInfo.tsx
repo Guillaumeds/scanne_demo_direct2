@@ -503,7 +503,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       // Call delete API (you'll need to implement this in your service)
       // await BlocService.deleteBloc(bloc.id)
 
-      console.log('Deleting bloc:', bloc.id)
+      console.log('Deleting bloc:', bloc.uuid || bloc.localId)
       alert('Bloc deletion functionality will be implemented')
 
       // Close modal and reset
@@ -532,7 +532,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
       // Call retire API (you'll need to implement this in your service)
       // await BlocService.retireBloc(bloc.id)
 
-      console.log('Retiring bloc:', bloc.id)
+      console.log('Retiring bloc:', bloc.uuid || bloc.localId)
       alert('Bloc retirement functionality will be implemented')
 
       // Close modal and reset
@@ -1138,7 +1138,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
               <div className="mb-6">
                 <p className="text-sm text-gray-700 mb-4">
-                  This will permanently delete <strong>Bloc {bloc.id}</strong> and all associated data including:
+                  This will permanently delete <strong>Bloc {bloc.localId}</strong> and all associated data including:
                 </p>
                 <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
                   <li>All crop cycles and their history</li>
@@ -1206,7 +1206,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
               <div className="mb-6">
                 <p className="text-sm text-gray-700 mb-4">
-                  This will retire <strong>Bloc {bloc.id}</strong> and:
+                  This will retire <strong>Bloc {bloc.localId}</strong> and:
                 </p>
                 <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-4">
                   <li>Mark the bloc as retired (not deleted)</li>

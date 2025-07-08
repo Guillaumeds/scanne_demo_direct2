@@ -101,7 +101,20 @@ export default function FarmGISLayout() {
 
         // Load bloc data without coordinates first (fast)
         console.log('⚡ Loading bloc metadata first for instant display...')
-        const savedBlocs = await BlocService.getAllBlocs()
+        const savedBlocsData = await BlocService.getAllBlocs()
+
+        // Transform database objects to DrawnArea format
+        const savedBlocs: DrawnArea[] = savedBlocsData.map(bloc => ({
+          uuid: bloc.id,
+          localId: bloc.name,
+          type: 'polygon' as const,
+          coordinates: bloc.coordinates as [number, number][],
+          area: bloc.area_hectares || 0,
+          isSaved: true,
+          isDirty: false,
+          createdAt: bloc.created_at,
+          updatedAt: bloc.updated_at
+        }))
 
         // Set blocs immediately for card display (without waiting for polygon rendering)
         setSavedAreas(savedBlocs)
@@ -268,7 +281,7 @@ export default function FarmGISLayout() {
 
     } catch (error) {
       console.error('❌ Failed to save blocs:', error)
-      alert(`Failed to save blocs: ${error.message}. Please check that the database is properly set up with fields data.`)
+      alert(`Failed to save blocs: ${(error as any)?.message || 'Unknown error'}. Please check that the database is properly set up.`)
     }
   }
 

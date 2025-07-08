@@ -1,11 +1,6 @@
 'use client'
 
-interface DrawnArea {
-  id: string
-  type: string
-  coordinates: [number, number][]
-  area: number
-}
+import { DrawnArea } from '@/types/drawnArea'
 
 interface DrawnAreasListProps {
   drawnAreas: DrawnArea[]
@@ -38,20 +33,22 @@ export default function DrawnAreasList({
       </div>
 
       <div className="space-y-2 max-h-60 overflow-y-auto">
-        {drawnAreas.map((area, index) => (
+        {drawnAreas.map((area, index) => {
+          const areaId = area.uuid || area.localId
+          return (
           <div
-            key={area.id}
+            key={areaId}
             className={`border rounded-lg p-3 transition-colors cursor-pointer relative ${
-              selectedAreaId === area.id
+              selectedAreaId === areaId
                 ? 'border-orange-500 bg-orange-50'
                 : 'border-gray-200 hover:bg-gray-50'
             }`}
-            onClick={() => onAreaSelect?.(area.id)}
-            onMouseEnter={() => onAreaHover?.(area.id)}
+            onClick={() => onAreaSelect?.(areaId)}
+            onMouseEnter={() => onAreaHover?.(areaId)}
             onMouseLeave={() => onAreaHover?.(null)}
           >
             {/* Selection indicator */}
-            {selectedAreaId === area.id && (
+            {selectedAreaId === areaId && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-orange-500 rounded-full"></div>
             )}
             <div className="flex items-center justify-between mb-2">
@@ -66,7 +63,7 @@ export default function DrawnAreasList({
               
               {onAreaDelete && (
                 <button
-                  onClick={() => onAreaDelete(area.id)}
+                  onClick={() => onAreaDelete(areaId)}
                   className="text-red-500 hover:text-red-700 text-sm"
                   title="Delete area"
                 >
@@ -91,7 +88,7 @@ export default function DrawnAreasList({
 
 
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">

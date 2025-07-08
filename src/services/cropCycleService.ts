@@ -684,8 +684,8 @@ export class CropCycleService {
       profitPerHectare: dbRecord.profit_per_hectare,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,
-      isNew: false,
-      isDirty: false
+      closureValidated: false, // Default value
+      createdBy: 'system' // Default value
     }
   }
 
@@ -815,22 +815,22 @@ export class CropCycleService {
         id: activity.id,
         name: activity.name,
         description: activity.description || '',
-        phase: activity.phase,
-        status: activity.status,
-        cropCycleId: activity.crop_cycle_id,
+        phase: (activity.phase as any) || 'preparation', // Default to preparation if null
+        status: (activity.status as any) || 'planned', // Default to planned if null
+        cropCycleId: activity.crop_cycle_id || '',
         cropCycleType: 'plantation' as 'plantation' | 'ratoon', // Default, could be enhanced based on cycle data
-        startDate: activity.start_date,
-        endDate: activity.end_date,
-        actualDate: activity.activity_date, // Correct database column name
+        startDate: activity.start_date || '',
+        endDate: activity.end_date || '',
+        actualDate: activity.activity_date || undefined, // Correct database column name
         duration: activity.duration || 0, // Correct property name
         products: [], // Will be loaded separately if needed
         resources: [], // Will be loaded separately if needed
         totalEstimatedCost: activity.estimated_total_cost || 0, // Correct property name
         totalActualCost: (activity.actual_total_cost && activity.actual_total_cost > 0) ? activity.actual_total_cost : undefined,
-        notes: activity.notes,
-        createdAt: activity.created_at,
-        updatedAt: activity.updated_at,
-        createdBy: activity.created_at || 'system' // Use created_at as fallback since created_by doesn't exist
+        notes: activity.notes || undefined,
+        createdAt: activity.created_at || new Date().toISOString(),
+        updatedAt: activity.updated_at || new Date().toISOString(),
+        createdBy: 'system' // Default value since created_by doesn't exist in database
       }))
     } catch (error) {
       console.error('Error loading activities for cycle:', error)

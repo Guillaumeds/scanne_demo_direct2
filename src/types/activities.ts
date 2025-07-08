@@ -34,6 +34,10 @@ export interface BlocActivity {
   cropCycleId: string
   cropCycleType: 'plantation' | 'ratoon'
 
+  // UUIDEntity properties
+  isNew?: boolean
+  isDirty?: boolean
+
   // Scheduling
   startDate: string
   endDate: string

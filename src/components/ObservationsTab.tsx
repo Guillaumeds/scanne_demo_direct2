@@ -414,8 +414,8 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-blue-800">SC Yield/ha</span>
                   <span className="text-sm font-bold text-blue-900">
-                    {cropCycleTotals?.sugarcaneYieldTonnesPerHectare > 0
-                      ? `${cropCycleTotals.sugarcaneYieldTonnesPerHectare.toFixed(1)} t`
+                    {(cropCycleTotals?.sugarcaneYieldTonnesPerHectare || 0) > 0
+                      ? `${cropCycleTotals?.sugarcaneYieldTonnesPerHectare?.toFixed(1) || '0'} t`
                       : '0 t'}
                   </span>
                 </div>

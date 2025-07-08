@@ -86,7 +86,7 @@ export class ObservationService {
       }
 
       // Call atomic database function
-      const { data, error } = await supabase.rpc('save_observation_with_totals', {
+      const { data, error } = await supabase.rpc('save_observation_with_totals' as any, {
         p_observation_data: observationData
       })
 
@@ -95,15 +95,19 @@ export class ObservationService {
         throw new Error(`Failed to create observation: ${error.message}`)
       }
 
-      if (!data || data.length === 0) {
+      if (!data || (data as any).length === 0) {
         throw new Error('No data returned from observation creation')
       }
 
-      const result = data[0]
+      const result = (data as any)[0]
       console.log('✅ Observation created with totals:', result)
 
       // Return the created observation (fetch fresh data)
-      return await this.getObservationById(result.observation_id)
+      const savedObservation = await this.getObservationById(result.observation_id)
+      if (!savedObservation) {
+        throw new Error('Failed to retrieve saved observation')
+      }
+      return savedObservation
     } catch (error) {
       console.error('Error creating observation:', error)
       throw error
@@ -147,7 +151,7 @@ export class ObservationService {
       console.log('💾 Observation data for atomic update:', observationData)
 
       // Call atomic database function
-      const { data, error } = await supabase.rpc('save_observation_with_totals', {
+      const { data, error } = await supabase.rpc('save_observation_with_totals' as any, {
         p_observation_data: observationData
       })
 

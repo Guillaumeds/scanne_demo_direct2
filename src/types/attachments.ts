@@ -29,6 +29,10 @@ export interface BlocAttachment {
   cropCycleId: string
   cropCycleType: 'plantation' | 'ratoon'
 
+  // UUIDEntity properties
+  isNew?: boolean
+  isDirty?: boolean
+
   // File metadata
   mimeType: string
   extension: string

@@ -1605,18 +1605,24 @@ export default function DrawingManager({
 
       // Find the existing area ID from the layer map
       let existingAreaId = ''
-      for (const [id, layer] of layerMapRef.current.entries()) {
+      for (const [id, layer] of Array.from(layerMapRef.current.entries())) {
         if (layer === polygon) {
           existingAreaId = id
           break
         }
       }
 
+      const now = new Date().toISOString()
       const updatedArea: DrawnArea = {
-        id: existingAreaId,
+        uuid: existingAreaId,
+        localId: `Bloc ${existingAreaId}`,
         type: 'polygon',
         coordinates,
-        area
+        area,
+        isSaved: true,
+        isDirty: true,
+        createdAt: now,
+        updatedAt: now
       }
 
       onAreaUpdated?.(updatedArea)

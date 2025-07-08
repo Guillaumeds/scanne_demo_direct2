@@ -4,7 +4,7 @@
 /**
  * Parse CSV field data into FieldData objects
  */
-export function parseFieldCSV(csvText: string): FieldData[] {
+export function parseFieldCSV(csvText: string): any[] {
   const lines = csvText.trim().split('\n')
   const headers = lines[0].split(',')
   
@@ -41,7 +41,7 @@ export function parseFieldCSV(csvText: string): FieldData[] {
       }
     })
     
-    return field as FieldData
+    return field as any
   })
 }
 
@@ -94,7 +94,7 @@ function calculatePolygonArea(coordinates: [number, number][]): number {
 /**
  * Convert GeoJSON feature to FieldData
  */
-function convertGeoJSONToFieldData(feature: GeoJSONFeature): FieldData {
+function convertGeoJSONToFieldData(feature: any): any {
   const coordinates = feature.geometry.coordinates[0] // Get outer ring of polygon
   const area = calculatePolygonArea(coordinates)
 
@@ -112,7 +112,7 @@ function convertGeoJSONToFieldData(feature: GeoJSONFeature): FieldData {
 /**
  * Load field data from GeoJSON file
  */
-export async function loadFieldData(geoJsonPath: string = '/estate_fields.geojson'): Promise<FieldData[]> {
+export async function loadFieldData(geoJsonPath: string = '/estate_fields.geojson'): Promise<any[]> {
   try {
     console.log('Loading field data from:', geoJsonPath)
     const response = await fetch(geoJsonPath)
@@ -120,7 +120,7 @@ export async function loadFieldData(geoJsonPath: string = '/estate_fields.geojso
       throw new Error(`Failed to load GeoJSON: ${response.statusText}`)
     }
 
-    const geoJsonData: GeoJSONFeatureCollection = await response.json()
+    const geoJsonData: any = await response.json()
     console.log('Loaded GeoJSON with', geoJsonData.features.length, 'features')
 
     const fieldData = geoJsonData.features.map(convertGeoJSONToFieldData)
@@ -136,7 +136,7 @@ export async function loadFieldData(geoJsonPath: string = '/estate_fields.geojso
 /**
  * Load field data from CSV file (legacy function for backward compatibility)
  */
-export async function loadFieldDataFromCSV(csvPath: string = '/sample-fields.csv'): Promise<FieldData[]> {
+export async function loadFieldDataFromCSV(csvPath: string = '/sample-fields.csv'): Promise<any[]> {
   try {
     const response = await fetch(csvPath)
     if (!response.ok) {

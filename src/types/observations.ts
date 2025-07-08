@@ -42,6 +42,10 @@ export interface BlocObservation {
   cropCycleId: string
   cropCycleType: 'plantation' | 'ratoon'
 
+  // UUIDEntity properties
+  isNew?: boolean
+  isDirty?: boolean
+
   // Scheduling
   observationDate: string
   actualDate?: string
@@ -367,8 +371,8 @@ export const validateObservationForCycleClosure = (
 
       // Revenue validation (more flexible - check if any revenue data exists)
       const hasRevenue = sugarcaneData?.sugarcaneRevenue > 0 ||
-                        sugarcaneData?.totalRevenue > 0 ||
-                        sugarcaneData?.pricePerTonne > 0
+                        (sugarcaneData?.totalRevenue || 0) > 0 ||
+                        (sugarcaneData?.pricePerTonne || 0) > 0
 
       if (!hasRevenue) {
         errors.push('Revenue data is required (price per tonne or total revenue)')

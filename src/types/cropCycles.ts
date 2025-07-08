@@ -147,6 +147,10 @@ export interface CropCycle {
   updatedAt: string
   lastUpdated?: string        // Alternative field name for updatedAt
   createdBy: string
+
+  // UUIDEntity properties
+  isNew?: boolean
+  isDirty?: boolean
 }
 
 // Validation requirements for cycle closure

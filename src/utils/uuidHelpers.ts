@@ -11,8 +11,8 @@ import { CropCycle } from '@/types/cropCycles'
 // Type for any entity with UUID
 export type UUIDEntity = {
   uuid?: string
-  isNew: boolean
-  isDirty: boolean
+  isNew?: boolean
+  isDirty?: boolean
 }
 
 /**
@@ -33,7 +33,7 @@ export function isNew(entity: UUIDEntity): boolean {
  * Check if an entity has unsaved changes
  */
 export function isDirty(entity: UUIDEntity): boolean {
-  return entity.isDirty
+  return entity.isDirty || false
 }
 
 /**
@@ -139,7 +139,7 @@ export const ObservationHelpers = {
    * Check if observation affects yield calculations
    */
   affectsYield: (observation: BlocObservation): boolean => {
-    return observation.category === 'yield' && isSaved(observation)
+    return (observation.category === 'sugarcane-yield-quality' || observation.category === 'intercrop-yield-quality') && isSaved(observation)
   }
 }
 

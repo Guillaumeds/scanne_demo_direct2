@@ -114,7 +114,7 @@ export class BlocService {
   /**
    * Get all blocs from database with WKT coordinates
    */
-  static async getAllBlocs(): Promise<Bloc[]> {
+  static async getAllBlocs(): Promise<any[]> {
     try {
       console.log('🔍 Fetching blocs from database...')
 
@@ -135,30 +135,10 @@ export class BlocService {
       // Transform database records to DrawnArea format with new naming convention
       console.log('🔄 Raw database data:', data)
 
-      const transformedBlocs = (data || []).map((dbRecord: any, index: number) => {
-        console.log('🔄 Transforming record:', {
-          id: dbRecord.id,
-          name: dbRecord.name,
-          coordinates_wkt: dbRecord.coordinates_wkt,
-          area_hectares: dbRecord.area_hectares,
-          allFields: Object.keys(dbRecord)
-        })
-        const transformed = this.transformDbToDrawnArea(dbRecord, index)
-        console.log('✅ Transformed to:', {
-          localId: transformed.localId,
-          uuid: transformed.uuid,
-          name: transformed.name,
-          coordinates: transformed.coordinates?.length,
-          area: transformed.area,
-          isSaved: transformed.isSaved,
-          getEntityKey: DrawnAreaUtils.getEntityKey(transformed)
-        })
-        return transformed
-      })
+      // Return raw database objects - transformation happens in calling code
+      console.log('🔄 Returning raw blocs:', data.length, 'blocs')
 
-      console.log('🔄 Final transformed blocs:', transformedBlocs.length, 'blocs')
-
-      return transformedBlocs
+      return data
     } catch (error) {
       console.error('Failed to fetch blocs:', error)
       return []
@@ -215,7 +195,6 @@ export class BlocService {
       }
 
       return { ...blocData, crop_cycles: cropCycles || [] }
-      return data
     } catch (error) {
       console.error('Failed to fetch bloc with crop cycle:', error)
       throw error

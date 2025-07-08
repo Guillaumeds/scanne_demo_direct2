@@ -50,8 +50,7 @@ export class DrawnAreaUtils {
       isSaved: false,
       isDirty: true,
       createdAt: now,
-      updatedAt: now,
-      get id() { return this.uuid || this.localId }
+      updatedAt: now
     }
   }
   
