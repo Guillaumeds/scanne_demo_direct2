@@ -78,7 +78,7 @@ export class ObservationService {
         observation_date: observation.observationDate,
         number_of_samples: observation.numberOfSamples,
         number_of_plants: observation.numberOfPlants,
-        observation_data: observation.observationData || {},
+        observation_data: observation.data || {},
         yield_tons_ha: observation.yieldTonsHa,
         area_hectares: observation.areaHectares,
         total_yield_tons: observation.totalYieldTons,

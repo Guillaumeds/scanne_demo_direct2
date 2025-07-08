@@ -73,13 +73,13 @@ export class FrontendCalculationService {
       console.log(`   Products: ${activity.products?.length || 0}, Resources: ${activity.resources?.length || 0}`)
       // Calculate estimated cost from products and resources
       const productCosts = (activity.products || []).reduce((sum, product) => {
-        console.log(`     Product: ${product.name || product.productName || 'UNNAMED'} - Est: ${product.estimatedCost || 0}`)
+        console.log(`     Product: ${product.productName || 'UNNAMED'} - Est: ${product.estimatedCost || 0}`)
         console.log(`     Product object:`, product)
         return sum + (product.estimatedCost || 0)
       }, 0)
 
       const resourceCosts = (activity.resources || []).reduce((sum, resource) => {
-        console.log(`     Resource: ${resource.name} - Est: ${resource.estimatedCost || 0}`)
+        console.log(`     Resource: ${resource.resourceName} - Est: ${resource.estimatedCost || 0}`)
         return sum + (resource.estimatedCost || 0)
       }, 0)
 
@@ -89,13 +89,13 @@ export class FrontendCalculationService {
       // Calculate actual cost (use actual if available, otherwise estimated)
       const actualProductCosts = (activity.products || []).reduce((sum, product) => {
         const cost = product.actualCost || product.estimatedCost || 0
-        console.log(`     Product: ${product.name || product.productName || 'UNNAMED'} - Actual: ${cost}`)
+        console.log(`     Product: ${product.productName || 'UNNAMED'} - Actual: ${cost}`)
         return sum + cost
       }, 0)
 
       const actualResourceCosts = (activity.resources || []).reduce((sum, resource) => {
         const cost = resource.actualCost || resource.estimatedCost || 0
-        console.log(`     Resource: ${resource.name} - Actual: ${cost}`)
+        console.log(`     Resource: ${resource.resourceName} - Actual: ${cost}`)
         return sum + cost
       }, 0)
 
@@ -140,20 +140,20 @@ export class FrontendCalculationService {
       const obsData = observation.data || {}
       
       // Sugarcane revenue and yield
-      if (observation.category === 'sugarcane-yield-quality' || obsData.sugarcaneRevenue) {
-        const revenue = obsData.sugarcaneRevenue || 0
+      if (observation.category === 'sugarcane-yield-quality') {
+        const revenue = observation.sugarcaneRevenue || 0
         sugarcaneRevenue += revenue
         totalRevenue += revenue
-        
+
         if (observation.yieldTonsHa) {
           sugarcaneYieldSum += observation.yieldTonsHa
           sugarcaneObsCount++
         }
       }
-      
+
       // Intercrop revenue and yield
-      if (observation.category === 'intercrop-yield-quality' || obsData.intercropRevenue) {
-        const revenue = obsData.intercropRevenue || 0
+      if (observation.category === 'intercrop-yield-quality') {
+        const revenue = observation.intercropRevenue || 0
         intercropRevenue += revenue
         totalRevenue += revenue
         

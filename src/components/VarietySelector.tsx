@@ -280,7 +280,7 @@ export default function VarietySelector({ onSelect, onClose, selectedVariety, va
                 <div className="text-center max-w-md">
                   <div className="text-red-500 text-6xl mb-4">⚠️</div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Varieties</h3>
-                  <p className="text-gray-600 mb-4">{typeof error === 'string' ? error : error?.message || 'Unknown error'}</p>
+                  <p className="text-gray-600 mb-4">{typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}</p>
                   <button
                     type="button"
                     onClick={() => window.location.reload()}

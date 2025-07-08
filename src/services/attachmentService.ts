@@ -186,7 +186,7 @@ export class AttachmentService {
       // Get attachment to find crop cycle ID and file path before deletion
       const attachment = await this.getAttachmentById(attachmentId)
       const cropCycleId = attachment?.cropCycleId
-      const filePath = attachment?.filePath
+      const filePath = attachment?.url
 
       // Delete file from storage if exists
       if (filePath) {

@@ -323,14 +323,14 @@ export class LocalStorageService {
     } catch (error) {
       console.log(`🚨 Error in ${operationName}:`, {
         error,
-        errorMessage: error?.message,
-        errorCode: error?.code,
+        errorMessage: (error as any)?.message,
+        errorCode: (error as any)?.code,
         isUuidMismatch: this.isUuidMismatchError(error)
       })
 
       if (this.isUuidMismatchError(error)) {
         console.log(`🔄 UUID mismatch detected in ${operationName}, refreshing cache and retrying...`)
-        console.log('🚨 Original error:', error.message)
+        console.log('🚨 Original error:', (error as any)?.message)
 
         // Refresh cache
         await this.refreshAllData()
@@ -347,7 +347,7 @@ export class LocalStorageService {
             originalError: error,
             operationName
           })
-          throw new Error(`${operationName} failed: ${retryError.message || 'Unknown error after auto-recovery'}`)
+          throw new Error(`${operationName} failed: ${(retryError as any)?.message || 'Unknown error after auto-recovery'}`)
         }
       }
 

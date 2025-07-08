@@ -115,6 +115,17 @@ export interface CropCycle {
   estimatedTotalCost?: number
   actualTotalCost?: number
   
+  // Expected yields (from database schema)
+  sugarcaneExpectedYieldTonnesPerHectare?: number // Maps to sugarcane_expected_yield_tons_ha
+  intercropExpectedYieldTonnesPerHectare?: number // Maps to intercrop_expected_yield_tons_ha
+  sugarcaneActualYieldTonnesPerHectare?: number   // Maps to sugarcane_actual_yield_tons_ha
+  sugarcaneActualYieldTonsHa?: number             // Alternative name for compatibility
+  intercropActualYieldTonnesPerHectare?: number   // Maps to intercrop_actual_yield_tons_ha
+
+  // Planting dates (from database schema)
+  sugarcanePlantingDate?: string                  // Maps to sugarcane_planting_date
+  intercropPlantingDate?: string                  // Maps to intercrop_planting_date
+
   // Yield summary (calculated on closure)
   sugarcaneYieldTons?: number
   sugarcaneYieldTonsPerHa?: number

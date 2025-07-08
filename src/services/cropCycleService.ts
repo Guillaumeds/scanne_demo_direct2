@@ -457,6 +457,9 @@ export class CropCycleService {
 
     if (allCropCycles) {
       allCropCycles.forEach(cycle => {
+        // Skip cycles without bloc_id
+        if (!cycle.bloc_id) return
+
         const existing = latestCyclesMap.get(cycle.bloc_id)
         if (!existing || cycle.cycle_number > existing.cycle_number) {
           latestCyclesMap.set(cycle.bloc_id, cycle)
@@ -664,7 +667,7 @@ export class CropCycleService {
       sugarcaneVarietyName,
       intercropVarietyId: dbRecord.intercrop_variety_id,
       intercropVarietyName,
-      sugarcaneExpectedYieldTonnesPerHectare: dbRecord.sugarcane_expected_yield_tons_ha,
+      expectedYield: dbRecord.sugarcane_expected_yield_tons_ha || 0,
       intercropExpectedYieldTonnesPerHectare: dbRecord.intercrop_expected_yield_tons_ha,
       sugarcaneActualYieldTonnesPerHectare: dbRecord.sugarcane_actual_yield_tons_ha,
       intercropActualYieldTonnesPerHectare: dbRecord.intercrop_actual_yield_tons_ha,
@@ -811,20 +814,23 @@ export class CropCycleService {
       return (data || []).map(activity => ({
         id: activity.id,
         name: activity.name,
-        description: activity.description,
+        description: activity.description || '',
         phase: activity.phase,
         status: activity.status,
         cropCycleId: activity.crop_cycle_id,
+        cropCycleType: 'plantation' as 'plantation' | 'ratoon', // Default, could be enhanced based on cycle data
         startDate: activity.start_date,
         endDate: activity.end_date,
-        actualDate: activity.actual_date,
-        durationHours: activity.duration_hours,
-        estimatedTotalCost: activity.estimated_total_cost || 0,
-        actualTotalCost: activity.actual_total_cost || 0,
+        actualDate: activity.activity_date, // Correct database column name
+        duration: activity.duration || 0, // Correct property name
+        products: [], // Will be loaded separately if needed
+        resources: [], // Will be loaded separately if needed
+        totalEstimatedCost: activity.estimated_total_cost || 0, // Correct property name
+        totalActualCost: (activity.actual_total_cost && activity.actual_total_cost > 0) ? activity.actual_total_cost : undefined,
         notes: activity.notes,
         createdAt: activity.created_at,
         updatedAt: activity.updated_at,
-        createdBy: activity.created_by || 'system'
+        createdBy: activity.created_at || 'system' // Use created_at as fallback since created_by doesn't exist
       }))
     } catch (error) {
       console.error('Error loading activities for cycle:', error)

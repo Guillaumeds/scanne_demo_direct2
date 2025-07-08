@@ -664,6 +664,17 @@ export class ActivityService {
     const products = await this.getActivityProducts(dbRecord.id)
     const resources = await this.getActivityResources(dbRecord.id)
 
+    // Calculate total costs from products and resources
+    const totalEstimatedCost = [
+      ...products.map(p => p.estimatedCost || 0),
+      ...resources.map(r => r.estimatedCost || 0)
+    ].reduce((sum, cost) => sum + cost, 0)
+
+    const totalActualCost = [
+      ...products.map(p => p.actualCost || 0),
+      ...resources.map(r => r.actualCost || 0)
+    ].reduce((sum, cost) => sum + cost, 0)
+
     const activity = {
       id: dbRecord.id,
       name: dbRecord.name,
@@ -671,13 +682,15 @@ export class ActivityService {
       phase: dbRecord.phase,
       status: dbRecord.status,
       cropCycleId: dbRecord.crop_cycle_id,
-      cropCycleType: 'plantation', // Default, could be enhanced
+      cropCycleType: 'plantation' as 'plantation' | 'ratoon', // Default, could be enhanced
       startDate: dbRecord.start_date,
       endDate: dbRecord.end_date,
       actualDate: dbRecord.actual_date,
       duration: dbRecord.duration || 0,
       products,
       resources,
+      totalEstimatedCost,
+      totalActualCost: totalActualCost > 0 ? totalActualCost : undefined,
       notes: dbRecord.notes,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,
@@ -832,9 +845,9 @@ export class ActivityService {
     if (localUpdates.startDate) dbUpdates.start_date = localUpdates.startDate
     if (localUpdates.endDate) dbUpdates.end_date = localUpdates.endDate
     if (localUpdates.actualDate) dbUpdates.actual_date = localUpdates.actualDate
-    if (localUpdates.durationHours) dbUpdates.duration_hours = localUpdates.durationHours
-    if (localUpdates.estimatedTotalCost !== undefined) dbUpdates.estimated_total_cost = localUpdates.estimatedTotalCost
-    if (localUpdates.actualTotalCost !== undefined) dbUpdates.actual_total_cost = localUpdates.actualTotalCost
+    if (localUpdates.duration) dbUpdates.duration = localUpdates.duration
+    if (localUpdates.totalEstimatedCost !== undefined) dbUpdates.estimated_total_cost = localUpdates.totalEstimatedCost
+    if (localUpdates.totalActualCost !== undefined) dbUpdates.actual_total_cost = localUpdates.totalActualCost
     if (localUpdates.notes) dbUpdates.notes = localUpdates.notes
 
     return dbUpdates

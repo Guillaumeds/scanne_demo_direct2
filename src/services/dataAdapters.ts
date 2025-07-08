@@ -68,10 +68,10 @@ export const transformDbProduct = (dbProduct: DbProduct): Product => {
     category: dbProduct.category as ProductCategory,
     description: dbProduct.description || undefined,
     unit: dbProduct.unit || '',
-    defaultRate: dbProduct.recommended_rate_per_ha || undefined,
+    defaultRate: (dbProduct as any).recommended_rate_per_ha || undefined,
     cost: dbProduct.cost_per_unit || undefined,
-    brand: dbProduct.brand || undefined,
-    composition: dbProduct.composition || undefined
+    brand: (dbProduct as any).brand || undefined,
+    composition: (dbProduct as any).composition || undefined
   }
 }
 
@@ -80,7 +80,7 @@ export const transformDbProduct = (dbProduct: DbProduct): Product => {
  */
 export const transformDbResource = (dbResource: DbResource): Resource => {
   // Determine cost per unit - prefer cost_per_unit, fallback to cost_per_hour
-  const costPerUnit = dbResource.cost_per_unit || dbResource.cost_per_hour || undefined
+  const costPerUnit = dbResource.cost_per_unit || (dbResource as any).cost_per_hour || undefined
 
   return {
     id: dbResource.resource_id,
@@ -90,8 +90,8 @@ export const transformDbResource = (dbResource: DbResource): Resource => {
     unit: dbResource.unit || '',
     defaultRate: 1, // Default rate for resources (hours/units typically)
     costPerUnit,
-    skillLevel: dbResource.skill_level || undefined,
-    overtimeMultiplier: dbResource.overtime_multiplier || undefined
+    skillLevel: (dbResource as any).skill_level || undefined,
+    overtimeMultiplier: (dbResource as any).overtime_multiplier || undefined
   }
 }
 
