@@ -7,6 +7,8 @@ import { useSugarcaneVarieties, useIntercropVarieties } from '@/hooks/useLocalSt
 import { CropCycleValidationService } from '@/services/cropCycleValidationService'
 import { CropCycleService } from '@/services/cropCycleService'
 import { CropCycleCalculationService } from '@/services/cropCycleCalculationService'
+import { ActivityService } from '@/services/activityService'
+import { ObservationService } from '@/services/observationService'
 
 import { useCropCycle } from '@/contexts/CropCycleContext'
 import VarietySelector from './VarietySelector'
@@ -47,6 +49,8 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     const [isValidating, setIsValidating] = useState(false)
   const [isUpdatingCycle, setIsUpdatingCycle] = useState(false)
     const [isCreatingCycle, setIsCreatingCycle] = useState(false)
+    const [isRecalculating, setIsRecalculating] = useState(false)
+    const [isLoadingData, setIsLoadingData] = useState(false)
 
     // Delete/Retire confirmation states
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -80,133 +84,187 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
   // No need to load crop cycles - context already provides them!
 
-  // Extract metrics from allCycles data (no API calls needed!)
-  const loadCycleMetrics = () => {
+  // Calculate metrics from actual activities and observations data
+  const loadCycleMetrics = async () => {
+    if (allCycles.length === 0) {
+      setCycleMetrics({})
+      return
+    }
+
+    setIsLoadingData(true)
     const metricsData: {[cycleId: string]: any} = {}
 
-    // Use totals already included in allCycles - no database calls needed!
+    // Calculate totals from actual activities and observations data
     for (const cycle of allCycles) {
       try {
-        // Check for missing data and show appropriate messages
-        const hasEstCost = cycle.estimatedTotalCost && cycle.estimatedTotalCost > 0
-        const hasActCost = cycle.actualTotalCost && cycle.actualTotalCost > 0
-        const hasSugarcaneRevenue = cycle.sugarcaneRevenue && cycle.sugarcaneRevenue > 0
-        const hasTotalRevenue = cycle.totalRevenue && cycle.totalRevenue > 0
+        // Get activities and observations for this cycle to calculate real totals
+        const activities = await ActivityService.getActivitiesForCycle(cycle.id)
+        const observations = await ObservationService.getObservationsForCycle(cycle.id)
 
-        // Calculate derived values from included totals
-        const netProfit = (cycle.totalRevenue || 0) - (cycle.actualTotalCost || 0)
-        const profitMargin = (cycle.totalRevenue || 0) > 0 ?
-          (netProfit / (cycle.totalRevenue || 1)) * 100 : 0
+        // Calculate actual costs from all activities
+        const estimatedCost = activities.reduce((total, activity) => {
+          const productCosts = (activity.products || []).reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
+          const resourceCosts = (activity.resources || []).reduce((sum, r) => sum + (r.estimatedCost || 0), 0)
+          return total + productCosts + resourceCosts
+        }, 0)
+
+        const actualCost = activities.reduce((total, activity) => {
+          const productCosts = (activity.products || []).reduce((sum, p) => sum + (p.actualCost || 0), 0)
+          const resourceCosts = (activity.resources || []).reduce((sum, r) => sum + (r.actualCost || 0), 0)
+          return total + productCosts + resourceCosts
+        }, 0)
+
+        // Calculate total yield from all sugarcane yield observations
+        const totalSugarcaneYield = observations
+          .filter(obs => obs.category === 'sugarcane-yield-quality')
+          .reduce((total, obs) => {
+            const yieldData = obs.data as any
+            return total + (yieldData?.yieldPerHectare || 0)
+          }, 0)
+
+        // Calculate total revenue from all observations
+        const sugarcaneRevenue = observations
+          .filter(obs => obs.category === 'sugarcane-yield-quality')
+          .reduce((total, obs) => {
+            // Check both the data field and the top-level revenue field
+            const yieldData = obs.data as any
+            const revenue = yieldData?.sugarcaneRevenue || obs.sugarcaneRevenue || 0
+            return total + revenue
+          }, 0)
+
+        const intercropRevenue = observations
+          .filter(obs => obs.category === 'intercrop-yield-quality')
+          .reduce((total, obs) => {
+            // Check both the data field and the top-level revenue field
+            const yieldData = obs.data as any
+            const revenue = yieldData?.intercropRevenue || obs.intercropRevenue || 0
+            return total + revenue
+          }, 0)
+
+        const totalRevenue = sugarcaneRevenue + intercropRevenue
+
+        // Check for missing data (null/undefined is missing, 0 is valid)
+        const hasEstCost = estimatedCost !== null && estimatedCost !== undefined
+        const hasActCost = actualCost !== null && actualCost !== undefined
+        const hasSugarcaneRevenue = sugarcaneRevenue > 0
+        const hasTotalRevenue = totalRevenue > 0
+        const hasYieldData = totalSugarcaneYield > 0
+
+        // Calculate derived values
+        const netProfit = totalRevenue - actualCost
+        const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+
+        // Profit/margin logic: Show 'Missing cost/revenue' only if there are NO activities with actual costs
+        // AND NO observations with actual revenue and sugarcane profit. Otherwise show actual values (including 0).
+        const hasAnyActualCosts = activities.some(activity =>
+          (activity.products || []).some(p => p.actualCost !== null && p.actualCost !== undefined) ||
+          (activity.resources || []).some(r => r.actualCost !== null && r.actualCost !== undefined)
+        )
+        const hasAnyObservationRevenue = observations.some(obs => {
+          if (obs.category === 'sugarcane-yield-quality') {
+            const yieldData = obs.data as any
+            const revenue = yieldData?.sugarcaneRevenue || obs.sugarcaneRevenue || 0
+            return (yieldData?.yieldPerHectare || 0) > 0 || revenue > 0
+          }
+          if (obs.category === 'intercrop-yield-quality') {
+            const yieldData = obs.data as any
+            const revenue = yieldData?.intercropRevenue || obs.intercropRevenue || 0
+            return (yieldData?.yieldPerHectare || 0) > 0 || revenue > 0
+          }
+          return false
+        })
+
+        const canCalculateProfit = hasAnyActualCosts || hasAnyObservationRevenue
 
         metricsData[cycle.id] = {
           costs: {
-            estimated: hasEstCost ? `Rs ${cycle.estimatedTotalCost?.toLocaleString() || '0'}` : 'No activity cost',
-            actual: hasActCost ? `Rs ${cycle.actualTotalCost?.toLocaleString() || '0'}` : 'No activity cost'
+            estimated: hasEstCost ? `Rs ${estimatedCost.toLocaleString()}` : 'No activity cost',
+            actual: hasActCost ? `Rs ${actualCost.toLocaleString()}` : 'No activity cost'
           },
           yield: {
-            sugarcane: `${(cycle.sugarcaneYieldTonsPerHa || 0).toFixed(1)} t/ha`,
-            intercrop: `${(cycle.intercropYieldTons || 0).toFixed(1)} t/ha`
+            sugarcane: hasYieldData ? `${totalSugarcaneYield.toFixed(1)} t/ha` : '0.0 t/ha',
+            intercrop: '0.0 t/ha' // TODO: Calculate intercrop yield when available
           },
           revenue: {
-            total: hasTotalRevenue ? `Rs ${cycle.totalRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
-            sugarcane: hasSugarcaneRevenue ? `Rs ${cycle.sugarcaneRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
-            intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
+            total: hasTotalRevenue ? `Rs ${totalRevenue.toLocaleString()}` : 'No observation revenue',
+            sugarcane: hasSugarcaneRevenue ? `Rs ${sugarcaneRevenue.toLocaleString()}` : 'No observation revenue',
+            intercrop: `Rs ${intercropRevenue.toLocaleString()}`
           },
           profit: {
-            total: (hasActCost && hasSugarcaneRevenue) ? `Rs ${netProfit.toLocaleString()}` : 'Missing cost/revenue',
-            perHa: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}` : 'Missing cost/revenue',
-            margin: (hasActCost && hasSugarcaneRevenue) ? `${profitMargin.toFixed(1)}%` : 'Missing cost/revenue'
+            total: canCalculateProfit ? `Rs ${netProfit.toLocaleString()}` : 'Missing cost/revenue',
+            perHa: canCalculateProfit ? `Rs ${(netProfit / bloc.area).toLocaleString()}` : 'Missing cost/revenue',
+            margin: canCalculateProfit ? `${profitMargin.toFixed(1)}%` : 'Missing cost/revenue'
           }
         }
       } catch (error) {
         console.error(`Failed to process metrics for cycle ${cycle.id}:`, error)
         metricsData[cycle.id] = {
           costs: { estimated: 'N/A', actual: 'N/A' },
-          yield: { sugarcane: 'TBC', intercrop: 'N/A' },
+          yield: { sugarcane: '0.0 t/ha', intercrop: '0.0 t/ha' },
           revenue: { total: 'N/A', sugarcane: 'N/A', intercrop: 'N/A' },
-          profit: { total: 'TBC', perHa: 'TBC', margin: 'N/A' }
+          profit: { total: 'N/A', perHa: 'N/A', margin: 'N/A' }
         }
       }
     }
 
     setCycleMetrics(metricsData)
+    setIsLoadingData(false)
   }
 
-  // Load metrics when cycles change (only when needed - no API calls!)
+  // Load metrics when cycles change (calculate from activities and observations)
   useEffect(() => {
     if (allCycles.length > 0) {
       console.log('🔄 CropCycleGeneralInfo: allCycles changed, reloading metrics...')
-      loadCycleMetrics() // Now synchronous - no await needed!
-      console.log('✅ CropCycleGeneralInfo: metrics reloaded')
+      loadCycleMetrics().then(() => {
+        console.log('✅ CropCycleGeneralInfo: metrics reloaded')
+      }).catch(error => {
+        console.error('❌ Error loading cycle metrics:', error)
+      })
     }
   }, [allCycles])
 
-  // Load metrics when cycles change (React Query invalidation will trigger this)
+  // Listen for crop cycle totals updates from activities and observations
   useEffect(() => {
-    console.log('🔄 CropCycleGeneralInfo: useEffect triggered, allCycles.length:', allCycles.length)
-    console.log('🔍 CropCycleGeneralInfo: allCycles data:', allCycles.map(c => ({
-      id: c.id.substring(0, 8) + '...',
-      estimatedCost: c.estimatedTotalCost,
-      actualCost: c.actualTotalCost,
-      lastUpdated: c.lastUpdated
-    })))
+    const handleTotalsUpdate = (event: CustomEvent) => {
+      const { cropCycleId, totals } = event.detail
+      console.log('🔄 CropCycleGeneralInfo: Received totals update for cycle:', cropCycleId)
 
-    // Compare with what we just calculated and saved
-    console.log('💰 Expected totals from last calculation: estimated=6860, actual=1')
-    console.log('📊 Actual totals from DB:', allCycles.map(c => `estimated=${c.estimatedTotalCost}, actual=${c.actualTotalCost}`))
+      // Show recalculating state briefly
+      setIsRecalculating(true)
 
-    if (allCycles.length > 0) {
-      console.log('🔄 CropCycleGeneralInfo: Loading metrics from fresh DB data')
-
-      const metricsData: {[cycleId: string]: any} = {}
-
-      for (const cycle of allCycles) {
-        try {
-          // Check for missing data and show appropriate messages
-          const hasEstCost = cycle.estimatedTotalCost && cycle.estimatedTotalCost > 0
-          const hasActCost = cycle.actualTotalCost && cycle.actualTotalCost > 0
-          const hasSugarcaneRevenue = cycle.sugarcaneRevenue && cycle.sugarcaneRevenue > 0
-          const hasTotalRevenue = cycle.totalRevenue && cycle.totalRevenue > 0
-
-          metricsData[cycle.id] = {
-            costs: {
-              estimated: hasEstCost ? `Rs ${cycle.estimatedTotalCost?.toLocaleString() || '0'}` : 'No activity cost',
-              actual: hasActCost ? `Rs ${cycle.actualTotalCost?.toLocaleString() || '0'}` : 'No activity cost'
-            },
-            yield: {
-              sugarcane: `${(cycle.sugarcaneActualYieldTonsHa || 0).toFixed(1)} t/ha`,
-              intercrop: `0.0 t/ha`
-            },
-            revenue: {
-              total: hasTotalRevenue ? `Rs ${cycle.totalRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
-              sugarcane: hasSugarcaneRevenue ? `Rs ${cycle.sugarcaneRevenue?.toLocaleString() || '0'}` : 'No observation revenue',
-              intercrop: `Rs ${(cycle.intercropRevenue || 0).toLocaleString()}`
-            },
-            profit: {
-              total: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.netProfit || 0).toLocaleString()}` : 'Missing cost/revenue',
-              perHa: (hasActCost && hasSugarcaneRevenue) ? `Rs ${(cycle.profitPerHectare || 0).toLocaleString()}` : 'Missing cost/revenue',
-              margin: (hasActCost && hasSugarcaneRevenue) ? `${(cycle.profitMarginPercent || 0).toFixed(1)}%` : 'Missing cost/revenue'
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to process metrics for cycle ${cycle.id}:`, error)
-          metricsData[cycle.id] = {
-            costs: { estimated: 'N/A', actual: 'N/A' },
-            yield: { sugarcane: 'TBC', intercrop: 'N/A' },
-            revenue: { total: 'N/A', sugarcane: 'N/A', intercrop: 'N/A' },
-            profit: { total: 'TBC', perHa: 'TBC', margin: 'N/A' }
-          }
-        }
-      }
-
-      setCycleMetrics(metricsData)
-      console.log('✅ CropCycleGeneralInfo: Metrics loaded from DB')
+      // Reload metrics for the updated cycle
+      loadCycleMetrics().then(() => {
+        console.log('✅ CropCycleGeneralInfo: metrics reloaded after totals update')
+        setIsRecalculating(false)
+      }).catch(error => {
+        console.error('❌ Error reloading metrics after totals update:', error)
+        setIsRecalculating(false)
+      })
     }
-  }, [allCycles]) // Re-run when cycles change (from React Query invalidation)
+
+    // Listen for the custom event dispatched by ActivityService
+    window.addEventListener('cropCycleTotalsCalculated', handleTotalsUpdate as EventListener)
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('cropCycleTotalsCalculated', handleTotalsUpdate as EventListener)
+    }
+  }, [])  // Empty dependency array - this effect should only run once
+
+
 
   // Helper functions
   const canCloseCycle = () => {
     return activeCycle && activeCycle.status === 'active'
+  }
+
+  // Calculate if cycle can be closed based on financial data availability
+  const canCloseCycleFinancially = (cycleId: string) => {
+    if (!cycleMetrics[cycleId]) return false
+
+    const metrics = cycleMetrics[cycleId]
+    // Same logic as profit calculation - if we can calculate profit, we can close cycle
+    return metrics.profit.total !== 'Missing cost/revenue'
   }
 
   const handleCloseCycle = async () => {
@@ -230,158 +288,119 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     }
   }
 
-  // If this is a side panel, show active cycle details and metrics
+  // If this is a side panel, show simplified current crop info
   if (sidePanel) {
     return (
       <div className="space-y-4">
-        {/* Active Cycle Details */}
-        {activeCycle && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-green-900">
-                Active {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`} Cycle
-              </h4>
-              {activeCycle.status === 'active' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditCycleData({
-                      plantingDate: activeCycle.plantingDate || '',
-                      plannedHarvestDate: activeCycle.plannedHarvestDate,
-                      expectedYield: activeCycle.expectedYield,
-                      sugarcaneVarietyId: activeCycle.sugarcaneVarietyId,
-                      sugarcaneVarietyName: activeCycle.sugarcaneVarietyName,
-                      intercropVarietyId: activeCycle.intercropVarietyId || '',
-                      intercropVarietyName: activeCycle.intercropVarietyName || ''
-                    })
-                    setShowEditCycle(true)
-                  }}
-                  className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
-                  title="Edit cycle details"
-                >
-                  Edit
-                </button>
-              )}
+        <h4 className="text-lg font-semibold text-gray-900">Current Crop</h4>
+
+        {/* Loading State */}
+        {(isLoadingData || isRecalculating) && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex flex-col items-center justify-center py-6">
+              <div className="relative">
+                <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+              </div>
+              <h5 className="font-medium text-gray-900 mt-3 mb-1">
+                {isLoadingData ? 'Loading Data' : 'Recalculating Values'}
+              </h5>
+              <p className="text-sm text-gray-600 text-center">
+                {isLoadingData ? 'Fetching crop cycle data...' : 'Updating calculations...'}
+              </p>
             </div>
-            <div className="grid grid-cols-1 gap-2 text-sm">
+          </div>
+        )}
+
+        {/* Active Cycle Only - Crop Performance */}
+        {!isLoadingData && !isRecalculating && activeCycle && cycleMetrics[activeCycle.id] && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h5 className="font-medium text-gray-900 mb-3">Crop Performance</h5>
+            <div className="space-y-2 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-gray-600">Est. Cost:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].costs.estimated}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Actual Cost:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].costs.actual}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-gray-600">Revenue:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].revenue.total}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Profit:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].profit.total}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-gray-600">Yield:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].yield.sugarcane}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Margin:</span>
+                  <div className="font-medium">{cycleMetrics[activeCycle.id].profit.margin}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Active Cycle Only - Crop Information */}
+        {!isLoadingData && !isRecalculating && activeCycle && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h5 className="font-medium text-gray-900 mb-3">Crop Information</h5>
+            <div className="space-y-2 text-sm">
               <div>
-                <span className="text-green-700 font-medium">Sugarcane Variety:</span>
-                <p className="text-green-900">{activeCycle.sugarcaneVarietyName}</p>
+                <span className="text-gray-600">Type:</span>
+                <div className="font-medium">
+                  {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`}
+                </div>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Plant Date:</span>
-                <p className="text-green-900">
+                <span className="text-gray-600">Sugarcane Variety:</span>
+                <div className="font-medium">{activeCycle.sugarcaneVarietyName}</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Plant Date:</span>
+                <div className="font-medium">
                   {activeCycle.type === 'plantation'
                     ? (activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'TBC')
                     : (activeCycle.ratoonPlantingDate ? new Date(activeCycle.ratoonPlantingDate).toLocaleDateString() : 'TBC')
                   }
-                </p>
+                </div>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Planned Harvest:</span>
-                <p className="text-green-900">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</p>
+                <span className="text-gray-600">Planned Harvest:</span>
+                <div className="font-medium">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</div>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Intercrop:</span>
-                <p className="text-green-900">
+                <span className="text-gray-600">Intercrop:</span>
+                <div className="font-medium">
                   {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
                     ? 'None'
                     : activeCycle.intercropVarietyName}
-                </p>
+                </div>
               </div>
               <div>
-                <span className="text-green-700 font-medium">Expected Yield:</span>
-                <p className="text-green-900">{activeCycle.expectedYield} tons/ha</p>
-              </div>
-              <div>
-                <span className="text-green-700 font-medium">Cycle Duration:</span>
-                <p className="text-green-900">
-                  {activeCycle.plantingDate || activeCycle.ratoonPlantingDate ?
-                    `${Math.ceil((new Date(activeCycle.plannedHarvestDate).getTime() -
-                      new Date(activeCycle.plantingDate || activeCycle.ratoonPlantingDate!).getTime()) /
-                      (1000 * 60 * 60 * 24))} days` : 'N/A'}
-                </p>
+                <span className="text-gray-600">Expected Yield:</span>
+                <div className="font-medium">{activeCycle.expectedYield} tons/ha</div>
               </div>
             </div>
-
-            {canCloseCycle() && (
-              <div className="mt-3 pt-3 border-t border-green-200">
-                <button
-                  type="button"
-                  onClick={handleCloseCycle}
-                  disabled={isValidating}
-                  className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isValidating ? 'Validating...' : '✓ Close Cycle'}
-                </button>
-                <p className="text-xs text-green-700 mt-1 text-center">
-                  Requires: All activities actual costs and all yield observations revenue
-                </p>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Cycle Metrics */}
-        {allCycles.length === 0 ? (
+        {/* No active cycle message */}
+        {!activeCycle && (
           <div className="text-center text-gray-500 py-8">
-            <p>No crop cycles yet</p>
+            <p>No active crop cycle</p>
             <p className="text-sm">Create a cycle in the General tab</p>
           </div>
-        ) : (
-          allCycles.map(cycle => (
-            <div key={cycle.id} className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-900">
-                  {cycle.type === 'plantation' ? 'Plantation' : `Ratoon ${cycle.cycleNumber - 1}`}
-                </h4>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  cycle.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {cycle.status}
-                </span>
-              </div>
-
-              {cycleMetrics[cycle.id] && (
-                <div className="space-y-2 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600">Est. Cost:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].costs.estimated}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Actual Cost:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].costs.actual}</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600">Revenue:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].revenue.total}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Profit:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].profit.total}</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600">Yield:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].yield.sugarcane}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Margin:</span>
-                      <div className="font-medium">{cycleMetrics[cycle.id].profit.margin}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
         )}
       </div>
     )
@@ -676,8 +695,21 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         </p>
       </div>
 
+      {/* Loading State */}
+      {isLoadingData && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mt-4 mb-2">Loading Data</h3>
+          <p className="text-gray-600 text-center">
+            Fetching crop cycle information...
+          </p>
+        </div>
+      )}
+
       {/* Validation Errors */}
-      {validationErrors.length > 0 && (
+      {!isLoadingData && validationErrors.length > 0 && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center mb-2">
             <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -693,16 +725,133 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         </div>
       )}
 
-      {/* Active cycle details moved to persistent right panel */}
+      {/* Current Crop Information - Beautiful Boxes */}
+      {!isLoadingData && activeCycle && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Crop</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Financial Overview Box */}
+            {cycleMetrics[activeCycle.id] && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="bg-green-100 p-2 rounded-lg mr-3">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Crop Performance</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Est. Cost</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].costs.estimated}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Actual Cost</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].costs.actual}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Revenue</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].revenue.total}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Profit</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].profit.total}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Yield</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].yield.sugarcane}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <span className="text-sm text-gray-600">Margin</span>
+                    <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].profit.margin}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Crop Information Box */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Crop Information</h3>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Type</span>
+                  <div className="font-semibold text-gray-900">
+                    {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Sugarcane Variety</span>
+                  <div className="font-semibold text-gray-900">{activeCycle.sugarcaneVarietyName}</div>
+                </div>
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Plant Date</span>
+                  <div className="font-semibold text-gray-900">
+                    {activeCycle.type === 'plantation'
+                      ? (activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'TBC')
+                      : (activeCycle.ratoonPlantingDate ? new Date(activeCycle.ratoonPlantingDate).toLocaleDateString() : 'TBC')
+                    }
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Planned Harvest</span>
+                  <div className="font-semibold text-gray-900">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</div>
+                </div>
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Intercrop</span>
+                  <div className="font-semibold text-gray-900">
+                    {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
+                      ? 'None'
+                      : activeCycle.intercropVarietyName}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                  <span className="text-sm text-gray-600">Expected Yield</span>
+                  <div className="font-semibold text-gray-900">{activeCycle.expectedYield} tons/ha</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Close Cycle Button */}
+          {canCloseCycle() && (
+            <div className="flex justify-center mb-6">
+              <button
+                type="button"
+                onClick={handleCloseCycle}
+                disabled={isValidating || !canCloseCycleFinancially(activeCycle.id)}
+                className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
+                  canCloseCycleFinancially(activeCycle.id)
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isValidating ? 'Validating...' : '✓ Close Cycle'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Cycle Creation Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Cycle Information */}
-        <div className="space-y-6">
-          <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {allCycles.length === 0 ? 'Create Plantation Cycle' : `Create Next Ratoon Cycle (Ratoon ${allCycles.length})`}
-            </h3>
+      {!isLoadingData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Cycle Information */}
+          <div className="space-y-6">
+            <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                {allCycles.length === 0 ? 'Create Plantation Cycle' : `Create Next Ratoon Cycle (Ratoon ${allCycles.length})`}
+              </h3>
 
             {/* Sugarcane Variety Selection - Mandatory */}
             <div className="mb-4">
@@ -861,49 +1010,67 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                 <p className="text-sm">Close your first cycle to see history</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {allCycles
                   .filter(cycle => cycle.status === 'closed')
                   .sort((a, b) => new Date(b.actualHarvestDate || b.plannedHarvestDate).getTime() - new Date(a.actualHarvestDate || a.plannedHarvestDate).getTime())
                   .map((cycle) => (
                   <div
                     key={cycle.id}
-                    className="p-3 rounded-lg border border-gray-200"
+                    className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-300 rounded-xl p-6 shadow-sm"
                   >
-                    <div className="mb-2">
-                      <h4 className="font-medium text-gray-900">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-gray-900">
                         {cycle.type === 'plantation' ? 'Plantation' : `Ratoon ${cycle.cycleNumber - 1}`}
                       </h4>
+                      <span className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-full font-medium">
+                        Closed
+                      </span>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      {/* Show plantation date only for plantation cycles */}
-                      {cycle.type === 'plantation' && (
-                        <p>Planted: {cycle.plantingDate ? new Date(cycle.plantingDate).toLocaleDateString() : 'TBC'}</p>
-                      )}
+                    {/* Financial Overview for Closed Cycle */}
+                    {cycleMetrics[cycle.id] && (
+                      <div className="mb-4">
+                        <h5 className="font-medium text-gray-800 mb-3">Crop Performance</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <span className="text-xs text-gray-600">Actual Cost</span>
+                            <div className="font-semibold text-gray-900">{cycleMetrics[cycle.id].costs.actual}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <span className="text-xs text-gray-600">Revenue</span>
+                            <div className="font-semibold text-gray-900">{cycleMetrics[cycle.id].revenue.total}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <span className="text-xs text-gray-600">Profit</span>
+                            <div className="font-semibold text-gray-900">{cycleMetrics[cycle.id].profit.total}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <span className="text-xs text-gray-600">Yield</span>
+                            <div className="font-semibold text-gray-900">{cycleMetrics[cycle.id].yield.sugarcane}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                      {/* For closed cycles, show actual data */}
-                      {cycle.status === 'closed' ? (
-                        <>
-                          <p>Harvested: {cycle.actualHarvestDate ? new Date(cycle.actualHarvestDate).toLocaleDateString() : 'TBC'}</p>
-                          <p>Expected Yield: {cycle.expectedYield} tons/ha</p>
-                          <p>Yield: {cycleMetrics[cycle.id]?.yield?.sugarcane || 'TBC'}</p>
-                          <p>Profit: {cycleMetrics[cycle.id]?.profit?.total || 'TBC'}</p>
-                          <p>Profit/ha: {cycleMetrics[cycle.id]?.profit?.perHa || 'TBC'}</p>
-                          <p>Precipitation: TBC</p>
-                          <p>Solar Radiation: TBC</p>
-                        </>
-                      ) : (
-                        /* For active cycles, show current values */
-                        <>
-                          <p>Planned Harvest: {new Date(cycle.plannedHarvestDate).toLocaleDateString()}</p>
-                          <p>Expected Yield: {cycle.expectedYield} tons/ha</p>
-                          <p>Yield: {cycleMetrics[cycle.id]?.yield?.sugarcane || 'TBC'}</p>
-                          <p>Profit: {cycleMetrics[cycle.id]?.profit?.total || 'TBC'}</p>
-                          <p>Profit/ha: {cycleMetrics[cycle.id]?.profit?.perHa || 'TBC'}</p>
-                          <p>Predicted Precipitation: TBC</p>
-                          <p>Predicted Solar Radiation: TBC</p>
-                        </>
-                      )}
+                    {/* Crop Information for Closed Cycle */}
+                    <div>
+                      <h5 className="font-medium text-gray-800 mb-3">Crop Information</h5>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200">
+                          <span className="text-xs text-gray-600">Harvested</span>
+                          <div className="font-semibold text-gray-900">
+                            {cycle.actualHarvestDate ? new Date(cycle.actualHarvestDate).toLocaleDateString() : 'TBC'}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200">
+                          <span className="text-xs text-gray-600">Expected Yield</span>
+                          <div className="font-semibold text-gray-900">{cycle.expectedYield} tons/ha</div>
+                        </div>
+                        <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200">
+                          <span className="text-xs text-gray-600">Sugarcane Variety</span>
+                          <div className="font-semibold text-gray-900">{cycle.sugarcaneVarietyName}</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -912,6 +1079,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
           </div>
         </div>
       </div>
+      )}
 
       {/* Variety Selectors */}
       {showSugarcaneSelector && (

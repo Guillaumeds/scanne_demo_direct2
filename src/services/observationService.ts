@@ -68,6 +68,18 @@ export class ObservationService {
     try {
       console.log('💾 Creating observation with atomic transaction:', observation.name)
 
+      // Extract revenue data from observation data based on category
+      let sugarcaneRevenue = null
+      let intercropRevenue = null
+
+      if (observation.category === 'sugarcane-yield-quality') {
+        const yieldData = observation.data as any
+        sugarcaneRevenue = yieldData?.sugarcaneRevenue || 0
+      } else if (observation.category === 'intercrop-yield-quality') {
+        const yieldData = observation.data as any
+        intercropRevenue = yieldData?.intercropRevenue || 0
+      }
+
       // Prepare observation data
       const observationData = {
         crop_cycle_id: observation.cropCycleId,
@@ -82,6 +94,8 @@ export class ObservationService {
         yield_tons_ha: observation.yieldTonsHa,
         area_hectares: observation.areaHectares,
         total_yield_tons: observation.totalYieldTons,
+        sugarcane_revenue: sugarcaneRevenue,
+        intercrop_revenue: intercropRevenue,
         notes: observation.notes
       }
 
@@ -101,9 +115,42 @@ export class ObservationService {
 
       console.log('✅ Observation created:', observationId)
 
-      // Trigger crop cycle totals recalculation
-      if (observation.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(observation.cropCycleId)
+      // Step 3: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get all activities and observations for this crop cycle
+        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(observation.cropCycleId))
+        const observations = await this.getObservationsForCycle(observation.cropCycleId)
+
+        // Calculate totals using frontend service
+        const { FrontendCalculationService } = await import('./frontendCalculationService')
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          observation.cropCycleId
+        )
+
+        // Broadcast calculated totals to frontend components immediately
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: observation.cropCycleId,
+            totals: totals
+          }
+        }))
+
+        // Update crop cycle totals in database as background task
+        const { CropCycleTotalsService } = await import('./cropCycleTotalsService')
+        CropCycleTotalsService.updateCycleTotals(observation.cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for new observation:', error)
+        })
+
+        console.log('✅ Atomic observation creation with totals completed')
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after observation creation:', totalsError)
+        // Observation was created but totals update failed - this is not ideal but not critical
+        console.warn('⚠️ Observation created but totals update failed - side panel may show stale data')
       }
 
       // Return the created observation (fetch fresh data)
@@ -134,6 +181,18 @@ export class ObservationService {
       // Merge existing data with updates
       const mergedObservation = { ...existingObservation, ...updates }
 
+      // Extract revenue data from observation data based on category
+      let sugarcaneRevenue = null
+      let intercropRevenue = null
+
+      if (mergedObservation.category === 'sugarcane-yield-quality') {
+        const yieldData = mergedObservation.data as any
+        sugarcaneRevenue = yieldData?.sugarcaneRevenue || 0
+      } else if (mergedObservation.category === 'intercrop-yield-quality') {
+        const yieldData = mergedObservation.data as any
+        intercropRevenue = yieldData?.intercropRevenue || 0
+      }
+
       // Prepare observation data for atomic function
       const observationData = {
         id: observationId, // Include ID for update
@@ -149,6 +208,8 @@ export class ObservationService {
         yield_tons_ha: mergedObservation.yieldTonsHa,
         area_hectares: mergedObservation.areaHectares,
         total_yield_tons: mergedObservation.totalYieldTons,
+        sugarcane_revenue: sugarcaneRevenue,
+        intercrop_revenue: intercropRevenue,
         notes: mergedObservation.notes
       }
 
@@ -166,9 +227,42 @@ export class ObservationService {
 
       console.log('✅ Observation updated:', updatedObservationId)
 
-      // Trigger crop cycle totals recalculation
-      if (mergedObservation.cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(mergedObservation.cropCycleId)
+      // Step 3: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get all activities and observations for this crop cycle
+        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(mergedObservation.cropCycleId))
+        const observations = await this.getObservationsForCycle(mergedObservation.cropCycleId)
+
+        // Calculate totals using frontend service
+        const { FrontendCalculationService } = await import('./frontendCalculationService')
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          mergedObservation.cropCycleId
+        )
+
+        // Broadcast calculated totals to frontend components immediately
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: mergedObservation.cropCycleId,
+            totals: totals
+          }
+        }))
+
+        // Update crop cycle totals in database as background task
+        const { CropCycleTotalsService } = await import('./cropCycleTotalsService')
+        CropCycleTotalsService.updateCycleTotals(mergedObservation.cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for observation update:', error)
+        })
+
+        console.log('✅ Atomic observation update with totals completed')
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after observation update:', totalsError)
+        // Observation was updated but totals update failed - this is not ideal but not critical
+        console.warn('⚠️ Observation updated but totals update failed - side panel may show stale data')
       }
 
       // Return the updated observation
@@ -184,11 +278,15 @@ export class ObservationService {
    */
   static async deleteObservation(observationId: string): Promise<void> {
     try {
-      // Get observation to find crop cycle ID before deletion
+      // Step 1: Get observation to find crop cycle ID before deletion
       const observation = await this.getObservationById(observationId)
       const cropCycleId = observation?.cropCycleId
 
-      // Delete observation from database
+      if (!cropCycleId) {
+        throw new Error('Cannot find crop cycle ID for observation deletion')
+      }
+
+      // Step 2: Delete observation from database
       const { error } = await supabase
         .from('observations')
         .delete()
@@ -196,9 +294,44 @@ export class ObservationService {
 
       if (error) throw error
 
-      // Recalculate crop cycle totals after deletion
-      if (cropCycleId) {
-        await CropCycleCalculationService.triggerRecalculation(cropCycleId)
+      console.log('✅ Observation deleted:', observationId)
+
+      // Step 3: Calculate totals and update crop cycle atomically
+      try {
+        console.log('🧮 Starting atomic totals calculation and update...')
+
+        // Get remaining activities and observations for this crop cycle (excluding the deleted one)
+        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(cropCycleId))
+        const observations = await this.getObservationsForCycle(cropCycleId)
+
+        // Calculate totals using frontend service
+        const { FrontendCalculationService } = await import('./frontendCalculationService')
+        const totals = FrontendCalculationService.calculateCropCycleTotals(
+          activities,
+          observations,
+          1, // TODO: Get actual bloc area
+          cropCycleId
+        )
+
+        // Broadcast calculated totals to frontend components immediately
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: cropCycleId,
+            totals: totals
+          }
+        }))
+
+        // Update crop cycle totals in database as background task
+        const { CropCycleTotalsService } = await import('./cropCycleTotalsService')
+        CropCycleTotalsService.updateCycleTotals(cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for observation deletion:', error)
+        })
+
+        console.log('✅ Atomic observation deletion with totals completed')
+      } catch (totalsError) {
+        console.error('❌ Error updating totals after observation deletion:', totalsError)
+        // Observation was deleted but totals update failed - this is not ideal but not critical
+        console.warn('⚠️ Observation deleted but totals update failed - side panel may show stale data')
       }
     } catch (error) {
       console.error('Error deleting observation:', error)
@@ -271,6 +404,10 @@ export class ObservationService {
       yieldTonsHa: dbRecord.yield_tons_ha,
       areaHectares: dbRecord.area_hectares,
       totalYieldTons: dbRecord.total_yield_tons,
+      sugarcaneRevenue: dbRecord.sugarcane_revenue,
+      intercropRevenue: dbRecord.intercrop_revenue,
+      pricePerTonne: dbRecord.price_per_tonne,
+      revenuePerHectare: dbRecord.revenue_per_hectare,
       notes: dbRecord.notes,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.updated_at,

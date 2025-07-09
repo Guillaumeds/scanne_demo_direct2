@@ -209,6 +209,7 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   const [activityPhases, setActivityPhases] = useState<any[]>([])
   const [activityTemplates, setActivityTemplates] = useState<any[]>([])
   const [configLoading, setConfigLoading] = useState(true)
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -221,15 +222,19 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
   useEffect(() => {
     const loadActivities = async () => {
       if (selectedCycleInfo?.id) {
+        setActivitiesLoading(true)
         try {
           const cycleActivities = await ActivityService.getActivitiesForCycle(selectedCycleInfo.id)
           setActivities(cycleActivities)
         } catch (error) {
           console.error('Error loading activities:', error)
           setActivities([])
+        } finally {
+          setActivitiesLoading(false)
         }
       } else {
         setActivities([])
+        setActivitiesLoading(false)
       }
     }
 
@@ -278,15 +283,33 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
   const handleDeleteActivity = async (id: string) => {
     if (confirm('Are you sure you want to delete this activity?')) {
-      try {
-        // Delete from database and state
-        await ActivityService.deleteActivity(id)
-        setActivities(prev => prev.filter(activity => activity.id !== id))
+      // Immediate UI feedback - remove from list and show loading
+      setActivities(prev => prev.filter(activity => activity.id !== id))
+      setActivitiesLoading(true)
 
-        // Side panel will auto-refresh via context
-      } catch (error) {
-        console.error('Error deleting activity:', error)
-      }
+      // Background database operation
+      ActivityService.deleteActivity(id).then(() => {
+        console.log('✅ Activity deleted successfully')
+        // Reload activities from database to ensure consistency
+        if (selectedCycleInfo?.id) {
+          return ActivityService.getActivitiesForCycle(selectedCycleInfo.id)
+        }
+        return []
+      }).then((refreshedActivities) => {
+        setActivities(refreshedActivities)
+        setActivitiesLoading(false)
+      }).catch(error => {
+        console.error('❌ Error deleting activity:', error)
+        // Reload activities to restore state in case of error
+        if (selectedCycleInfo?.id) {
+          ActivityService.getActivitiesForCycle(selectedCycleInfo.id).then(activities => {
+            setActivities(activities)
+            setActivitiesLoading(false)
+          })
+        } else {
+          setActivitiesLoading(false)
+        }
+      })
     }
   }
 
@@ -577,46 +600,60 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
 
           {/* Activities List */}
           <div className="space-y-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={filteredActivities.map(a => a.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {filteredActivities.map((activity) => (
-                  <SortableActivityItem
-                    key={activity.id}
-                    activity={activity}
-                    onEdit={handleEditActivity}
-                    onDelete={handleDeleteActivity}
-                    onStatusChange={handleStatusChange}
-                    activityPhases={activityPhases}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-
-            {filteredActivities.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <div className="text-4xl mb-4">📝</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
-                <p className="text-gray-600 mb-4">
-                  {selectedPhase === 'all'
-                    ? 'Start by adding your first activity'
-                    : `No activities in the ${activityPhases.find(p => p.id === selectedPhase)?.name} phase`
-                  }
+            {activitiesLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mt-4 mb-2">Loading Activities</h3>
+                <p className="text-gray-600 text-center">
+                  Fetching activities from database...
                 </p>
-                <button
-                  type="button"
-                  onClick={handleAddActivity}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                  Add Activity
-                </button>
               </div>
+            ) : (
+              <>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={filteredActivities.map(a => a.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {filteredActivities.map((activity) => (
+                      <SortableActivityItem
+                        key={activity.id}
+                        activity={activity}
+                        onEdit={handleEditActivity}
+                        onDelete={handleDeleteActivity}
+                        onStatusChange={handleStatusChange}
+                        activityPhases={activityPhases}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+
+                {filteredActivities.length === 0 && (
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                    <div className="text-4xl mb-4">📝</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
+                    <p className="text-gray-600 mb-4">
+                      {selectedPhase === 'all'
+                        ? 'Start by adding your first activity'
+                        : `No activities in the ${activityPhases.find(p => p.id === selectedPhase)?.name} phase`
+                      }
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddActivity}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      Add Activity
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -646,27 +683,38 @@ export default function ActivitiesTab({ bloc }: ActivitiesTabProps) {
                 cropCycleType: activeCycleInfo?.type || 'plantation'
               }
 
-              // Use autoSaveActivity which handles UUID validation and create/update logic
-              console.log('Auto-saving activity with ID:', activityWithCycle.id)
-              savedActivity = await ActivityService.autoSaveActivity(activityWithCycle)
-
-              // Update local state
-              if (editingActivity && editingActivity.id && editingActivity.id.trim() !== '') {
-                // Update existing activity in local state
-                setActivities(prev => prev.map(a => a.id === editingActivity.id ? savedActivity : a))
-              } else {
-                // Add new activity to local state
-                setActivities(prev => [...prev, savedActivity])
-              }
-
-              // Side panel will auto-refresh via context
-              console.log('✅ Activity saved - side panel will auto-refresh')
-
+              // Close modal immediately for better UX
               setShowAddModal(false)
               setEditingActivity(null)
+              setActivitiesLoading(true)
+
+              // Background database operation
+              ActivityService.autoSaveActivity(activityWithCycle).then((savedActivity) => {
+                console.log('✅ Activity saved successfully')
+                // Reload activities from database to ensure consistency
+                if (selectedCycleInfo?.id) {
+                  return ActivityService.getActivitiesForCycle(selectedCycleInfo.id)
+                }
+                return []
+              }).then((refreshedActivities) => {
+                setActivities(refreshedActivities)
+                setActivitiesLoading(false)
+              }).catch(error => {
+                console.error('❌ Error saving activity:', error)
+                // Reload activities to restore state in case of error
+                if (selectedCycleInfo?.id) {
+                  ActivityService.getActivitiesForCycle(selectedCycleInfo.id).then(activities => {
+                    setActivities(activities)
+                    setActivitiesLoading(false)
+                  })
+                } else {
+                  setActivitiesLoading(false)
+                }
+                alert(`Error saving activity: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              })
             } catch (error) {
-              console.error('Error saving activity:', error)
-              alert(`Error saving activity: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              console.error('Error preparing activity for save:', error)
+              alert(`Error preparing activity: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
           }}
           onCancel={() => {

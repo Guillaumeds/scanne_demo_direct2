@@ -231,6 +231,7 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   const [selectedCropCycle, setSelectedCropCycle] = useState<string>('planted')
   const [statusFilter, setStatusFilter] = useState<'all' | 'incomplete' | 'overdue'>('all')
   const [completionFilter, setCompletionFilter] = useState<'all' | 'complete' | 'incomplete'>('all')
+  const [observationsLoading, setObservationsLoading] = useState(false)
   // Totals are displayed in right panel only - no duplicate calculations needed
 
   const sensors = useSensors(
@@ -244,15 +245,19 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
   useEffect(() => {
     const loadObservations = async () => {
       if (selectedCycleInfo?.id) {
+        setObservationsLoading(true)
         try {
           const cycleObservations = await ObservationService.getObservationsForCycle(selectedCycleInfo.id)
           setObservations(cycleObservations)
         } catch (error) {
           console.error('Error loading observations:', error)
           setObservations([])
+        } finally {
+          setObservationsLoading(false)
         }
       } else {
         setObservations([])
+        setObservationsLoading(false)
       }
     }
 
@@ -294,13 +299,33 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
 
   const handleDeleteObservation = async (id: string) => {
     if (confirm('Are you sure you want to delete this observation?')) {
-      try {
-        // Delete from database and state
-        await ObservationService.deleteObservation(id)
-        setObservations(prev => prev.filter(observation => observation.id !== id))
-      } catch (error) {
-        console.error('Error deleting observation:', error)
-      }
+      // Immediate UI feedback - remove from list and show loading
+      setObservations(prev => prev.filter(observation => observation.id !== id))
+      setObservationsLoading(true)
+
+      // Background database operation
+      ObservationService.deleteObservation(id).then(() => {
+        console.log('✅ Observation deleted successfully')
+        // Reload observations from database to ensure consistency
+        if (selectedCycleInfo?.id) {
+          return ObservationService.getObservationsForCycle(selectedCycleInfo.id)
+        }
+        return []
+      }).then((refreshedObservations) => {
+        setObservations(refreshedObservations)
+        setObservationsLoading(false)
+      }).catch(error => {
+        console.error('❌ Error deleting observation:', error)
+        // Reload observations to restore state in case of error
+        if (selectedCycleInfo?.id) {
+          ObservationService.getObservationsForCycle(selectedCycleInfo.id).then(observations => {
+            setObservations(observations)
+            setObservationsLoading(false)
+          })
+        } else {
+          setObservationsLoading(false)
+        }
+      })
     }
   }
 
@@ -520,50 +545,64 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
 
           {/* Observations List */}
           <div className="space-y-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={filteredObservations.map(o => o.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {filteredObservations.map((observation) => (
-                  <SortableObservationItem
-                    key={observation.id}
-                    observation={observation}
-                    onEdit={handleEditObservation}
-                    onDelete={handleDeleteObservation}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-
-            {filteredObservations.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <div className="text-4xl mb-4">🔬</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No observations found</h3>
-                <p className="text-gray-600 mb-4">
-                  {selectedCategory === 'all'
-                    ? 'Start by adding your first observation'
-                    : `No observations in the ${OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)?.name} category`
-                  }
+            {observationsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mt-4 mb-2">Loading Observations</h3>
+                <p className="text-gray-600 text-center">
+                  Fetching observations from database...
                 </p>
-                <button
-                  type="button"
-                  onClick={handleAddObservation}
-                  disabled={!permissions.canAddObservations}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    permissions.canAddObservations
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  Add Observation
-                </button>
               </div>
+            ) : (
+              <>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={filteredObservations.map(o => o.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {filteredObservations.map((observation) => (
+                      <SortableObservationItem
+                        key={observation.id}
+                        observation={observation}
+                        onEdit={handleEditObservation}
+                        onDelete={handleDeleteObservation}
+                        onStatusChange={handleStatusChange}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+
+                {filteredObservations.length === 0 && (
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                    <div className="text-4xl mb-4">🔬</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No observations found</h3>
+                    <p className="text-gray-600 mb-4">
+                      {selectedCategory === 'all'
+                        ? 'Start by adding your first observation'
+                        : `No observations in the ${OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)?.name} category`
+                      }
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddObservation}
+                      disabled={!permissions.canAddObservations}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        permissions.canAddObservations
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Add Observation
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -586,27 +625,42 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
           blocArea={bloc.area}
           onSave={async (observation) => {
             try {
-              let savedObservation: BlocObservation
-
-              if (editingObservation) {
-                // Update existing observation in database
-                savedObservation = await ObservationService.updateObservation(editingObservation.id, observation)
-                setObservations(prev => prev.map(o => o.id === editingObservation.id ? savedObservation : o))
-              } else {
-                // Create new observation in database
-                savedObservation = await ObservationService.createObservation(observation)
-                setObservations(prev => [...prev, savedObservation])
-              }
-
-              // Note: Crop cycle totals will be updated by the database function
-              // and refreshed automatically when context data is reloaded
-              console.log('✅ Observation saved - totals will be updated by database function')
-
+              // Close modal immediately for better UX
               setShowAddModal(false)
               setEditingObservation(null)
+              setObservationsLoading(true)
+
+              // Background database operation
+              const saveOperation = editingObservation
+                ? ObservationService.updateObservation(editingObservation.id, observation)
+                : ObservationService.createObservation(observation)
+
+              saveOperation.then((savedObservation) => {
+                console.log('✅ Observation saved successfully')
+                // Reload observations from database to ensure consistency
+                if (selectedCycleInfo?.id) {
+                  return ObservationService.getObservationsForCycle(selectedCycleInfo.id)
+                }
+                return []
+              }).then((refreshedObservations) => {
+                setObservations(refreshedObservations)
+                setObservationsLoading(false)
+              }).catch(error => {
+                console.error('❌ Error saving observation:', error)
+                // Reload observations to restore state in case of error
+                if (selectedCycleInfo?.id) {
+                  ObservationService.getObservationsForCycle(selectedCycleInfo.id).then(observations => {
+                    setObservations(observations)
+                    setObservationsLoading(false)
+                  })
+                } else {
+                  setObservationsLoading(false)
+                }
+                alert(`Error saving observation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              })
             } catch (error) {
-              console.error('Error saving observation:', error)
-              alert(`Error saving observation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              console.error('Error preparing observation for save:', error)
+              alert(`Error preparing observation: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
           }}
           onCancel={() => {

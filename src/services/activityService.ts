@@ -194,8 +194,18 @@ export class ActivityService {
           revenue: totals.totalRevenue
         })
 
-        // Update crop cycle totals in database
-        await CropCycleTotalsService.updateCycleTotals(createdActivity.cropCycleId, totals)
+        // Broadcast calculated totals to frontend components immediately
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: createdActivity.cropCycleId,
+            totals: totals
+          }
+        }))
+
+        // Update crop cycle totals in database as background task
+        CropCycleTotalsService.updateCycleTotals(createdActivity.cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for new activity:', error)
+        })
 
         console.log('✅ Atomic activity creation with totals completed')
         return createdActivity
@@ -315,16 +325,19 @@ export class ActivityService {
           updatedActivity.cropCycleId
         )
 
-        // Update crop cycle totals in database
-        await CropCycleTotalsService.updateCycleTotals(updatedActivity.cropCycleId, totals)
-
-        // Broadcast calculated totals to frontend components
+        // Broadcast calculated totals to frontend components immediately
         window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
           detail: {
             cropCycleId: updatedActivity.cropCycleId,
             totals: totals
           }
         }))
+
+        // Update crop cycle totals in database as background task
+        CropCycleTotalsService.updateCycleTotals(updatedActivity.cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for activity:', error)
+          // Could dispatch another event here if we want to show error state
+        })
 
         console.log('✅ Atomic activity update with totals completed')
         return updatedActivity
@@ -395,8 +408,18 @@ export class ActivityService {
           cropCycleId
         )
 
-        // Update crop cycle totals in database
-        await CropCycleTotalsService.updateCycleTotals(cropCycleId, totals)
+        // Broadcast calculated totals to frontend components immediately
+        window.dispatchEvent(new CustomEvent('cropCycleTotalsCalculated', {
+          detail: {
+            cropCycleId: cropCycleId,
+            totals: totals
+          }
+        }))
+
+        // Update crop cycle totals in database as background task
+        CropCycleTotalsService.updateCycleTotals(cropCycleId, totals).catch(error => {
+          console.error('❌ Background database update failed for activity deletion:', error)
+        })
 
         console.log('✅ Atomic activity deletion with totals completed')
 

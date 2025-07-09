@@ -51,20 +51,25 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'category' | 'size'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc') // Default to earliest to oldest
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
 
   // Load attachments from database
   useEffect(() => {
     const loadAttachments = async () => {
       if (selectedCycleInfo?.id) {
+        setAttachmentsLoading(true)
         try {
           const cycleAttachments = await AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id)
           setAttachments(cycleAttachments)
         } catch (error) {
           console.error('Error loading attachments:', error)
           setAttachments([])
+        } finally {
+          setAttachmentsLoading(false)
         }
       } else {
         setAttachments([])
+        setAttachmentsLoading(false)
       }
     }
 
@@ -101,13 +106,33 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
 
   const handleDeleteAttachment = async (id: string) => {
     if (confirm('Are you sure you want to delete this attachment?')) {
-      try {
-        // Delete from database and state
-        await AttachmentService.deleteAttachment(id)
-        setAttachments(prev => prev.filter(attachment => attachment.id !== id))
-      } catch (error) {
-        console.error('Error deleting attachment:', error)
-      }
+      // Immediate UI feedback - remove from list and show loading
+      setAttachments(prev => prev.filter(attachment => attachment.id !== id))
+      setAttachmentsLoading(true)
+
+      // Background database operation
+      AttachmentService.deleteAttachment(id).then(() => {
+        console.log('✅ Attachment deleted successfully')
+        // Reload attachments from database to ensure consistency
+        if (selectedCycleInfo?.id) {
+          return AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id)
+        }
+        return []
+      }).then((refreshedAttachments) => {
+        setAttachments(refreshedAttachments)
+        setAttachmentsLoading(false)
+      }).catch(error => {
+        console.error('❌ Error deleting attachment:', error)
+        // Reload attachments to restore state in case of error
+        if (selectedCycleInfo?.id) {
+          AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id).then(attachments => {
+            setAttachments(attachments)
+            setAttachmentsLoading(false)
+          })
+        } else {
+          setAttachmentsLoading(false)
+        }
+      })
     }
   }
 
@@ -267,7 +292,17 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
 
           {/* Attachments List */}
           <div className="space-y-4">
-            {filteredAttachments.length === 0 ? (
+            {attachmentsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mt-4 mb-2">Loading Attachments</h3>
+                <p className="text-gray-600 text-center">
+                  Fetching attachments from database...
+                </p>
+              </div>
+            ) : filteredAttachments.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
                 <div className="text-4xl mb-4">📎</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No attachments found</h3>
@@ -381,15 +416,39 @@ export default function AttachmentsTab({ bloc }: AttachmentsTabProps) {
           onClose={() => setShowUploadModal(false)}
           onUpload={async (newAttachments) => {
             try {
-              // Save attachments to database
-              const savedAttachments = await Promise.all(
-                newAttachments.map(attachment => AttachmentService.createAttachment(attachment))
-              )
-              setAttachments(prev => [...prev, ...savedAttachments])
+              // Close modal immediately for better UX
               setShowUploadModal(false)
+              setAttachmentsLoading(true)
+
+              // Background database operation
+              Promise.all(
+                newAttachments.map(attachment => AttachmentService.createAttachment(attachment))
+              ).then((savedAttachments) => {
+                console.log('✅ Attachments uploaded successfully')
+                // Reload attachments from database to ensure consistency
+                if (selectedCycleInfo?.id) {
+                  return AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id)
+                }
+                return []
+              }).then((refreshedAttachments) => {
+                setAttachments(refreshedAttachments)
+                setAttachmentsLoading(false)
+              }).catch(error => {
+                console.error('❌ Error uploading attachments:', error)
+                // Reload attachments to restore state in case of error
+                if (selectedCycleInfo?.id) {
+                  AttachmentService.getAttachmentsForCycle(selectedCycleInfo.id).then(attachments => {
+                    setAttachments(attachments)
+                    setAttachmentsLoading(false)
+                  })
+                } else {
+                  setAttachmentsLoading(false)
+                }
+                alert(`Error saving attachments: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              })
             } catch (error) {
-              console.error('Error saving attachments:', error)
-              alert(`Error saving attachments: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              console.error('Error preparing attachments for upload:', error)
+              alert('Error preparing files for upload.')
             }
           }}
           activeCycleInfo={activeCycleInfo}
