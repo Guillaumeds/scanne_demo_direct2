@@ -510,7 +510,7 @@ export default function ObservationForm({
 
             {attachments.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
-                No attachments yet. Click "Add Files" to upload files.
+                No attachments yet. Click &quot;Add Files&quot; to upload files.
               </div>
             ) : (
               <div className="space-y-2">

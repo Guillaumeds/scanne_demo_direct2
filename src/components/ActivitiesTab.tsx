@@ -1204,7 +1204,7 @@ function AddActivityModal({
                 <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
                   <div className="text-2xl mb-2">📦</div>
                   <p>No products or resources added yet</p>
-                  <p className="text-sm">Click "Add Product" or "Add Resource" to get started</p>
+                  <p className="text-sm">Click &quot;Add Product&quot; or &quot;Add Resource&quot; to get started</p>
                 </div>
               )}
             </div>

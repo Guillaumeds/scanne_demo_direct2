@@ -113,7 +113,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
 
           <h3 className="text-2xl font-semibold text-gray-800 mb-3">Vegetation Analysis Service Unavailable</h3>
           <p className="text-gray-600 mb-6 max-w-md">
-            We're unable to fetch vegetation analysis data at the moment. Please check your internet connection and try again later.
+            We&apos;re unable to fetch vegetation analysis data at the moment. Please check your internet connection and try again later.
           </p>
 
           <button
