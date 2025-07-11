@@ -4,9 +4,7 @@ import { useState, useRef } from 'react'
 import SoilDataTab from './SoilDataTab'
 import VegetationDataTab from './VegetationDataTab'
 import WeatherDashboard from './WeatherDashboard'
-import ActivitiesTab from './ActivitiesTab'
 import ObservationsTab from './ObservationsTab'
-import AttachmentsTab from './AttachmentsTab'
 import OverviewTab from './OverviewTab'
 import VarietySelector from './VarietySelector'
 import CropCycleGeneralInfo from './CropCycleGeneralInfo'
@@ -94,7 +92,6 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
 
   // Form refs for auto-commit functionality
   const cropCycleFormRef = useRef<FormCommitRef>(null)
-  const activitiesFormRef = useRef<FormCommitRef>(null)
   const observationsFormRef = useRef<FormCommitRef>(null)
   const [blocData, setBlocData] = useState<BlocData>({
     // Initialize with default values
@@ -152,12 +149,10 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   const tabs = [
     { id: 'general', name: 'General Info', icon: '📋', status: getTabStatus('general') },
     { id: 'overview', name: 'Overview', icon: '📊', status: getTabStatus('overview') },
-    { id: 'activities', name: 'Activities', icon: '📋', status: getTabStatus('activities') },
     { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') },
     { id: 'weather', name: 'Weather', icon: '🌤️', status: getTabStatus('weather') },
     { id: 'satellite-soil', name: 'Satellite Soil', icon: '🛰️', status: getTabStatus('satellite-soil') },
-    { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') },
-    { id: 'attachments', name: 'Attachments', icon: '📎', status: getTabStatus('attachments') }
+    { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') }
   ]
 
   const handleInputChange = (field: keyof BlocData, value: string | number | boolean) => {
@@ -342,7 +337,6 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
             // Check if tab has unsaved changes
             const hasUnsavedChanges = Boolean(
               (tab.id === 'general' && cropCycleFormRef.current?.isDirty) ||
-              (tab.id === 'activities' && activitiesFormRef.current?.isDirty) ||
               (tab.id === 'observations' && observationsFormRef.current?.isDirty)
             )
 
@@ -687,16 +681,8 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
             <WeatherDashboard drawnAreas={[legacyBloc]} />
           )}
 
-          {activeTab === 'activities' && (
-            <ActivitiesTab bloc={legacyBloc} />
-          )}
-
           {activeTab === 'observations' && (
             <ObservationsTab bloc={legacyBloc} />
-          )}
-
-          {activeTab === 'attachments' && (
-            <AttachmentsTab bloc={legacyBloc} />
           )}
 
         </div>
