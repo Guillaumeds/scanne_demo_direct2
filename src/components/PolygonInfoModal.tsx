@@ -106,7 +106,7 @@ export default function PolygonInfoModal({
 
           {/* Tips */}
           <div className="text-xs text-gray-500 bg-yellow-50 rounded p-2">
-            <strong>💡 Tip:</strong> You can drag the blue vertex markers on the map to edit this area's shape.
+            <strong>💡 Tip:</strong> You can drag the blue vertex markers on the map to edit this area&apos;s shape.
           </div>
         </div>
       </div>

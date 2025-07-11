@@ -61,6 +61,8 @@ export default function Home() {
                 <span className="text-sm font-medium">Agriculture Management</span>
               </div>
 
+
+
               {/* HSE Management Module */}
               <a
                 href="https://scanne-hse.vercel.app/"

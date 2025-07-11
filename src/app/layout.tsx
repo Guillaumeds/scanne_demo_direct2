@@ -80,7 +80,7 @@ export default function RootLayout({
 
             // Global function to refresh localStorage data
             window.refreshLocalStorageData = async function() {
-              const { LocalStorageService } = await import('/src/services/localStorageService.ts');
+              const { LocalStorageService } = await import('@/services/localStorageService');
               await LocalStorageService.refreshAllData();
               console.log('✅ localStorage data refreshed! Please reload the page.');
             };

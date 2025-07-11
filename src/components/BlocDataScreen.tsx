@@ -7,6 +7,7 @@ import WeatherDashboard from './WeatherDashboard'
 import ActivitiesTab from './ActivitiesTab'
 import ObservationsTab from './ObservationsTab'
 import AttachmentsTab from './AttachmentsTab'
+import OverviewTab from './OverviewTab'
 import VarietySelector from './VarietySelector'
 import CropCycleGeneralInfo from './CropCycleGeneralInfo'
 import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
@@ -150,6 +151,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
 
   const tabs = [
     { id: 'general', name: 'General Info', icon: '📋', status: getTabStatus('general') },
+    { id: 'overview', name: 'Overview', icon: '📊', status: getTabStatus('overview') },
     { id: 'activities', name: 'Activities', icon: '📋', status: getTabStatus('activities') },
     { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') },
     { id: 'weather', name: 'Weather', icon: '🌤️', status: getTabStatus('weather') },
@@ -395,6 +397,13 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
                   }
                 }}
                 hideSidePanel={true}
+              />
+            )}
+
+            {activeTab === 'overview' && (
+              <OverviewTab
+                bloc={bloc}
+                readOnly={false}
               />
             )}
 

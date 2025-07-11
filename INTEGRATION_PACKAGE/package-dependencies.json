@@ -1,0 +1,23 @@
+{
+  "name": "agricultural-nested-table-dependencies",
+  "description": "Required dependencies for the Agricultural Nested Table Component",
+  "dependencies": {
+    "@mui/material": "^5.14.20",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0", 
+    "@mui/icons-material": "^5.14.19",
+    "material-react-table": "^2.8.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "typescript": "^4.9.0"
+  },
+  "installCommand": "npm install @mui/material @emotion/react @emotion/styled @mui/icons-material material-react-table",
+  "yarnInstallCommand": "yarn add @mui/material @emotion/react @emotion/styled @mui/icons-material material-react-table",
+  "notes": [
+    "Make sure your project has React 18+ and TypeScript 4.9+",
+    "If using Next.js, you may need to configure emotion for SSR",
+    "Material-UI theme provider should wrap your app for proper styling"
+  ]
+}
