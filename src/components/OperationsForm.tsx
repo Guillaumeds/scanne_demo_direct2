@@ -45,7 +45,6 @@ export default function OperationsForm({
       startDate: operation?.planned_start_date || new Date().toISOString().split('T')[0],
       endDate: operation?.planned_end_date || new Date().toISOString().split('T')[0],
       status: operation?.status || 'planned',
-      products: operation?.products || [],
       resources: operation?.resources || [],
       notes: operation?.notes || ''
     }
@@ -55,11 +54,8 @@ export default function OperationsForm({
   const [showOperationSelector, setShowOperationSelector] = useState(false)
   const [showMethodSelector, setShowMethodSelector] = useState(false)
   const [showMainProductSelector, setShowMainProductSelector] = useState(false)
-  const [showProductSelector, setShowProductSelector] = useState(false)
   const [showResourceSelector, setShowResourceSelector] = useState(false)
-  const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null)
   const [editingResourceIndex, setEditingResourceIndex] = useState<number | null>(null)
-  const [showProductEditor, setShowProductEditor] = useState(false)
   const [showResourceEditor, setShowResourceEditor] = useState(false)
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
@@ -115,29 +111,7 @@ export default function OperationsForm({
     }
   }
 
-  // Product handlers
-  const handleProductSelect = (product: Product, quantity: number, rate: number, actualCost?: number) => {
-    const estimatedCost = product.cost ? quantity * product.cost : 0
-    const newProduct = {
-      productId: product.id,
-      productName: product.name,
-      quantity,
-      rate,
-      unit: product.unit,
-      estimatedCost,
-      actualCost
-    }
 
-    if (editingProductIndex !== null) {
-      const updatedProducts = [...(formData.products || [])]
-      updatedProducts[editingProductIndex] = newProduct
-      setFormData({ ...formData, products: updatedProducts })
-      setEditingProductIndex(null)
-    } else {
-      const updatedProducts = [...(formData.products || []), newProduct]
-      setFormData({ ...formData, products: updatedProducts })
-    }
-  }
 
   // Resource handlers
   const handleResourceSelect = (resource: Resource, hours: number, actualCost?: number) => {
@@ -186,7 +160,6 @@ export default function OperationsForm({
       planned_end_date: formData.endDate!,
       quantity: formData.quantity || 0,
       mainProduct: formData.mainProduct,
-      products: formData.products || [],
       resources: resourcesData || [],
       yieldData: yieldData,
       notes: notesData.filter(note => note.trim() !== '').join('\n'),
@@ -337,11 +310,11 @@ export default function OperationsForm({
               </div>
             </div>
 
-            {/* Main Product - Connected to table, compact design */}
+            {/* Product - Connected to table, compact design */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Main Product
+                  Product
                 </label>
                 <button
                   type="button"
@@ -352,7 +325,7 @@ export default function OperationsForm({
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
-                  <span>{formData.mainProduct ? 'Change Product' : 'Add Main Product'}</span>
+                  <span>{formData.mainProduct ? 'Change Product' : 'Add Product'}</span>
                 </button>
               </div>
 
@@ -389,104 +362,21 @@ export default function OperationsForm({
                 </div>
               ) : (
                 <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="text-gray-500 text-sm">No main product selected</div>
+                  <div className="text-gray-500 text-sm">No product selected</div>
                 </div>
               )}
             </div>
 
-                {/* Other Products - Compact design */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Other Products
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowProductSelector(true)}
-                      className="flex items-center space-x-1 px-2 py-1 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 rounded border border-dashed border-green-300 hover:border-green-400 transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
-                      <span>Add Product</span>
-                    </button>
-                  </div>
 
-                  {formData.products && formData.products.length > 0 ? (
-                    <div className="space-y-1">
-                      {/* Products - Compact */}
-                      {formData.products?.map((product: any, index: number) => (
-                        <div key={`product-${index}`} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm">🧪</span>
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-gray-900">{product.productName}</div>
-                              <div className="text-xs text-gray-600">
-                                {product.quantity} {product.unit} • Rate: {product.rate} {product.unit}/ha •
-                                <span className="text-blue-600">Est: Rs {(product.estimatedCost || 0).toLocaleString()}</span>
-                                {product.actualCost !== undefined && (
-                                  <span className="text-green-600 ml-1">Act: Rs {product.actualCost.toLocaleString()}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingProductIndex(index)
-                                setShowProductEditor(true)
-                              }}
-                              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
-                              title="Edit product"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="m18 2 4 4-14 14H4v-4L18 2z"></path>
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updatedProducts = formData.products?.filter((_: any, i: number) => i !== index) || []
-                                setFormData({ ...formData, products: updatedProducts })
-                              }}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
-                              title="Remove product"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3,6 5,6 21,6"></polyline>
-                                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
-                      <div className="text-gray-500 text-sm">No other products added yet</div>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
             {/* Yield Tab */}
             {activeTab === 'yield' && (
               <div className="space-y-6">
-                {/* Smart Calculations Header */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-blue-600">🧮</span>
-                    <h3 className="text-sm font-medium text-blue-900">Smart Calculations</h3>
-                  </div>
-                  <p className="text-xs text-blue-700">Values auto-calculate as you type for immediate feedback. Database stores final authoritative totals when saved.</p>
-                </div>
-
                 {/* Main Yield Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-900">Main Yield Section</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">Main Yield Section</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -552,8 +442,8 @@ export default function OperationsForm({
                 </div>
 
                 {/* Quality Metrics */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-900">Quality Metrics</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">Quality Metrics</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -592,8 +482,8 @@ export default function OperationsForm({
                 </div>
 
                 {/* Revenue Information Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-900">Revenue Information Section</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">Revenue Information Section</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -923,19 +813,7 @@ export default function OperationsForm({
         />
       )}
 
-      {/* Other Products Selector Modal */}
-      {showProductSelector && (
-        <ProductSelector
-          onSelect={handleProductSelect}
-          onClose={() => {
-            setShowProductSelector(false)
-            setEditingProductIndex(null)
-          }}
-          blocArea={blocArea}
-          existingProduct={editingProductIndex !== null && formData.products?.[editingProductIndex] ?
-            formData.products[editingProductIndex] : undefined}
-        />
-      )}
+
 
       {/* Resource Selector Modal */}
       {showResourceSelector && (
@@ -950,187 +828,9 @@ export default function OperationsForm({
         />
       )}
 
-      {/* Product Editor Modal */}
-      {showProductEditor && editingProductIndex !== null && formData.products?.[editingProductIndex] && (
-        <ProductEditor
-          product={formData.products[editingProductIndex]}
-          blocArea={blocArea}
-          onSave={(updatedProduct) => {
-            const updatedProducts = [...(formData.products || [])]
-            updatedProducts[editingProductIndex] = updatedProduct
-            setFormData({ ...formData, products: updatedProducts })
-            setShowProductEditor(false)
-            setEditingProductIndex(null)
-          }}
-          onClose={() => {
-            setShowProductEditor(false)
-            setEditingProductIndex(null)
-          }}
-        />
-      )}
+
     </div>
   )
 }
 
-// Product Editor Component
-function ProductEditor({
-  product,
-  blocArea,
-  onSave,
-  onClose
-}: {
-  product: {
-    productId: string
-    productName: string
-    quantity: number
-    rate: number
-    unit: string
-    estimatedCost: number
-    actualCost?: number
-  }
-  blocArea: number
-  onSave: (product: {
-    productId: string
-    productName: string
-    quantity: number
-    rate: number
-    unit: string
-    estimatedCost: number
-    actualCost?: number
-  }) => void
-  onClose: () => void
-}) {
-  const [quantity, setQuantity] = useState(product.quantity)
-  const [rate, setRate] = useState(product.rate)
-  const [actualCost, setActualCost] = useState(product.actualCost || 0)
-  const [isUpdatingFromRate, setIsUpdatingFromRate] = useState(false)
 
-  const handleRateChange = (newRate: number) => {
-    setIsUpdatingFromRate(true)
-    setRate(newRate)
-    const calculatedQuantity = Math.round((newRate * blocArea) * 10) / 10
-    setQuantity(calculatedQuantity)
-    setIsUpdatingFromRate(false)
-  }
-
-  const handleQuantityChange = (newQuantity: number) => {
-    if (!isUpdatingFromRate) {
-      setQuantity(newQuantity)
-      const calculatedRate = blocArea > 0 ? Math.round((newQuantity / blocArea) * 10) / 10 : 0
-      setRate(calculatedRate)
-    }
-  }
-
-  const handleSave = () => {
-    onSave({
-      productId: product.productId,
-      productName: product.productName,
-      quantity,
-      rate,
-      unit: product.unit,
-      estimatedCost: product.estimatedCost, // Keep the original estimated cost
-      actualCost: actualCost > 0 ? actualCost : undefined
-    })
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Edit Product</h2>
-            <p className="text-gray-600 mt-1">{product.productName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Close"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rate ({product.unit}/ha) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={rate === 0 ? '' : rate}
-                onChange={(e) => handleRateChange(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="0"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Quantity ({product.unit}) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={quantity === 0 ? '' : quantity}
-                onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Actual Cost (Rs) <span className="text-gray-500 text-xs">Optional</span>
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={actualCost || ''}
-              onChange={(e) => setActualCost(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Enter actual cost"
-            />
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="text-sm text-gray-600">
-              <div>Estimated Cost: Rs {product.estimatedCost.toLocaleString()}</div>
-              <div>Bloc Area: {blocArea} ha</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={quantity <= 0 || rate <= 0}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
