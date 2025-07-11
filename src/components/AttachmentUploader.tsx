@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Paperclip, X, Upload, File, Image, FileText, Video, Music } from 'lucide-react'
+import { Paperclip, X, Upload, File, Image as ImageIcon, FileText, Video, Music } from 'lucide-react'
 
 interface AttachmentFile {
   id: string
@@ -94,7 +94,7 @@ export default function AttachmentUploader({
   }
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <Image className="w-4 h-4" />
+    if (mimeType.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
     if (mimeType.startsWith('video/')) return <Video className="w-4 h-4" />
     if (mimeType.startsWith('audio/')) return <Music className="w-4 h-4" />
     if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) {

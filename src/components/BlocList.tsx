@@ -92,7 +92,7 @@ export default function BlocList({
     }
 
     loadCropCycleData()
-  }, [savedAreas.length]) // Re-run when number of saved areas changes
+  }, [savedAreas]) // Re-run when saved areas change
 
   // Debug props
   console.log('📋 BlocList props:', {

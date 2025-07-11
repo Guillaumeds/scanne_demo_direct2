@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { CropCycle, CyclePermissions } from '@/types/cropCycles'
 import { CropCycleService } from '@/services/cropCycleService'
 
@@ -37,7 +37,7 @@ export function CropCycleProvider({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshCycles = async () => {
+  const refreshCycles = useCallback(async () => {
     try {
       console.log('🔄 CropCycleContext.refreshCycles() called for blocId:', blocId)
       setIsLoading(true)
@@ -71,9 +71,9 @@ export function CropCycleProvider({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [blocId])
 
-  const setActiveCycleId = async (cycleId: string | null) => {
+  const setActiveCycleId = useCallback(async (cycleId: string | null) => {
     try {
       if (!cycleId) {
         setActiveCycle(null)
@@ -91,7 +91,7 @@ export function CropCycleProvider({
       console.error('Error setting active cycle:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     }
-  }
+  }, [])
 
   const createCycle = async (request: any): Promise<CropCycle> => {
     try {
