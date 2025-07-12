@@ -118,10 +118,10 @@ export function ModernInformationTab({ bloc, currentSubView }: ModernInformation
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium text-slate-900">
-                    {activeCycleInfo.variety_name} - Cycle {activeCycleInfo.cycle_number}
+                    {activeCycleInfo.sugarcaneVariety} - Cycle 1
                   </h3>
                   <p className="text-sm text-slate-600">
-                    {activeCycleInfo.cycle_type === 'plantation' ? 'Plantation' : 'Ratoon'} Cycle
+                    {activeCycleInfo.type === 'plantation' ? 'Plantation' : 'Ratoon'} Cycle
                   </p>
                 </div>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -133,20 +133,20 @@ export function ModernInformationTab({ bloc, currentSubView }: ModernInformation
                 <div>
                   <label className="text-sm font-medium text-slate-700">Planting Date</label>
                   <p className="text-slate-900">
-                    {new Date(activeCycleInfo.planting_date).toLocaleDateString()}
+                    {activeCycleInfo.plantingDate ? new Date(activeCycleInfo.plantingDate).toLocaleDateString() : 'Not set'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700">Expected Harvest</label>
                   <p className="text-slate-900">
-                    {new Date(activeCycleInfo.planned_harvest_date).toLocaleDateString()}
+                    {new Date(activeCycleInfo.plannedHarvestDate).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-slate-700">Growth Stage</label>
-                <p className="text-slate-900 capitalize">{activeCycleInfo.growth_stage}</p>
+                <p className="text-slate-900 capitalize">Active</p>
               </div>
 
               <div className="flex gap-2">
@@ -199,15 +199,15 @@ export function ModernInformationTab({ bloc, currentSubView }: ModernInformation
           <CardContent>
             <div className="space-y-3">
               {cropCycles.slice(0, 5).map((cycle, index) => (
-                <div key={cycle.uuid} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div key={cycle.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
                     <p className="font-medium text-slate-900">
-                      {cycle.variety_name} - Cycle {cycle.cycle_number}
+                      {cycle.sugarcaneVarietyId} - Cycle {cycle.cycleNumber}
                     </p>
                     <p className="text-sm text-slate-600">
-                      {new Date(cycle.planting_date).toLocaleDateString()} - 
-                      {cycle.actual_harvest_date 
-                        ? new Date(cycle.actual_harvest_date).toLocaleDateString()
+                      {cycle.plantingDate ? new Date(cycle.plantingDate).toLocaleDateString() : 'Not set'} -
+                      {cycle.actualHarvestDate
+                        ? new Date(cycle.actualHarvestDate).toLocaleDateString()
                         : 'Ongoing'
                       }
                     </p>

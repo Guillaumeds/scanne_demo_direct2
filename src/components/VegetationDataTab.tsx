@@ -6,10 +6,13 @@ import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
 interface DrawnArea {
-  id: string
+  id?: string
+  uuid?: string
+  localId: string
   type: string
   coordinates: [number, number][]
   area: number
+  name?: string
 }
 
 interface VegetationDataTabProps {
@@ -45,7 +48,7 @@ export default function VegetationDataTab({ bloc }: VegetationDataTabProps) {
   useEffect(() => {
     // Auto-fetch vegetation data when component mounts
     fetchVegetationData() // Use real data
-  }, [bloc.id])
+  }, [bloc.uuid || bloc.localId])
 
   const getVegetationHealth = (ndvi: number) => {
     if (ndvi >= 0.7) return { status: 'Excellent', color: 'text-green-600 bg-green-50', bgColor: 'bg-green-100' }

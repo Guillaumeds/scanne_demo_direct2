@@ -3,6 +3,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import ModernOverviewTab from '../ModernOverviewTab'
 import { BlocOverviewNode } from '@/types/operationsOverview'
 
@@ -124,7 +125,7 @@ describe('ModernOverviewTab', () => {
               area: 2.5,
               rate: 1.0,
               quantity: 100,
-              status: 'completed'
+              status: 'complete'
             }
           ]
         }

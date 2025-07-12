@@ -7,10 +7,13 @@ import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
 import { format } from 'date-fns'
 
 interface DrawnArea {
-  id: string
+  id?: string
+  uuid?: string
+  localId: string
   type: string
   coordinates: [number, number][]
   area: number
+  name?: string
 }
 
 interface SoilDataTabProps {
@@ -107,7 +110,7 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
       fetchAllSoilData() // Use real API data
       fetchSatelliteData() // Use real satellite data
     }
-  }, [bloc.id, hasInitiallyLoaded])
+  }, [bloc.uuid || bloc.localId, hasInitiallyLoaded])
 
   const getFertilityColor = (fertility: string) => {
     switch (fertility) {

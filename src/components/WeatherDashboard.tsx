@@ -10,7 +10,7 @@ import {
   CloudRain,
   CloudDrizzle,
   CloudSnow,
-  CloudLightning
+  CloudLightning,
   Thermometer,
   Droplets,
   Wind,
@@ -138,8 +138,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
       CloudRain,
       CloudDrizzle,
       CloudSnow,
-      CloudLightning,
-      Cloud
+      CloudLightning
     }
 
     const IconComponent = iconComponents[iconName as keyof typeof iconComponents] || Cloud

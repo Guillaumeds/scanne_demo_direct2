@@ -275,7 +275,11 @@ export function ModernOverviewTable({
 
     // Only update if there are new expansions (never auto-collapse)
     if (Array.from(newExpandedProducts).some(id => !expandedProducts.has(id))) {
-      setExpandedProducts(prev => new Set([...prev, ...newExpandedProducts]))
+      setExpandedProducts(prev => {
+        const newSet = new Set(prev)
+        newExpandedProducts.forEach(id => newSet.add(id))
+        return newSet
+      })
     }
   }, [data, expandedProducts])
 

@@ -17,6 +17,7 @@ const mockBloc: DrawnArea = {
   uuid: 'test-bloc-uuid',
   localId: 'B001',
   name: 'Test Bloc Alpha',
+  type: 'bloc',
   area: 12.5,
   coordinates: [
     [57.5, -20.1],
@@ -25,9 +26,10 @@ const mockBloc: DrawnArea = {
     [57.5, -20.11],
     [57.5, -20.1]
   ],
-  color: '#10b981',
-  isVisible: true,
-  isSelected: false
+  isSaved: true,
+  isDirty: false,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
 }
 
 const mockOperationsData: BlocOverviewNode[] = [

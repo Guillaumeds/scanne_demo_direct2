@@ -74,7 +74,7 @@ export function ModernOperationsForm({
   const [notesData, setNotesData] = useState<string[]>([''])
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
-  const form = useForm<OperationFormData>({
+  const form = useForm({
     resolver: zodResolver(createOperationSchemaWithBlocArea(blocArea)),
     defaultValues: {
       operationName: operation?.product_name || '',
@@ -156,7 +156,7 @@ export function ModernOperationsForm({
     setShowEquipmentSelector(false)
   }
 
-  const handleSubmit = async (data: OperationFormData) => {
+  const handleSubmit = async (data: any) => {
     if (isSaving) return
 
     setIsSaving(true)
@@ -500,7 +500,7 @@ export function ModernOperationsForm({
                           </label>
                           <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
                             {form.watch('totalYield') && form.watch('actualArea')
-                              ? (form.watch('totalYield') / form.watch('actualArea')).toFixed(2)
+                              ? ((form.watch('totalYield') || 0) / (form.watch('actualArea') || 1)).toFixed(2)
                               : '0.00'
                             }
                           </div>
@@ -535,7 +535,7 @@ export function ModernOperationsForm({
                           </label>
                           <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
                             {form.watch('revenuePerHectare') && form.watch('actualArea') && form.watch('totalYield')
-                              ? ((form.watch('revenuePerHectare') * form.watch('actualArea')) / form.watch('totalYield')).toFixed(2)
+                              ? (((form.watch('revenuePerHectare') || 0) * (form.watch('actualArea') || 1)) / (form.watch('totalYield') || 1)).toFixed(2)
                               : '0.00'
                             }
                           </div>
@@ -547,7 +547,7 @@ export function ModernOperationsForm({
                           </label>
                           <div className="w-full px-3 py-2 bg-green-100 border border-green-300 rounded-md text-green-700 font-medium">
                             Rs {form.watch('revenuePerHectare') && form.watch('actualArea')
-                              ? (form.watch('revenuePerHectare') * form.watch('actualArea')).toLocaleString()
+                              ? ((form.watch('revenuePerHectare') || 0) * (form.watch('actualArea') || 0)).toLocaleString()
                               : '0'
                             }
                           </div>
@@ -680,7 +680,7 @@ export function ModernOperationsForm({
                         onFilesChange={setAttachmentFiles}
                         maxFiles={10}
                         maxSize={50} // 50MB
-                        acceptedFileTypes={[
+                        acceptedTypes={[
                           'image/*',
                           'application/pdf',
                           '.doc,.docx',

@@ -75,7 +75,7 @@ export const operationFormSchema = z.object({
   revenuePerHectare: z.number().min(0, "Revenue per hectare must be positive").optional(),
 
   // Status
-  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).optional().default('planned'),
+  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).default('planned'),
 
   // Related data
   products: z.array(productSchema).optional().default([]),

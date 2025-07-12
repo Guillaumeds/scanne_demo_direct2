@@ -62,26 +62,16 @@ export function ModernWorkPackageForm({
   const [notesData, setNotesData] = useState<string[]>([''])
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([])
 
-  const form = useForm<WorkPackageFormData>({
+  const form = useForm({
     resolver: zodResolver(createWorkPackageSchemaWithOperationDates(operationStartDate, operationEndDate)),
     defaultValues: {
-      operationId: operationId,
-      workPackageName: workPackage?.name || '',
-      date: workPackage?.date || '',
-      startTime: workPackage?.start_time || '',
-      endTime: workPackage?.end_time || '',
-      duration: workPackage?.duration || undefined,
-      plannedArea: workPackage?.planned_area || undefined,
-      actualArea: workPackage?.actual_area || undefined,
-      plannedQuantity: workPackage?.planned_quantity || undefined,
-      actualQuantity: workPackage?.actual_quantity || undefined,
+      date: workPackage?.date || new Date().toISOString().split('T')[0],
+      actualArea: workPackage?.actualArea || undefined,
+      actualQuantity: workPackage?.actualQuantity || undefined,
       rate: workPackage?.rate || undefined,
-      actualRate: workPackage?.actual_rate || undefined,
       status: workPackage?.status || 'not-started',
-      actualProducts: workPackage?.actualProducts || [],
-      actualEquipment: workPackage?.actualEquipment || [],
-      actualResources: workPackage?.actualResources || [],
       notes: workPackage?.notes || '',
+      attachments: []
     }
   })
 
@@ -106,7 +96,7 @@ export function ModernWorkPackageForm({
     ))
   }
 
-  const handleSubmit = async (data: WorkPackageFormData) => {
+  const handleSubmit = async (data: any) => {
     if (isSaving) return
 
     setIsSaving(true)
@@ -278,7 +268,7 @@ export function ModernWorkPackageForm({
                               size="sm"
                               onClick={() => {
                                 const statuses = ['not-started', 'in-progress', 'completed']
-                                const currentIndex = statuses.indexOf(field.value)
+                                const currentIndex = statuses.indexOf(field.value || 'not-started')
                                 const nextIndex = (currentIndex + 1) % statuses.length
                                 field.onChange(statuses[nextIndex])
                               }}
@@ -482,7 +472,7 @@ export function ModernWorkPackageForm({
                       onFilesChange={setAttachmentFiles}
                       maxFiles={10}
                       maxSize={50} // 50MB
-                      acceptedFileTypes={[
+                      acceptedTypes={[
                         'image/*',
                         'application/pdf',
                         '.doc,.docx',

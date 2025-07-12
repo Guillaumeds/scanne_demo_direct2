@@ -20,8 +20,11 @@ export function ModernBlocBreadcrumbs() {
   const getCurrentPageTitle = () => {
     const tabTitles = {
       'information': 'Information',
-      'crop-management': 'Crop Management', 
-      'observations': 'Observations'
+      'crop-management': 'Crop Management',
+      'observations': 'Observations',
+      'weather': 'Weather',
+      'satellite-soil': 'Soil Data',
+      'satellite-vegetation': 'Vegetation Data'
     }
     
     const subViewTitles = {

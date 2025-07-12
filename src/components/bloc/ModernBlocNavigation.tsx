@@ -18,7 +18,8 @@ interface ModernBlocNavigationProps {
 
 export function ModernBlocNavigation({ bloc, onDelete }: ModernBlocNavigationProps) {
   const { currentTab, navigateToTab, hasUnsavedChanges } = useBlocNavigation()
-  const { activeCycleInfo } = useCropCycleInfo()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const activeCycleInfo = getActiveCycleInfo()
   const [isEditingBlocName, setIsEditingBlocName] = useState(false)
 
   // Navigation items

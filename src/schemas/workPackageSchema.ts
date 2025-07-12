@@ -19,7 +19,7 @@ export const workPackageFormSchema = z.object({
   rate: z.number().min(0, "Rate must be positive").optional(),
 
   // Status
-  status: z.enum(['not-started', 'in-progress', 'completed']).optional().default('not-started'),
+  status: z.enum(['not-started', 'in-progress', 'completed']).default('not-started'),
 
   // Additional information
   notes: z.string().optional(),

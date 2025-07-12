@@ -88,6 +88,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
   // Convert DrawnArea to legacy format expected by tab components
   const legacyBloc = {
     id: DrawnAreaUtils.getEntityKey(bloc), // Use entity key as id for compatibility
+    localId: bloc.localId,
     type: bloc.type,
     coordinates: bloc.coordinates,
     area: bloc.area,

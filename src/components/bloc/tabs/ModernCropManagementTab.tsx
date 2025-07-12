@@ -25,7 +25,19 @@ export function ModernCropManagementTab({ bloc, currentSubView }: ModernCropMana
   const [operationsData, setOperationsData] = useState<BlocOverviewNode[]>([{
     id: bloc.uuid || bloc.localId,
     name: bloc.name || `Bloc ${bloc.localId}`,
-    area: bloc.area,
+    area_hectares: bloc.area,
+    cycle_number: [1],
+    variety_name: 'Unknown',
+    planned_harvest_date: new Date().toISOString().split('T')[0],
+    expected_yield_tons_ha: 0,
+    growth_stage: 'Unknown',
+    progress: 0,
+    total_est_product_cost: 0,
+    total_est_resource_cost: 0,
+    total_act_product_cost: 0,
+    total_act_resource_cost: 0,
+    cycle_type: 'plantation',
+    planting_date: new Date().toISOString().split('T')[0],
     products: [] // Empty products array - will show "Add Operation" button
   }])
 
