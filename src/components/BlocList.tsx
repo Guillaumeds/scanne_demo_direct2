@@ -111,18 +111,35 @@ export default function BlocList({
   const scrollToBlocCard = (areaId: string) => {
     console.log('📜 Attempting to scroll to bloc card:', areaId)
     const cardElement = blocCardRefs.current.get(areaId)
-    if (cardElement && listContainerRef.current) {
+    const container = listContainerRef.current
+
+    if (cardElement && container) {
       console.log('📜 Scrolling to card element:', cardElement)
-      cardElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+
+      // Calculate positions relative to the container
+      const containerRect = container.getBoundingClientRect()
+      const cardRect = cardElement.getBoundingClientRect()
+
+      // Calculate the scroll position needed to center the card in the container
+      const containerScrollTop = container.scrollTop
+      const cardOffsetTop = cardRect.top - containerRect.top + containerScrollTop
+      const containerHeight = container.clientHeight
+      const cardHeight = cardRect.height
+
+      // Center the card in the container
+      const targetScrollTop = cardOffsetTop - (containerHeight / 2) + (cardHeight / 2)
+
+      // Smooth scroll within the container only
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
       })
 
       // Card will be highlighted through selection state, no need for temporary animation
     } else {
       console.log('❌ Could not find card element for:', areaId, {
         cardElement,
-        listContainer: listContainerRef.current,
+        listContainer: container,
         availableCards: Array.from(blocCardRefs.current.keys())
       })
     }

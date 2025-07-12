@@ -22,20 +22,20 @@ const nextConfig = {
         aggregateTimeout: 300,
       }
 
-      // Optimize development build speed
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-          },
-        },
-      }
+      // Optimize development build speed - temporarily disable vendor chunking to fix CSS error
+      // config.optimization = {
+      //   ...config.optimization,
+      //   splitChunks: {
+      //     chunks: 'all',
+      //     cacheGroups: {
+      //       vendor: {
+      //         test: /[\\/]node_modules[\\/]/,
+      //         name: 'vendors',
+      //         chunks: 'all',
+      //       },
+      //     },
+      //   },
+      // }
     }
     return config
   },

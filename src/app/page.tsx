@@ -37,6 +37,7 @@ export default function Home() {
                   width={48}
                   height={48}
                   className="drop-shadow-lg brightness-0 invert"
+                  style={{ width: "auto", height: "auto" }}
                   priority
                 />
               </div>

@@ -229,6 +229,12 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
   // Simple tab change handler - no auto-commit needed with database persistence
   const handleTabChange = (newTabId: string) => {
     if (newTabId === activeTab) return
+
+    // Prevent switching to disabled tabs when no active crop cycle
+    if (!activeCycleInfo && (newTabId === 'overview' || newTabId === 'observations')) {
+      return
+    }
+
     setActiveTab(newTabId)
   }
 
@@ -364,14 +370,20 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
                   (tab.id === 'observations' && observationsFormRef.current?.isDirty)
                 )
 
+                // Check if tab should be disabled (no active crop cycle)
+                const isDisabled = !activeCycleInfo && (tab.id === 'overview' || tab.id === 'observations')
+
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => handleTabChange(tab.id)}
+                    onClick={() => !isDisabled && handleTabChange(tab.id)}
+                    disabled={isDisabled}
                     className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
                       activeTab === tab.id
                         ? 'bg-green-100 text-green-700 border border-green-200'
+                        : isDisabled
+                        ? 'text-gray-400 cursor-not-allowed'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                   >
@@ -381,13 +393,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
                     {/* Unsaved changes indicator */}
                     <TabUnsavedIndicator isDirty={hasUnsavedChanges} />
 
-                    {/* Status indicator */}
-                    {tab.status === 'warning' && (
-                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                    )}
-                    {tab.status === 'complete' && (
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    )}
+                    {/* Status indicators removed as requested */}
                   </button>
                 )
               })}
@@ -416,6 +422,12 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
             <h2 className="text-xl font-semibold text-gray-900">
               {tabs.find(tab => tab.id === activeTab)?.name}
             </h2>
+            {/* Note for no active crop cycle */}
+            {activeTab === 'general' && !activeCycleInfo && (
+              <p className="text-sm text-orange-600 mt-2 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                📝 No active crop cycle found. Please create a crop cycle to start tracking activities and observations.
+              </p>
+            )}
           </div>
 
           {/* Tab Content */}

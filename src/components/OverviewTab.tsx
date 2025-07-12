@@ -1569,22 +1569,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   // Render Level 3 (Work Package) Table
   const renderWorkPackageTable = (bloc: BlocOverviewNode, product: ProductNode) => {
     if (!product.work_packages || product.work_packages.length === 0) {
-      return (
-        <div className="m-3 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className={`${DEFAULT_COLORS.workPackage.header} border-b-2 ${DEFAULT_COLORS.workPackage.border}`}>
-                <tr>
-                  {renderDynamicHeaders('node3', 'text-gray-900')}
-                  {!readOnly && (
-                    <th className="w-16"></th>
-                  )}
-                </tr>
-              </thead>
-            </table>
-          </div>
-        </div>
-      )
+      return null // Don't render anything when no work packages exist
     }
 
     return (
