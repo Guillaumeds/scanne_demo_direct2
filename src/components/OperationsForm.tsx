@@ -15,6 +15,8 @@ import {
   ACTIVITY_TEMPLATES
 } from '@/types/activities'
 import AttachmentUploader, { AttachmentFile } from './AttachmentUploader'
+import EquipmentSelector from './EquipmentSelector'
+import EquipmentForm from './EquipmentForm'
 import { SaveButton, CancelButton } from '@/components/ui/SubmitButton'
 
 interface OperationsFormProps {
@@ -36,12 +38,18 @@ export default function OperationsForm({
   const [formData, setFormData] = useState(() => {
     console.log('🎯 Initializing operations form with operation:', operation?.id, operation?.product_name)
 
+    // Ensure mainProduct.rate is synced with planned_rate
+    const mainProduct = operation?.mainProduct || null
+    if (mainProduct && operation?.planned_rate && !mainProduct.rate) {
+      mainProduct.rate = operation.planned_rate
+    }
+
     return {
       id: operation?.id || '',
       operationName: operation?.product_name || '',
       method: operation?.method || '',
-      mainProduct: operation?.mainProduct || null,
-      quantity: operation?.quantity || 0,
+      mainProduct: mainProduct,
+
       startDate: operation?.planned_start_date || new Date().toISOString().split('T')[0],
       endDate: operation?.planned_end_date || new Date().toISOString().split('T')[0],
       status: operation?.status || 'planned',
@@ -62,11 +70,16 @@ export default function OperationsForm({
   // Tab state
   const [activeTab, setActiveTab] = useState<'general' | 'yield' | 'resources' | 'notes' | 'attachments'>('general')
 
+  // Helper function to determine if operation is harvest-related
+  const isHarvestOperation = (operationName: string): boolean => {
+    if (!operationName) return false
+    return operationName.toLowerCase().includes('harvest')
+  }
+
   // Additional form data for new tabs
   const [yieldData, setYieldData] = useState({
     totalYieldTons: 552.2,
     yieldPerHectare: 110,
-    actualHarvestDate: '16/07/2025',
     brixPercentage: 17,
     sugarContentPercentage: 14,
     totalSugarcaneRevenue: 828300,
@@ -98,6 +111,97 @@ export default function OperationsForm({
   )
 
   const [notesData, setNotesData] = useState<string[]>([''])
+
+  // Equipment state
+  const [equipmentData, setEquipmentData] = useState<Array<{
+    id: string
+    name: string
+    estimatedDuration: number
+    costPerHour: number
+    totalEstimatedCost: number
+  }>>([])
+  const [showEquipmentSelector, setShowEquipmentSelector] = useState(false)
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false)
+  const [selectedEquipment, setSelectedEquipment] = useState<{
+    id: string
+    name: string
+    category: string
+    icon: string
+    defaultRate: number
+    unit: string
+    description?: string
+  } | null>(null)
+  const [editingEquipment, setEditingEquipment] = useState<{
+    id: string
+    name: string
+    estimatedDuration: number
+    costPerHour: number
+    totalEstimatedCost: number
+  } | null>(null)
+
+  // Equipment handlers
+  const addEquipment = () => {
+    setEditingEquipment(null)
+    setShowEquipmentSelector(true)
+  }
+
+  const editEquipment = (equipment: typeof equipmentData[0]) => {
+    // Find the selected equipment from the equipment data
+    setSelectedEquipment({
+      id: equipment.id,
+      name: equipment.name,
+      category: 'tractors', // Default category, would be stored in real implementation
+      icon: '🚜',
+      defaultRate: equipment.costPerHour,
+      unit: 'Rs/hour'
+    })
+    setEditingEquipment(equipment)
+    setShowEquipmentForm(true)
+  }
+
+  const handleEquipmentSelect = (equipment: {
+    id: string
+    name: string
+    category: string
+    icon: string
+    defaultRate: number
+    unit: string
+    description?: string
+  }) => {
+    setSelectedEquipment(equipment)
+    setShowEquipmentSelector(false)
+    setShowEquipmentForm(true)
+  }
+
+  const saveEquipment = (equipmentInfo: {
+    name: string
+    estimatedDuration: number
+    costPerHour: number
+    totalEstimatedCost: number
+  }) => {
+    if (editingEquipment?.id) {
+      // Edit existing equipment
+      setEquipmentData(prev => prev.map(eq =>
+        eq.id === editingEquipment.id
+          ? { ...eq, ...equipmentInfo }
+          : eq
+      ))
+    } else {
+      // Add new equipment
+      const newEquipment = {
+        id: `eq_${Date.now()}`,
+        ...equipmentInfo
+      }
+      setEquipmentData(prev => [...prev, newEquipment])
+    }
+    setShowEquipmentForm(false)
+    setSelectedEquipment(null)
+    setEditingEquipment(null)
+  }
+
+  const deleteEquipment = (equipmentId: string) => {
+    setEquipmentData(prev => prev.filter(eq => eq.id !== equipmentId))
+  }
 
   // Template selection handler
   const handleTemplateSelect = (templateId: string) => {
@@ -158,7 +262,8 @@ export default function OperationsForm({
       method: formData.method!,
       planned_start_date: formData.startDate!,
       planned_end_date: formData.endDate!,
-      quantity: formData.quantity || 0,
+      planned_rate: formData.mainProduct?.rate || 0, // Map mainProduct.rate to planned_rate
+
       mainProduct: formData.mainProduct,
       resources: resourcesData || [],
       yieldData: yieldData,
@@ -204,21 +309,30 @@ export default function OperationsForm({
                 { id: 'resources', name: 'Resources', icon: '👥' },
                 { id: 'notes', name: 'Notes', icon: '📝' },
                 { id: 'attachments', name: 'Attachments', icon: '📎' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`${
-                    activeTab === tab.id
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.name}</span>
-                </button>
-              ))}
+              ].map((tab) => {
+                const isHarvest = isHarvestOperation(formData.operationName || '')
+                const isYieldTab = tab.id === 'yield'
+                const isDisabled = isYieldTab && !isHarvest
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => !isDisabled && setActiveTab(tab.id as any)}
+                    disabled={isDisabled}
+                    className={`${
+                      activeTab === tab.id
+                        ? 'border-green-500 text-green-600'
+                        : isDisabled
+                        ? 'border-transparent text-gray-300 cursor-not-allowed opacity-50'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.name}</span>
+                  </button>
+                )
+              })}
             </nav>
           </div>
 
@@ -261,22 +375,7 @@ export default function OperationsForm({
                     </div>
                   </div>
 
-                  {/* Quantity - Independent field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={formData.quantity || ''}
-                      onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="Enter quantity"
-                      title="Enter quantity"
-                    />
-                  </div>
+
                 </div>
 
             {/* Dates - Connected to table */}
@@ -311,15 +410,20 @@ export default function OperationsForm({
             </div>
 
             {/* Product - Connected to table, compact design */}
-            <div>
+            <div className={`${isHarvestOperation(formData.operationName || '') ? 'opacity-50 pointer-events-none' : ''}`}>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Product
+                  Product {isHarvestOperation(formData.operationName || '') && <span className="text-gray-400">(not relevant for harvest operations)</span>}
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowMainProductSelector(true)}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-dashed border-blue-300 hover:border-blue-400 transition-colors"
+                  onClick={() => !isHarvestOperation(formData.operationName || '') && setShowMainProductSelector(true)}
+                  disabled={isHarvestOperation(formData.operationName || '')}
+                  className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg border border-dashed transition-colors ${
+                    isHarvestOperation(formData.operationName || '')
+                      ? 'text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300 hover:border-blue-400'
+                  }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -426,18 +530,7 @@ export default function OperationsForm({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Actual Harvest Date
-                      </label>
-                      <input
-                        type="date"
-                        value={yieldData.actualHarvestDate}
-                        onChange={(e) => setYieldData({ ...yieldData, actualHarvestDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        title="Select actual harvest date"
-                      />
-                    </div>
+
                   </div>
                 </div>
 
@@ -570,60 +663,148 @@ export default function OperationsForm({
             {/* Resources Tab */}
             {activeTab === 'resources' && (
               <div className="space-y-6">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Resource
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estimate Effort (Hours)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estimate Cost (MUR)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {resourcesData.map((resource, index) => (
-                        <tr key={resource.resource}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <span className="text-sm font-medium text-gray-900">{resource.resource}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={resource.estimatedEffort || ''}
-                              onChange={(e) => {
-                                const effort = parseFloat(e.target.value) || 0
-                                const cost = effort * resource.ratePerHour
-                                const updated = [...resourcesData]
-                                updated[index] = {
-                                  ...updated[index],
-                                  estimatedEffort: effort,
-                                  estimatedCost: Math.round(cost)
-                                }
-                                setResourcesData(updated)
-                              }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              placeholder="0"
-                              title="Enter estimated effort in hours"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {resource.estimatedCost.toLocaleString()}
-                            </div>
-                          </td>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Estimated Resource Usage</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Plan the estimated hours and costs for each resource type.
+                  </p>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-blue-300">
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Resource</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Estimated Effort (hours)</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Rate/Hour</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Estimated Cost</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {resourcesData.map((resource, index) => (
+                          <tr key={resource.resource} className="border-b border-blue-200">
+                            <td className="py-2 px-3 font-medium text-gray-900">{resource.resource}</td>
+                            <td className="py-2 px-3">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                value={resource.estimatedEffort || ''}
+                                onChange={(e) => {
+                                  const effort = parseFloat(e.target.value) || 0
+                                  const cost = effort * resource.ratePerHour
+                                  const updated = [...resourcesData]
+                                  updated[index] = {
+                                    ...updated[index],
+                                    estimatedEffort: effort,
+                                    estimatedCost: Math.round(cost)
+                                  }
+                                  setResourcesData(updated)
+                                }}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                                title="Enter estimated effort in hours"
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-gray-600">Rs {resource.ratePerHour}</td>
+                            <td className="py-2 px-3 font-medium text-green-600">
+                              Rs {resource.estimatedCost.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-blue-300">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-900">Total Estimated Cost:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        Rs {resourcesData.reduce((sum, r) => sum + r.estimatedCost, 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Equipment Section - Matching Product UX */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Equipment
+                    </label>
+                    {equipmentData.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={addEquipment}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Equipment</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={addEquipment}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-dashed border-blue-300 hover:border-blue-400 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Equipment</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {equipmentData.length > 0 ? (
+                      equipmentData.map((equipment) => (
+                        <div key={equipment.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <span className="text-lg">🚜</span>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{equipment.name}</div>
+                                <div className="text-sm text-gray-600">
+                                  Duration: {equipment.estimatedDuration}h • Rate: Rs {equipment.costPerHour}/h
+                                  <br />
+                                  <span className="text-blue-600">Est: Rs {equipment.totalEstimatedCost.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => editEquipment(equipment)}
+                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                title="Edit equipment"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="m18 2 4 4-14 14H4v-4L18 2z"/>
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteEquipment(equipment.id)}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
+                                title="Remove equipment"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polyline points="3,6 5,6 21,6"></polyline>
+                                  <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2,2h4a2,2 0 0,1,2,2v2"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+                        <div className="text-gray-500 text-sm">No equipment selected</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -792,7 +973,7 @@ export default function OperationsForm({
       )}
 
       {/* Main Product Selector Modal */}
-      {showMainProductSelector && (
+      {showMainProductSelector && !isHarvestOperation(formData.operationName || '') && (
         <ProductSelector
           onSelect={(product, quantity, actualCost) => {
             const mainProduct = {
@@ -828,6 +1009,31 @@ export default function OperationsForm({
         />
       )}
 
+      {/* Equipment Selector Modal */}
+      {showEquipmentSelector && (
+        <EquipmentSelector
+          onSelect={handleEquipmentSelect}
+          onClose={() => setShowEquipmentSelector(false)}
+        />
+      )}
+
+      {/* Equipment Form Modal */}
+      {showEquipmentForm && selectedEquipment && (
+        <EquipmentForm
+          selectedEquipment={selectedEquipment}
+          existingData={editingEquipment}
+          onSave={saveEquipment}
+          onCancel={() => {
+            setShowEquipmentForm(false)
+            setSelectedEquipment(null)
+            setEditingEquipment(null)
+          }}
+          onBack={() => {
+            setShowEquipmentForm(false)
+            setShowEquipmentSelector(true)
+          }}
+        />
+      )}
 
     </div>
   )

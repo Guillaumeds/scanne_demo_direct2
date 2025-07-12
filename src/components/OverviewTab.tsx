@@ -7,6 +7,8 @@ import { DrawnArea } from '@/types/drawnArea'
 import { BlocOverviewNode, ProductNode, WorkPackageNode, WorkPackageStatus } from '@/types/operationsOverview'
 import ProductSelector from '@/components/ProductSelector'
 import OperationsForm from '@/components/OperationsForm'
+import EditWorkPackageForm from '@/components/EditWorkPackageForm'
+import ContentSwitcher from '@/components/ui/ContentSwitcher'
 import { Product } from '@/types/products'
 
 // Status Badge Component
@@ -60,7 +62,7 @@ const StatusCompactToggle: React.FC<StatusCompactToggleProps> = ({ status, onCha
       case 'not-started':
         return { icon: '○', color: 'text-gray-500', bg: 'bg-gray-100', hover: 'hover:bg-gray-200', label: 'Not Started' }
       case 'in-progress':
-        return { icon: '◐', color: 'text-blue-600', bg: 'bg-blue-100', hover: 'hover:bg-blue-200', label: 'In Progress' }
+        return { icon: '◑', color: 'text-blue-600', bg: 'bg-blue-100', hover: 'hover:bg-blue-200', label: 'In Progress' }
       case 'complete':
         return { icon: '●', color: 'text-green-600', bg: 'bg-green-100', hover: 'hover:bg-green-200', label: 'Complete' }
     }
@@ -126,6 +128,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
 
   // Auto-expand logic for empty nodes (only expand, never auto-collapse)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const newExpandedBlocs = new Set(expandedBlocs) // Start with current state
     const newExpandedProducts = new Set(expandedProducts) // Start with current state
@@ -164,6 +167,81 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   // Operations form state
   const [showOperationsForm, setShowOperationsForm] = useState(false)
   const [editingOperation, setEditingOperation] = useState<ProductNode | null>(null)
+
+  // Work package form state
+  const [showWorkPackageForm, setShowWorkPackageForm] = useState(false)
+  const [editingWorkPackage, setEditingWorkPackage] = useState<{
+    workPackage: WorkPackageNode
+    blocId: string
+    productId: string
+  } | null>(null)
+
+  // View switcher state
+  type TableView = 'operations' | 'resources' | 'financial'
+  const [currentView, setCurrentView] = useState<TableView>('operations')
+
+  // Resource types for consistent data structure
+  const RESOURCE_TYPES = [
+    { name: 'Supervisor', ratePerHour: 500 },
+    { name: 'Permanent Male', ratePerHour: 300 },
+    { name: 'Permanent Female', ratePerHour: 250 },
+    { name: 'Contract Male', ratePerHour: 350 },
+    { name: 'Contract Female', ratePerHour: 280 }
+  ]
+
+  // Column definitions for each view
+  const columnViews = {
+    operations: {
+      node2: [
+        { key: 'operation', label: 'Operation', width: 'w-32' },
+        { key: 'method', label: 'Method', width: 'w-24' },
+        { key: 'product', label: 'Product', width: 'w-28' },
+        { key: 'rate', label: 'Rate', width: 'w-20' },
+        { key: 'start_date', label: 'Start Date', width: 'w-28' },
+        { key: 'end_date', label: 'End Date', width: 'w-28' }
+      ],
+      node3: [
+        { key: 'date', label: 'Date', width: 'w-28' },
+        { key: 'area', label: 'Area (ha)', width: 'w-24' },
+        { key: 'quantity', label: 'Quantity', width: 'w-24' },
+        { key: 'rate', label: 'Rate', width: 'w-20' },
+        { key: 'status', label: 'Status', width: 'w-16' }
+      ]
+    },
+    resources: {
+      node2: [
+        { key: 'operation', label: 'Operation', width: 'w-32' },
+        ...RESOURCE_TYPES.map(type => ({
+          key: type.name.toLowerCase().replace(' ', '_'),
+          label: `${type.name} (hrs)`,
+          width: 'w-24'
+        }))
+      ],
+      node3: [
+        { key: 'date', label: 'Date', width: 'w-28' },
+        ...RESOURCE_TYPES.map(type => ({
+          key: type.name.toLowerCase().replace(' ', '_'),
+          label: `${type.name} (hrs)`,
+          width: 'w-24'
+        }))
+      ]
+    },
+    financial: {
+      node2: [
+        { key: 'operation', label: 'Operation', width: 'w-32' },
+        { key: 'est_product_cost', label: 'Estimate Product Cost', width: 'w-32' },
+        { key: 'est_labour_cost', label: 'Estimate Labour Cost', width: 'w-32' },
+        { key: 'est_equipment_cost', label: 'Estimate Equipment Cost', width: 'w-32' },
+        { key: 'actual_revenue', label: 'Actual Revenue', width: 'w-28' }
+      ],
+      node3: [
+        { key: 'date', label: 'Date', width: 'w-28' },
+        { key: 'act_product_cost', label: 'Act Product Cost', width: 'w-28' },
+        { key: 'act_labour_cost', label: 'Actual Labour Cost', width: 'w-28' },
+        { key: 'act_equipment_cost', label: 'Actual Equipment Cost', width: 'w-32' }
+      ]
+    }
+  }
 
   // Get crop cycle information
   const { activeCycle, getActiveCycleInfo } = useCropCycleInfo()
@@ -376,6 +454,470 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     setShowOperationsForm(false)
     setEditingOperation(null)
   };
+
+  // Handle work package editing
+  const handleEditWorkPackage = (workPackage: WorkPackageNode, blocId: string, productId: string) => {
+    console.log('✏️ Editing work package:', workPackage.id, 'for bloc:', blocId, 'product:', productId)
+    setEditingWorkPackage({ workPackage, blocId, productId })
+    setShowWorkPackageForm(true)
+  };
+
+  const handleWorkPackageSave = async (workPackageData: WorkPackageNode) => {
+    console.log('💾 Saving work package:', workPackageData)
+
+    // Update the work package in the data
+    if (editingWorkPackage) {
+      setData(prev => prev.map(bloc =>
+        bloc.id === editingWorkPackage.blocId ? {
+          ...bloc,
+          products: bloc.products?.map(product =>
+            product.id === editingWorkPackage.productId ? {
+              ...product,
+              work_packages: product.work_packages?.map(wp =>
+                wp.id === workPackageData.id ? workPackageData : wp
+              )
+            } : product
+          )
+        } : bloc
+      ))
+    }
+
+    setShowWorkPackageForm(false)
+    setEditingWorkPackage(null)
+  };
+
+  // Handle view switching
+  const handleViewChange = (viewId: string) => {
+    setCurrentView(viewId as TableView)
+  }
+
+  // Content switcher options
+  const viewOptions = [
+    { id: 'operations', label: 'Operations', icon: '⚙️' },
+    { id: 'resources', label: 'Resources', icon: '👥' },
+    { id: 'financial', label: 'Financial', icon: '💰' }
+  ]
+
+  // Helper functions to extract data for different views
+  const getResourceData = (product: ProductNode, isEstimate: boolean = true) => {
+    // Extract resource data from product (this would come from the forms)
+    // For now, return mock data structure that matches the forms
+    const resourceData: { [key: string]: number } = {}
+    RESOURCE_TYPES.forEach(type => {
+      const key = type.name.toLowerCase().replace(' ', '_')
+      resourceData[key] = isEstimate ? 0 : 0 // Will be populated from actual data
+    })
+    return resourceData
+  }
+
+  const getFinancialData = (product: ProductNode, isActual: boolean = false) => {
+    // Extract financial data from product
+    const estLabourCost = 0 // TODO: Calculate from estimated labour resources
+    const estEquipmentCost = 0 // TODO: Calculate from estimated equipment resources
+    const actualRevenue = 0 // TODO: Calculate from actual sales/harvest data
+
+    return {
+      product_qty: product.planned_rate || 0, // Using planned_rate as quantity proxy
+      rate: product.planned_rate || 0,
+      total_cost: product.est_product_cost || 0,
+      est_resource_cost: product.est_resource_cost || 0,
+      actual_qty: product.planned_rate || 0, // Will come from actual data
+      actual_rate: product.planned_rate || 0,
+      actual_cost: product.act_product_cost || 0,
+      act_resource_cost: product.act_resource_cost || 0,
+      // New financial fields
+      est_product_cost: product.est_product_cost || 0,
+      est_labour_cost: estLabourCost,
+      est_equipment_cost: estEquipmentCost,
+      actual_revenue: actualRevenue
+    }
+  }
+
+  const getWorkPackageResourceData = (workPackage: WorkPackageNode, isActual: boolean = false) => {
+    // Extract resource data from work package
+    const resourceData: { [key: string]: number } = {}
+    RESOURCE_TYPES.forEach(type => {
+      const key = type.name.toLowerCase().replace(' ', '_')
+      resourceData[key] = 0 // Will be populated from actual work package data
+    })
+    return resourceData
+  }
+
+  const getWorkPackageFinancialData = (workPackage: WorkPackageNode) => {
+    const productCost = (workPackage.quantity || 0) * (workPackage.rate || 0)
+    const labourCost = 0 // TODO: Calculate from actual labour resource usage
+    const equipmentCost = 0 // TODO: Calculate from actual equipment usage
+
+    return {
+      actual_qty: workPackage.quantity || 0,
+      actual_rate: workPackage.rate || 0,
+      actual_cost: productCost,
+      act_resource_cost: labourCost + equipmentCost,
+      act_product_cost: productCost,
+      act_labour_cost: labourCost,
+      act_equipment_cost: equipmentCost
+    }
+  }
+
+  // Dynamic column rendering functions
+  const renderDynamicHeaders = (level: 'node2' | 'node3', colorClass: string) => {
+    const columns = columnViews[currentView][level]
+    return columns.map((column) => (
+      <th
+        key={column.key}
+        className={`px-2 py-2 text-left text-xs font-medium ${colorClass} uppercase tracking-wider ${column.width}`}
+      >
+        {column.label}
+      </th>
+    ))
+  }
+
+  const renderDynamicProductCells = (product: ProductNode, blocId: string) => {
+    const columns = columnViews[currentView].node2
+
+    return columns.map((column) => {
+      switch (currentView) {
+        case 'operations':
+          return renderOperationCell(product, column.key, blocId)
+        case 'resources':
+          return renderResourceCell(product, column.key, true, blocId) // true for estimate
+        case 'financial':
+          return renderFinancialCell(product, column.key, false, blocId) // false for estimate
+        default:
+          return <td key={column.key} className="px-2 py-2">-</td>
+      }
+    })
+  }
+
+  const renderDynamicWorkPackageCells = (workPackage: WorkPackageNode, blocId: string, productId: string) => {
+    const columns = columnViews[currentView].node3
+
+    return columns.map((column) => {
+      switch (currentView) {
+        case 'operations':
+          return renderWorkPackageOperationCell(workPackage, column.key, blocId, productId)
+        case 'resources':
+          return renderResourceCell(workPackage, column.key, false) // false for actual
+        case 'financial':
+          return renderWorkPackageFinancialCell(workPackage, column.key)
+        default:
+          return <td key={column.key} className="px-2 py-2">-</td>
+      }
+    })
+  }
+
+  // Individual cell rendering functions
+  const renderOperationCell = (product: ProductNode, key: string, blocId?: string) => {
+    switch (key) {
+      case 'operation':
+        return (
+          <td key={key} className="px-2 py-2 w-32">
+            <div className="flex items-center">
+              {readOnly ? (
+                <span className="text-sm font-medium text-green-800">
+                  {product.product_name || 'Not set'}
+                </span>
+              ) : (
+                <div
+                  className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center w-full"
+                  onClick={() => {
+                    setSelectedProductId(product.id)
+                    setShowOperationSelector(true)
+                  }}
+                  title="Select Operation"
+                >
+                  <span className="text-green-800 text-xs truncate">
+                    {product.product_name || 'Select operation...'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </td>
+        )
+      case 'method':
+        return (
+          <td key={key} className="px-2 py-2 w-20 text-center">
+            {readOnly ? (
+              <span className="text-sm text-green-800">{product.method || '-'}</span>
+            ) : (
+              <div
+                className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center justify-center w-full"
+                onClick={() => {
+                  setSelectedProductId(product.id)
+                  setShowMethodSelector(true)
+                }}
+                title="Select Method"
+              >
+                <span className="text-green-800 text-center text-xs">
+                  {product.method || 'Method...'}
+                </span>
+              </div>
+            )}
+          </td>
+        )
+      case 'product':
+        return (
+          <td key={key} className="px-2 py-2 w-28 text-center">
+            <span className="text-sm text-green-800">
+              {product.product_name || '-'}
+            </span>
+          </td>
+        )
+      case 'rate':
+        return (
+          <td key={key} className="px-2 py-2 w-20 text-center">
+            {readOnly || !product.product_name ? (
+              <span className="text-sm text-green-800">
+                {product.planned_rate ? `${product.planned_rate}` : '-'}
+              </span>
+            ) : (
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={product.planned_rate || ''}
+                onChange={(e) => updateProductField(blocId || '', product.id, 'planned_rate', parseFloat(e.target.value) || 0)}
+                className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
+                title="Enter rate"
+                placeholder="Rate"
+              />
+            )}
+          </td>
+        )
+      case 'start_date':
+        return (
+          <td key={key} className="px-2 py-2 w-24">
+            {readOnly ? (
+              <span className="text-sm text-green-800">
+                {product.planned_start_date ? formatDate(product.planned_start_date) : 'Not set'}
+              </span>
+            ) : (
+              <input
+                type="date"
+                value={product.planned_start_date || ''}
+                onChange={(e) => updateProductField(blocId || '', product.id, 'planned_start_date', e.target.value)}
+                className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
+                title="Select planned start date"
+              />
+            )}
+          </td>
+        )
+      case 'end_date':
+        return (
+          <td key={key} className="px-2 py-2 w-24">
+            {readOnly ? (
+              <span className="text-sm text-green-800">
+                {product.planned_end_date ? formatDate(product.planned_end_date) : 'Not set'}
+              </span>
+            ) : (
+              <input
+                type="date"
+                value={product.planned_end_date || ''}
+                onChange={(e) => updateProductField(blocId || '', product.id, 'planned_end_date', e.target.value)}
+                className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
+                title="Select planned end date"
+              />
+            )}
+          </td>
+        )
+
+      default:
+        return <td key={key} className="px-2 py-2">-</td>
+    }
+  }
+
+  const renderResourceCell = (item: ProductNode | WorkPackageNode, key: string, isEstimate: boolean, blocId?: string) => {
+    // Handle operation column for resources view
+    if (key === 'operation' && 'product_name' in item) {
+      return renderOperationCell(item as ProductNode, key, blocId)
+    }
+
+    const resourceData = 'operationName' in item
+      ? getResourceData(item as ProductNode, isEstimate)
+      : getWorkPackageResourceData(item as WorkPackageNode, !isEstimate)
+
+    const value = resourceData[key] || 0
+
+    return (
+      <td key={key} className="px-2 py-2 w-24 text-center">
+        {readOnly ? (
+          <span className="text-sm text-gray-900">{value}</span>
+        ) : (
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            value={value || ''}
+            onChange={(e) => {
+              // Handle resource update
+              console.log(`Update ${key}:`, e.target.value)
+            }}
+            className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-1 py-1 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            title={`Enter ${key.replace('_', ' ')} hours`}
+          />
+        )}
+      </td>
+    )
+  }
+
+  const renderFinancialCell = (product: ProductNode, key: string, isActual: boolean, blocId?: string) => {
+    // Handle operation column for financial view
+    if (key === 'operation') {
+      return renderOperationCell(product, key, blocId)
+    }
+
+    const financialData = getFinancialData(product, isActual)
+
+    switch (key) {
+      case 'est_product_cost':
+        return (
+          <td key={key} className="px-2 py-2 w-32 text-right">
+            <span className="text-sm text-blue-600">Rs {financialData.est_product_cost.toLocaleString()}</span>
+          </td>
+        )
+      case 'est_labour_cost':
+        return (
+          <td key={key} className="px-2 py-2 w-32 text-right">
+            <span className="text-sm text-blue-600">Rs {financialData.est_labour_cost.toLocaleString()}</span>
+          </td>
+        )
+      case 'est_equipment_cost':
+        return (
+          <td key={key} className="px-2 py-2 w-32 text-right">
+            <span className="text-sm text-blue-600">Rs {financialData.est_equipment_cost.toLocaleString()}</span>
+          </td>
+        )
+      case 'actual_revenue':
+        return (
+          <td key={key} className="px-2 py-2 w-28 text-right">
+            <span className="text-sm text-green-600">Rs {financialData.actual_revenue.toLocaleString()}</span>
+          </td>
+        )
+      default:
+        return <td key={key} className="px-2 py-2">-</td>
+    }
+  }
+
+  const renderWorkPackageOperationCell = (workPackage: WorkPackageNode, key: string, blocId?: string, productId?: string) => {
+    switch (key) {
+      case 'date':
+        return (
+          <td key={key} className="px-3 py-2 w-32">
+            {readOnly ? (
+              <span className="text-sm text-gray-900">{workPackage.date ? formatDate(workPackage.date) : 'Not set'}</span>
+            ) : (
+              <input
+                type="date"
+                value={workPackage.date || ''}
+                onChange={(e) => updateWorkPackageField(blocId || '', productId || '', workPackage.id, 'date', e.target.value)}
+                className="w-full text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm"
+                title="Select work package date"
+              />
+            )}
+          </td>
+        )
+      case 'area':
+        return (
+          <td key={key} className="px-3 py-2 w-24 text-center">
+            {readOnly ? (
+              <span className="text-sm text-gray-900">{workPackage.area > 0 ? `${workPackage.area}` : '-'}</span>
+            ) : (
+              <input
+                type="number"
+                value={workPackage.area > 0 ? workPackage.area : ''}
+                onChange={(e) => updateWorkPackageField(blocId || '', productId || '', workPackage.id, 'area', parseFloat(e.target.value) || 0)}
+                placeholder="Area"
+                className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Enter area in hectares"
+              />
+            )}
+          </td>
+        )
+      case 'quantity':
+        return (
+          <td key={key} className="px-3 py-2 w-24 text-center">
+            {readOnly ? (
+              <span className="text-sm text-gray-900">{workPackage.quantity > 0 ? workPackage.quantity : '-'}</span>
+            ) : (
+              <input
+                type="number"
+                value={workPackage.quantity > 0 ? workPackage.quantity : ''}
+                onChange={(e) => updateWorkPackageField(blocId || '', productId || '', workPackage.id, 'quantity', parseFloat(e.target.value) || 0)}
+                placeholder="Qty"
+                className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Enter quantity"
+              />
+            )}
+          </td>
+        )
+      case 'rate':
+        return (
+          <td key={key} className="px-3 py-2 w-20 text-center">
+            {readOnly ? (
+              <span className="text-sm text-gray-900">{workPackage.rate > 0 ? workPackage.rate : '-'}</span>
+            ) : (
+              <input
+                type="number"
+                value={workPackage.rate > 0 ? workPackage.rate : ''}
+                onChange={(e) => updateWorkPackageField(blocId || '', productId || '', workPackage.id, 'rate', parseFloat(e.target.value) || 0)}
+                placeholder="Rate"
+                className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Enter rate"
+              />
+            )}
+          </td>
+        )
+      case 'status':
+        return (
+          <td key={key} className="px-3 py-2 w-16 text-center">
+            {readOnly ? (
+              <StatusBadge status={workPackage.status || 'not-started'} />
+            ) : (
+              <StatusCompactToggle
+                status={workPackage.status || 'not-started'}
+                onChange={(newStatus) => updateWorkPackageStatus(blocId || '', productId || '', workPackage.id, newStatus)}
+              />
+            )}
+          </td>
+        )
+      default:
+        return <td key={key} className="px-3 py-2">-</td>
+    }
+  }
+
+  const renderWorkPackageFinancialCell = (workPackage: WorkPackageNode, key: string) => {
+    const financialData = getWorkPackageFinancialData(workPackage)
+    const formatCurrency = (value: number) => `Rs ${value.toLocaleString()}`
+
+    switch (key) {
+      case 'date':
+        return (
+          <td key={key} className="px-3 py-2 w-28 text-center">
+            <span className="text-sm text-gray-900">{workPackage.date ? formatDate(workPackage.date) : 'Not set'}</span>
+          </td>
+        )
+      case 'act_product_cost':
+        return (
+          <td key={key} className="px-3 py-2 w-28 text-right">
+            <span className="text-sm text-gray-900">{formatCurrency(financialData.act_product_cost)}</span>
+          </td>
+        )
+      case 'act_labour_cost':
+        return (
+          <td key={key} className="px-3 py-2 w-28 text-right">
+            <span className="text-sm text-gray-900">{formatCurrency(financialData.act_labour_cost)}</span>
+          </td>
+        )
+      case 'act_equipment_cost':
+        return (
+          <td key={key} className="px-3 py-2 w-32 text-right">
+            <span className="text-sm text-gray-900">{formatCurrency(financialData.act_equipment_cost)}</span>
+          </td>
+        )
+      default:
+        return <td key={key} className="px-3 py-2">-</td>
+    }
+  }
 
   // Create bloc data from real bloc and crop cycle information
   useEffect(() => {
@@ -654,19 +1196,9 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                     <td className="px-2 py-3 text-blue-800 w-20 text-sm">{bloc.area_hectares.toFixed(1)} ha</td>
                     <td className="px-2 py-3 text-blue-800 w-24 truncate text-sm">{bloc.variety_name}</td>
                     <td className="px-2 py-3 w-32">
-                      {readOnly ? (
-                        <span className="text-blue-800 text-sm">
-                          {bloc.planned_harvest_date ? formatDate(bloc.planned_harvest_date) : 'Not set'}
-                        </span>
-                      ) : (
-                        <input
-                          type="date"
-                          value={bloc.planned_harvest_date || ''}
-                          onChange={(e) => updateBlocField(bloc.id, 'planned_harvest_date', e.target.value)}
-                          className="w-full text-blue-800 bg-transparent border-none focus:bg-blue-50 focus:outline-none focus:ring-1 focus:ring-blue-300 rounded px-1 py-1 text-xs"
-                          title="Select planned harvest date"
-                        />
-                      )}
+                      <span className="text-blue-800 text-sm">
+                        {bloc.planned_harvest_date ? formatDate(bloc.planned_harvest_date) : 'Not set'}
+                      </span>
                     </td>
                     <td className="px-2 py-3 text-blue-800 w-24 text-sm">{bloc.expected_yield_tons_ha.toFixed(1)} t/ha</td>
                     <td className="px-2 py-3 w-28">
@@ -775,27 +1307,12 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
           <table className="min-w-full">
             <thead className={`${DEFAULT_COLORS.product.header} border-b-2 ${DEFAULT_COLORS.product.border}`}>
               <tr>
-                <th className="px-2 py-2 text-left text-xs font-medium text-green-900 uppercase tracking-wider w-32">
-                  Operation
-                </th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-green-900 uppercase tracking-wider w-20">
-                  Method
-                </th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-green-900 uppercase tracking-wider w-24">
-                  Main Product
-                </th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-green-900 uppercase tracking-wider w-20">
-                  Rate
-                </th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-green-900 uppercase tracking-wider w-24">
-                  Start Date
-                </th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-green-900 uppercase tracking-wider w-24">
-                  End Date
-                </th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-green-900 uppercase tracking-wider w-28">
-                  Progress
-                </th>
+                {renderDynamicHeaders('node2', 'text-green-900')}
+                {currentView === 'operations' && (
+                  <th className="px-2 py-2 text-center text-xs font-medium text-green-900 uppercase tracking-wider w-28">
+                    Progress
+                  </th>
+                )}
                 {!readOnly && (
                   <th className="w-16"></th>
                 )}
@@ -806,7 +1323,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                 <React.Fragment key={product.id}>
                   {/* Product Row */}
                   <tr className={`${DEFAULT_COLORS.product.background} ${DEFAULT_COLORS.product.hover} group`}>
-                    {/* Operation Column */}
+                    {/* First column always has expand/collapse button */}
                     <td className="px-2 py-2 w-32">
                       <div className="flex items-center">
                         {/* Always show expand/collapse button */}
@@ -821,133 +1338,54 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                             <ChevronRightIcon className="h-3 w-3 text-green-700" />
                           )}
                         </button>
-                        <div
-                          className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center"
-                          onClick={() => {
-                            setSelectedProductId(product.id)
-                            setShowOperationSelector(true)
-                          }}
-                          title="Select Operation"
-                        >
-                          <span className="text-green-800 text-xs truncate">
-                            {product.product_name || 'Select operation...'}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Method Column */}
-                    <td className="px-2 py-2 w-20">
-                      <div className="flex items-center justify-center">
-                        <div
-                          className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center justify-center w-full"
-                          onClick={() => {
-                            setSelectedProductId(product.id)
-                            setShowMethodSelector(true)
-                          }}
-                          title="Select Method"
-                        >
-                          <span className="text-green-800 text-center text-xs">
-                            {product.method || 'Method...'}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Main Product Column */}
-                    <td className="px-2 py-2 w-24">
-                      <div className="flex items-center justify-center">
-                        <div
-                          className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center justify-center w-full"
-                          onClick={() => {
-                            setSelectedProductId(product.id)
-                            setShowProductSelector(true)
-                          }}
-                          title="Select Product"
-                        >
-                          <span className="text-green-800 text-center text-xs">
-                            {product.product_name || 'Product...'}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Planned Rate Column */}
-                    <td className="px-2 py-2 w-20">
-                      <div className="flex items-center justify-center">
-                        {readOnly ? (
-                          <span className="text-green-800 text-center text-xs">
-                            {product.planned_rate > 0 ? product.planned_rate : '-'}
-                          </span>
+                        {currentView === 'operations' ? (
+                          <div
+                            className="cursor-pointer hover:bg-green-100 px-1 py-1 rounded border border-transparent hover:border-green-300 min-h-[24px] flex items-center"
+                            onClick={() => {
+                              setSelectedProductId(product.id)
+                              setShowOperationSelector(true)
+                            }}
+                            title="Select Operation"
+                          >
+                            <span className="text-green-800 text-xs truncate">
+                              {product.product_name || 'Select operation...'}
+                            </span>
+                          </div>
                         ) : (
-                          <input
-                            type="number"
-                            value={product.planned_rate > 0 ? product.planned_rate : ''}
-                            onChange={(e) => updateProductField(bloc.id, product.id, 'planned_rate', parseFloat(e.target.value) || 0)}
-                            placeholder="Rate"
-                            className="w-full text-center text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            title="Enter Planned Rate"
-                          />
+                          <span className="text-green-800 text-xs truncate">
+                            {currentView === 'resources' ? 'Resources' : 'Financial'}
+                          </span>
                         )}
                       </div>
                     </td>
 
-                    {/* Planned Start Date Column */}
-                    <td className="px-2 py-2 w-24">
-                      {readOnly ? (
-                        <span className="text-green-800 text-center block text-xs">
-                          {product.planned_start_date ? formatDate(product.planned_start_date) : 'Not set'}
-                        </span>
-                      ) : (
-                        <input
-                          type="date"
-                          value={product.planned_start_date || ''}
-                          onChange={(e) => updateProductField(bloc.id, product.id, 'planned_start_date', e.target.value)}
-                          className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
-                          title="Select planned start date"
-                        />
-                      )}
-                    </td>
+                    {/* Dynamic columns based on current view */}
+                    {renderDynamicProductCells(product, bloc.id).slice(1)} {/* Skip first column as it's handled above */}
 
-                    {/* Planned End Date Column */}
-                    <td className="px-2 py-2 w-24">
-                      {readOnly ? (
-                        <span className="text-green-800 text-center block text-xs">
-                          {product.planned_end_date ? formatDate(product.planned_end_date) : 'Not set'}
-                        </span>
-                      ) : (
-                        <input
-                          type="date"
-                          value={product.planned_end_date || ''}
-                          onChange={(e) => updateProductField(bloc.id, product.id, 'planned_end_date', e.target.value)}
-                          className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
-                          title="Select planned end date"
-                        />
-                      )}
-                    </td>
-
-                    {/* Progress Column */}
-                    <td className="px-2 py-2 w-28">
-                      <div className="flex items-center justify-center">
-                        {(() => {
-                          const progress = calculateProductProgress(product, bloc.area_hectares)
-                          return (
-                            <div className="w-full">
-                              <div className="flex items-center justify-between text-xs text-green-700 mb-1">
-                                <span>Progress</span>
-                                <span className="font-medium">{progress}%</span>
+                    {/* Progress Column - only show in operations view */}
+                    {currentView === 'operations' && (
+                      <td className="px-2 py-2 w-28">
+                        <div className="flex items-center justify-center">
+                          {(() => {
+                            const progress = calculateProductProgress(product, bloc.area_hectares)
+                            return (
+                              <div className="w-full">
+                                <div className="flex items-center justify-between text-xs text-green-700 mb-1">
+                                  <span>Progress</span>
+                                  <span className="font-medium">{progress}%</span>
+                                </div>
+                                <div className="w-full bg-green-200 rounded-full h-2">
+                                  <div
+                                    className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300 ease-in-out"
+                                    style={{ width: `${progress}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                              <div className="w-full bg-green-200 rounded-full h-2">
-                                <div
-                                  className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300 ease-in-out"
-                                  style={{ width: `${progress}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    </td>
+                            )
+                          })()}
+                        </div>
+                      </td>
+                    )}
 
                     {/* Actions Column */}
                     {!readOnly && (
@@ -1009,34 +1447,101 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
         </div>
 
         {/* Product Footer with Financial Summary */}
-        <div className="bg-white border-t border-black px-3 py-2">
-          <div className="grid grid-cols-4 gap-3 text-sm">
-            <div className="text-center">
-              <div className="text-black font-medium">Est. Cost</div>
-              <div className="text-black font-bold">
-                Rs {(bloc.products?.reduce((acc, p) => acc + p.est_product_cost + p.est_resource_cost, 0) || 0).toLocaleString()}
+        {currentView === 'financial' ? (
+          <div className="bg-white border-t border-black px-3 py-2">
+            <div className="grid grid-cols-4 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Product</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = bloc.products?.reduce((acc, product) => {
+                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                        const dwpData = getWorkPackageFinancialData(dwp)
+                        return dwpAcc + dwpData.act_product_cost
+                      }, 0) || 0
+                      return acc + dwpTotal
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-black font-medium">Act. Cost</div>
-              <div className="text-black font-bold">
-                Rs {(bloc.products?.reduce((acc, p) => acc + p.act_product_cost + p.act_resource_cost, 0) || 0).toLocaleString()}
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Labour</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = bloc.products?.reduce((acc, product) => {
+                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                        const dwpData = getWorkPackageFinancialData(dwp)
+                        return dwpAcc + dwpData.act_labour_cost
+                      }, 0) || 0
+                      return acc + dwpTotal
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-black font-medium">Est. Revenue</div>
-              <div className="text-black font-bold">
-                Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500).toLocaleString()}
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Equipment</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = bloc.products?.reduce((acc, product) => {
+                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                        const dwpData = getWorkPackageFinancialData(dwp)
+                        return dwpAcc + dwpData.act_equipment_cost
+                      }, 0) || 0
+                      return acc + dwpTotal
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-black font-medium">Act. Revenue</div>
-              <div className="text-black font-bold">
-                Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500 * (bloc.progress / 100)).toLocaleString()}
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Cost</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = bloc.products?.reduce((acc, product) => {
+                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                        const dwpData = getWorkPackageFinancialData(dwp)
+                        return dwpAcc + dwpData.act_product_cost + dwpData.act_labour_cost + dwpData.act_equipment_cost
+                      }, 0) || 0
+                      return acc + dwpTotal
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white border-t border-black px-3 py-2">
+            <div className="grid grid-cols-4 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-black font-medium">Est. Cost</div>
+                <div className="text-black font-bold">
+                  Rs {(bloc.products?.reduce((acc, p) => acc + p.est_product_cost + p.est_resource_cost, 0) || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Act. Cost</div>
+                <div className="text-black font-bold">
+                  Rs {(bloc.products?.reduce((acc, p) => acc + p.act_product_cost + p.act_resource_cost, 0) || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Est. Revenue</div>
+                <div className="text-black font-bold">
+                  Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Act. Revenue</div>
+                <div className="text-black font-bold">
+                  Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500 * (bloc.progress / 100)).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1068,21 +1573,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
           <table className="min-w-full">
             <thead className={`${DEFAULT_COLORS.workPackage.header} border-b-2 ${DEFAULT_COLORS.workPackage.border}`}>
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-900 uppercase tracking-wider w-32">
-                  Date
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-24">
-                  Area (ha)
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-24">
-                  Quantity
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-24">
-                  Rate
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-16">
-                  Status
-                </th>
+                {renderDynamicHeaders('node3', 'text-gray-900')}
                 {!readOnly && (
                   <th className="w-16"></th>
                 )}
@@ -1091,96 +1582,8 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
             <tbody className="divide-y divide-gray-200">
               {product.work_packages.map((workPackage) => (
                 <tr key={workPackage.id} className={`${DEFAULT_COLORS.workPackage.background} ${DEFAULT_COLORS.workPackage.hover} group`}>
-                  {/* Date Column */}
-                  <td className="px-3 py-2 w-28">
-                    {readOnly ? (
-                      <span className="text-gray-800">
-                        {workPackage.date ? formatDate(workPackage.date) : 'Not set'}
-                      </span>
-                    ) : (
-                      <input
-                        type="date"
-                        value={workPackage.date || ''}
-                        onChange={(e) => updateWorkPackageField(bloc.id, product.id, workPackage.id, 'date', e.target.value)}
-                        className="w-full text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm"
-                        title="Select work package date"
-                      />
-                    )}
-                  </td>
-
-                  {/* Area Column */}
-                  <td className="px-3 py-2 w-24">
-                    <div className="flex items-center justify-center">
-                      {readOnly ? (
-                        <span className="text-gray-800 text-center">
-                          {workPackage.area > 0 ? `${workPackage.area} ha` : '-'}
-                        </span>
-                      ) : (
-                        <input
-                          type="number"
-                          value={workPackage.area > 0 ? workPackage.area : ''}
-                          onChange={(e) => updateWorkPackageField(bloc.id, product.id, workPackage.id, 'area', parseFloat(e.target.value) || 0)}
-                          placeholder="Area"
-                          className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          title="Enter area in hectares"
-                        />
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Quantity Column */}
-                  <td className="px-3 py-2 w-24">
-                    <div className="flex items-center justify-center">
-                      {readOnly ? (
-                        <span className="text-gray-800 text-center">
-                          {workPackage.quantity > 0 ? workPackage.quantity : '-'}
-                        </span>
-                      ) : (
-                        <input
-                          type="number"
-                          value={workPackage.quantity > 0 ? workPackage.quantity : ''}
-                          onChange={(e) => updateWorkPackageField(bloc.id, product.id, workPackage.id, 'quantity', parseFloat(e.target.value) || 0)}
-                          placeholder="Qty"
-                          className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          title="Enter quantity"
-                        />
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Rate Column */}
-                  <td className="px-3 py-2 w-24">
-                    <div className="flex items-center justify-center">
-                      {readOnly ? (
-                        <span className="text-gray-800 text-center">
-                          {workPackage.rate > 0 ? workPackage.rate : '-'}
-                        </span>
-                      ) : (
-                        <input
-                          type="number"
-                          value={workPackage.rate > 0 ? workPackage.rate : ''}
-                          onChange={(e) => updateWorkPackageField(bloc.id, product.id, workPackage.id, 'rate', parseFloat(e.target.value) || 0)}
-                          placeholder="Rate"
-                          className="w-full text-center text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          title="Enter rate"
-                        />
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Status Column */}
-                  <td className="px-3 py-2 w-16">
-                    <div className="flex items-center justify-center">
-                      {readOnly ? (
-                        <StatusBadge status={getWorkPackageStatus(workPackage)} />
-                      ) : (
-                        <StatusCompactToggle
-                          status={getWorkPackageStatus(workPackage)}
-                          onChange={(newStatus) => updateWorkPackageStatus(bloc.id, product.id, workPackage.id, newStatus)}
-                        />
-                      )}
-                    </div>
-                  </td>
+                  {/* Dynamic columns based on current view */}
+                  {renderDynamicWorkPackageCells(workPackage, bloc.id, product.id)}
 
                   {/* Actions Column */}
                   {!readOnly && (
@@ -1189,6 +1592,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                         <button
                           type="button"
                           title="Edit Work Package"
+                          onClick={() => handleEditWorkPackage(workPackage, bloc.id, product.id)}
                           className="p-1 hover:bg-gray-200 rounded text-gray-600"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -1229,6 +1633,18 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
 
   return (
     <div className="space-y-4">
+      {/* View Switcher */}
+      <div className="flex justify-between items-center">
+        <ContentSwitcher
+          options={viewOptions}
+          selectedId={currentView}
+          onChange={handleViewChange}
+        />
+        <div className="text-sm text-gray-500">
+          Viewing: <span className="font-medium capitalize">{currentView}</span> data
+        </div>
+      </div>
+
       {/* Main Nested Tables */}
       {data.length === 0 ? (
         <div className="p-8 border-2 border-dashed border-blue-300 bg-blue-50 rounded-lg">
@@ -1356,6 +1772,20 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
         />
       )}
 
+      {/* Edit Work Package Form Modal */}
+      {showWorkPackageForm && editingWorkPackage && (
+        <EditWorkPackageForm
+          workPackage={editingWorkPackage.workPackage}
+          blocId={editingWorkPackage.blocId}
+          productId={editingWorkPackage.productId}
+          operationEquipment={[]} // TODO: Get equipment data from operation
+          onSave={handleWorkPackageSave}
+          onCancel={() => {
+            setShowWorkPackageForm(false)
+            setEditingWorkPackage(null)
+          }}
+        />
+      )}
 
     </div>
   )

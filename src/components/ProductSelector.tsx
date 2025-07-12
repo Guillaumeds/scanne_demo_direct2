@@ -25,7 +25,6 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [quantity, setQuantity] = useState<number>(0)
   const [rate, setRate] = useState<number>(0)
-  const [actualCost, setActualCost] = useState<number>(0)
   const [isUpdatingFromRate, setIsUpdatingFromRate] = useState(false)
 
   // Use localStorage for products data
@@ -47,7 +46,6 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
         setSelectedProduct(product)
         setQuantity(existingProduct.quantity)
         setRate(existingProduct.rate)
-        setActualCost(existingProduct.actualCost || existingProduct.estimatedCost)
       }
     }
   }, [existingProduct, products])
@@ -58,7 +56,6 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
     const calculatedQuantity = Math.round((defaultRate * blocArea) * 10) / 10
     setRate(Math.round(defaultRate * 10) / 10)
     setQuantity(calculatedQuantity)
-    setActualCost(0)
   }
 
   const handleRateChange = (newRate: number) => {
@@ -79,7 +76,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
 
   const handleConfirm = () => {
     if (selectedProduct && quantity > 0 && rate > 0) {
-      onSelect(selectedProduct, quantity, rate, actualCost || undefined)
+      onSelect(selectedProduct, quantity, rate)
       onClose()
     }
   }
@@ -97,6 +94,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
             type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -301,7 +299,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Rate ({selectedProduct.unit}/ha) *
@@ -332,20 +330,7 @@ export default function ProductSelector({ onSelect, onClose, blocArea, existingP
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Actual Cost (Rs) <span className="text-gray-500 text-xs">Optional</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={actualCost || ''}
-                        onChange={(e) => setActualCost(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="Enter actual cost"
-                      />
-                    </div>
+
                   </div>
 
                   {selectedProduct.cost && (
