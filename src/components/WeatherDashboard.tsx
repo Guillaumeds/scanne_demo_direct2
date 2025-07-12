@@ -3,6 +3,23 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetch15DayWeatherForecast, WeatherAnalysis } from '@/services/weatherDataService'
 import { calculatePolygonCenter } from '@/utils/geoUtils'
+import {
+  Sun,
+  CloudSun,
+  Cloud,
+  CloudRain,
+  CloudDrizzle,
+  CloudSnow,
+  CloudLightning,
+  Clouds, // Using Clouds instead of Fog
+  Thermometer,
+  Droplets,
+  Wind,
+  Eye,
+  Gauge,
+  RefreshCw,
+  MapPin
+} from 'lucide-react'
 
 interface DrawnArea {
   id: string
@@ -112,31 +129,49 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
     }
   }, [weatherData])
 
-  // Get weather emoji/icon
+  // Render weather icon component
+  const renderWeatherIcon = (code: number, className: string = "w-6 h-6") => {
+    const iconName = getWeatherIcon(code)
+    const iconComponents = {
+      Sun,
+      CloudSun,
+      Cloud,
+      CloudRain,
+      CloudDrizzle,
+      CloudSnow,
+      CloudLightning,
+      Clouds // Using Clouds instead of Fog
+    }
+
+    const IconComponent = iconComponents[iconName as keyof typeof iconComponents] || Cloud
+    return <IconComponent className={className} />
+  }
+
+  // Get weather icon name for Lucide React
   const getWeatherIcon = (code: number): string => {
-    if (code === 0) return '☀️'
-    if (code === 1) return '🌤️'
-    if (code === 2) return '⛅'
-    if (code === 3) return '☁️'
-    if (code === 45 || code === 48) return '🌫️'
-    if (code === 51) return '🌦️'
-    if (code === 53) return '🌦️'
-    if (code === 55) return '🌧️'
-    if (code === 61) return '🌧️'
-    if (code === 63) return '🌧️'
-    if (code === 65) return '🌧️'
-    if (code === 66 || code === 67) return '🌧️'
-    if (code === 71) return '❄️'
-    if (code === 73) return '❄️'
-    if (code === 75) return '❄️'
-    if (code === 77) return '❄️'
-    if (code === 80) return '🌦️'
-    if (code === 81) return '🌧️'
-    if (code === 82) return '🌧️'
-    if (code === 85 || code === 86) return '❄️'
-    if (code === 95) return '⛈️'
-    if (code === 96 || code === 99) return '⛈️'
-    return '☁️'
+    if (code === 0) return 'Sun'
+    if (code === 1) return 'Sun'
+    if (code === 2) return 'CloudSun'
+    if (code === 3) return 'Cloud'
+    if (code === 45 || code === 48) return 'Clouds' // Using Clouds instead of Fog
+    if (code === 51) return 'CloudDrizzle'
+    if (code === 53) return 'CloudDrizzle'
+    if (code === 55) return 'CloudRain'
+    if (code === 61) return 'CloudRain'
+    if (code === 63) return 'CloudRain'
+    if (code === 65) return 'CloudRain'
+    if (code === 66 || code === 67) return 'CloudRain'
+    if (code === 71) return 'CloudSnow'
+    if (code === 73) return 'CloudSnow'
+    if (code === 75) return 'CloudSnow'
+    if (code === 77) return 'CloudSnow'
+    if (code === 80) return 'CloudDrizzle'
+    if (code === 81) return 'CloudRain'
+    if (code === 82) return 'CloudRain'
+    if (code === 85 || code === 86) return 'CloudSnow'
+    if (code === 95) return 'CloudLightning'
+    if (code === 96 || code === 99) return 'CloudLightning'
+    return 'Cloud'
   }
 
   const getWeatherDescription = (code: number): string => {
@@ -316,8 +351,8 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
                       })}
                     </div>
 
-                    <div className="text-4xl mb-3">
-                      {getWeatherIcon(weatherCode)}
+                    <div className="mb-3 flex justify-center">
+                      {renderWeatherIcon(weatherCode, "w-12 h-12 text-blue-600")}
                     </div>
 
                     <div className="mb-3">
@@ -331,14 +366,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
                       </div>
 
                       {precipitation > 0 && (
-                        <div className="flex items-center justify-center text-blue-600">
-                          <span className="mr-1">💧</span>
+                        <div className="flex items-center justify-center text-blue-600 gap-1">
+                          <Droplets className="w-3 h-3" />
                           {precipitation.toFixed(1)}mm
                         </div>
                       )}
 
-                      <div className="flex items-center justify-center text-gray-500">
-                        <span className="mr-1">💨</span>
+                      <div className="flex items-center justify-center text-gray-500 gap-1">
+                        <Wind className="w-3 h-3" />
                         {windSpeed} km/h
                       </div>
                     </div>
@@ -388,21 +423,31 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
                       {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </div>
 
-                    <div className="text-2xl mb-2">
-                      {getWeatherIcon(weatherCode)}
+                    <div className="mb-2 flex justify-center">
+                      {renderWeatherIcon(weatherCode, "w-8 h-8 text-blue-600")}
                     </div>
 
                     <div className="text-lg font-bold text-gray-900 mb-2">{temp}°C</div>
 
                     <div className="space-y-1 text-xs text-gray-600">
                       {precipitation > 0 && (
-                        <div className="text-blue-600">
-                          💧 {precipitation.toFixed(1)}mm
+                        <div className="text-blue-600 flex items-center gap-1">
+                          <Droplets className="w-3 h-3" />
+                          {precipitation.toFixed(1)}mm
                         </div>
                       )}
-                      <div>💨 {windSpeed} km/h</div>
-                      <div>💧 {humidity}%</div>
-                      <div>☁️ {cloudCover}%</div>
+                      <div className="flex items-center gap-1">
+                        <Wind className="w-3 h-3" />
+                        {windSpeed} km/h
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Droplets className="w-3 h-3" />
+                        {humidity}%
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Cloud className="w-3 h-3" />
+                        {cloudCover}%
+                      </div>
                     </div>
                   </div>
                 )

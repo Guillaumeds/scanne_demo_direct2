@@ -13,6 +13,42 @@ export interface WorkPackageNode {
   completed?: boolean; // Keep for backward compatibility
   status?: WorkPackageStatus; // New status field
   operationName?: string; // Operation name from parent product
+
+  // Additional fields for modern forms
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  duration?: number;
+  planned_area?: number;
+  actual_area?: number;
+  planned_quantity?: number;
+  actual_quantity?: number;
+  actual_rate?: number;
+  actual_cost?: number;
+
+  // Resource tracking
+  actualProducts?: Array<{
+    id: string;
+    name: string;
+    quantityUsed: number;
+    wastage?: number;
+    wastageReason?: string;
+  }>;
+  actualEquipment?: Array<{
+    id: string;
+    name: string;
+    hoursUsed: number;
+    fuelConsumed?: number;
+    maintenanceRequired?: boolean;
+    maintenanceNotes?: string;
+  }>;
+  actualResources?: Array<{
+    id: string;
+    name: string;
+    hoursWorked: number;
+    overtimeHours?: number;
+    performanceRating?: number;
+  }>;
 }
 
 export interface ProductNode {
@@ -30,6 +66,20 @@ export interface ProductNode {
   act_resource_cost: number;
   status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
   work_packages?: WorkPackageNode[];
+
+  // Additional fields for modern forms
+  operation_type?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  planned_area?: number;
+  actual_area?: number;
+  planned_quantity?: number;
+  actual_quantity?: number;
+  estimated_total_cost?: number;
+  actual_total_cost?: number;
+  actual_revenue?: number;
+  notes?: string;
+
   // New fields for multiple products and equipment support
   productsData?: Array<{
     id: string;

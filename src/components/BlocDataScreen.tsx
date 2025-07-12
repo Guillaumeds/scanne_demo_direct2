@@ -6,6 +6,10 @@ import VegetationDataTab from './VegetationDataTab'
 import WeatherDashboard from './WeatherDashboard'
 import ObservationsTab from './ObservationsTab'
 import OverviewTab from './OverviewTab'
+import ModernOverviewTab from './ModernOverviewTab'
+import { ModernBlocScreen } from './bloc/ModernBlocScreen'
+import { getFeatureFlags } from '@/lib/featureFlags'
+import { Icon } from '@/components/ui/icon'
 import VarietySelector from './VarietySelector'
 import CropCycleGeneralInfo from './CropCycleGeneralInfo'
 import { TabUnsavedIndicator } from './UnsavedChangesIndicator'
@@ -149,15 +153,15 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
   }
 
   const tabs = [
-    { id: 'general', name: 'Crop Cycle Information', icon: '📋', status: getTabStatus('general') },
-    { id: 'overview', name: 'Crop Management', icon: '📊', status: getTabStatus('overview') },
-    { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') }
+    { id: 'general', name: 'Crop Cycle Information', icon: 'settings', status: getTabStatus('general') },
+    { id: 'overview', name: 'Crop Management', icon: 'overview', status: getTabStatus('overview') },
+    { id: 'observations', name: 'Observations', icon: 'observations', status: getTabStatus('observations') }
   ]
 
   const footerTabs = [
-    { id: 'weather', name: 'Weather', icon: '🌤️', status: getTabStatus('weather') },
-    { id: 'satellite-soil', name: 'Soil', icon: '🛰️', status: getTabStatus('satellite-soil') },
-    { id: 'satellite-vegetation', name: 'Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') }
+    { id: 'weather', name: 'Weather', icon: 'weather', status: getTabStatus('weather') },
+    { id: 'satellite-soil', name: 'Soil', icon: 'location', status: getTabStatus('satellite-soil') },
+    { id: 'satellite-vegetation', name: 'Vegetation', icon: 'crop', status: getTabStatus('satellite-vegetation') }
   ]
 
   const handleInputChange = (field: keyof BlocData, value: string | number | boolean) => {
@@ -370,8 +374,8 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
                   (tab.id === 'observations' && observationsFormRef.current?.isDirty)
                 )
 
-                // Check if tab should be disabled (no active crop cycle)
-                const isDisabled = !activeCycleInfo && (tab.id === 'overview' || tab.id === 'observations')
+                // Allow access to all tabs regardless of crop cycle status
+                const isDisabled = false
 
                 return (
                   <button
@@ -387,7 +391,11 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="text-lg">{tab.icon}</span>
+                    <Icon
+                      name={tab.icon as any}
+                      size="sm"
+                      className={activeTab === tab.id ? 'text-emerald-600' : 'text-slate-600'}
+                    />
                     <span className="flex-1 text-left">{tab.name}</span>
 
                     {/* Unsaved changes indicator */}
@@ -422,12 +430,6 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
             <h2 className="text-xl font-semibold text-gray-900">
               {tabs.find(tab => tab.id === activeTab)?.name}
             </h2>
-            {/* Note for no active crop cycle */}
-            {activeTab === 'general' && !activeCycleInfo && (
-              <p className="text-sm text-orange-600 mt-2 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
-                📝 No active crop cycle found. Please create a crop cycle to start tracking activities and observations.
-              </p>
-            )}
           </div>
 
           {/* Tab Content */}
@@ -450,12 +452,49 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): J
               />
             )}
 
-            {activeTab === 'overview' && (
-              <OverviewTab
-                bloc={bloc}
-                readOnly={false}
-              />
-            )}
+            {activeTab === 'overview' && (() => {
+              const flags = getFeatureFlags()
+
+              if (flags.useModernOverviewTab) {
+                // Use modern overview tab with mock data for now
+                const mockData = [{
+                  id: bloc.uuid || bloc.localId,
+                  name: bloc.name || `Bloc ${bloc.localId}`,
+                  area_hectares: bloc.area,
+                  cycle_number: [1], // Default cycle number
+                  variety_name: activeCycleInfo?.sugarcaneVariety || 'Not set',
+                  planned_harvest_date: activeCycleInfo?.plannedHarvestDate || '',
+                  expected_yield_tons_ha: 80,
+                  growth_stage: 'germination', // Default growth stage
+                  progress: 0,
+                  total_est_product_cost: 0,
+                  total_est_resource_cost: 0,
+                  total_act_product_cost: 0,
+                  total_act_resource_cost: 0,
+                  cycle_type: activeCycleInfo?.type || 'plantation',
+                  planting_date: activeCycleInfo?.plantingDate || new Date().toISOString().split('T')[0],
+                  products: []
+                }]
+
+                return (
+                  <ModernOverviewTab
+                    data={mockData}
+                    activeCycleInfo={activeCycleInfo}
+                    onDataUpdate={(data) => {
+                      console.log('Modern overview data updated:', data)
+                    }}
+                  />
+                )
+              }
+
+              // Use legacy overview tab
+              return (
+                <OverviewTab
+                  bloc={bloc}
+                  readOnly={false}
+                />
+              )
+            })()}
 
           {activeTab === 'cultivation' && (
             <div className="bg-white rounded-lg shadow-sm p-6">
@@ -778,6 +817,21 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
     throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
   }
 
+  // Check feature flags
+  const flags = getFeatureFlags()
+
+  if (flags.useModernNavigation) {
+    // Use modern bloc screen
+    return (
+      <ModernBlocScreen
+        bloc={bloc}
+        onBack={onBack}
+        onDelete={onDelete}
+      />
+    )
+  }
+
+  // Use legacy bloc screen
   return (
     <CropCycleProvider blocId={bloc.uuid} userRole="user">
       <SelectedCropCycleProvider>
