@@ -127,6 +127,30 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   const [expandedBlocs, setExpandedBlocs] = useState<Set<string>>(new Set())
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
 
+  // Data migration function to populate operationName in work packages
+  const migrateWorkPackageOperationNames = (data: BlocOverviewNode[]): BlocOverviewNode[] => {
+    return data.map(bloc => ({
+      ...bloc,
+      products: bloc.products?.map(product => ({
+        ...product,
+        work_packages: product.work_packages?.map(wp => ({
+          ...wp,
+          operationName: wp.operationName || product.product_name // Set operation name if not already set
+        }))
+      }))
+    }))
+  }
+
+  // Apply migration whenever data changes to ensure operationName is populated
+  useEffect(() => {
+    setData(prevData => {
+      const migratedData = migrateWorkPackageOperationNames(prevData)
+      // Only update if there were actual changes to avoid infinite loops
+      const hasChanges = JSON.stringify(migratedData) !== JSON.stringify(prevData)
+      return hasChanges ? migratedData : prevData
+    })
+  }, []) // Empty dependency array - only run once on mount
+
   // Auto-expand logic for empty nodes (only expand, never auto-collapse)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -196,7 +220,6 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
         { key: 'operation', label: 'Operation', width: 'w-32' },
         { key: 'method', label: 'Method', width: 'w-24' },
         { key: 'product', label: 'Product', width: 'w-28' },
-        { key: 'rate', label: 'Rate', width: 'w-20' },
         { key: 'start_date', label: 'Start Date', width: 'w-28' },
         { key: 'end_date', label: 'End Date', width: 'w-28' }
       ],
@@ -215,7 +238,8 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
           key: type.name.toLowerCase().replace(' ', '_'),
           label: `${type.name} (hrs)`,
           width: 'w-24'
-        }))
+        })),
+        { key: 'est_equipment_duration', label: 'Est Equipment Duration (hrs)', width: 'w-32' }
       ],
       node3: [
         { key: 'date', label: 'Date', width: 'w-28' },
@@ -223,22 +247,23 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
           key: type.name.toLowerCase().replace(' ', '_'),
           label: `${type.name} (hrs)`,
           width: 'w-24'
-        }))
+        })),
+        { key: 'act_equipment_duration', label: 'Act Equipment Duration (hrs)', width: 'w-32' }
       ]
     },
     financial: {
       node2: [
         { key: 'operation', label: 'Operation', width: 'w-32' },
-        { key: 'est_product_cost', label: 'Estimate Product Cost', width: 'w-32' },
-        { key: 'est_labour_cost', label: 'Estimate Labour Cost', width: 'w-32' },
-        { key: 'est_equipment_cost', label: 'Estimate Equipment Cost', width: 'w-32' },
-        { key: 'actual_revenue', label: 'Actual Revenue', width: 'w-28' }
+        { key: 'est_product_cost', label: 'Estimate Product Cost (Rs)', width: 'w-32' },
+        { key: 'est_labour_cost', label: 'Estimate Labour Cost (Rs)', width: 'w-32' },
+        { key: 'est_equipment_cost', label: 'Estimate Equipment Cost (Rs)', width: 'w-32' },
+        { key: 'actual_revenue', label: 'Actual Revenue (Rs)', width: 'w-28' }
       ],
       node3: [
         { key: 'date', label: 'Date', width: 'w-28' },
-        { key: 'act_product_cost', label: 'Act Product Cost', width: 'w-28' },
-        { key: 'act_labour_cost', label: 'Actual Labour Cost', width: 'w-28' },
-        { key: 'act_equipment_cost', label: 'Actual Equipment Cost', width: 'w-32' }
+        { key: 'act_product_cost', label: 'Act Product Cost (Rs)', width: 'w-28' },
+        { key: 'act_labour_cost', label: 'Actual Labour Cost (Rs)', width: 'w-28' },
+        { key: 'act_equipment_cost', label: 'Actual Equipment Cost (Rs)', width: 'w-32' }
       ]
     }
   }
@@ -445,7 +470,15 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
             planned_end_date: operationData.planned_end_date,
             planned_rate: operationData.planned_rate,
             method: operationData.method,
-            status: operationData.status
+            status: operationData.status,
+            // Save the products data and equipment data from the form
+            productsData: operationData.productsData || [],
+            equipmentData: operationData.equipmentData || [],
+            // Update operation name in all work packages
+            work_packages: p.work_packages?.map(wp => ({
+              ...wp,
+              operationName: operationData.product_name
+            }))
           } : p
         )
       })))
@@ -511,22 +544,37 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   }
 
   const getFinancialData = (product: ProductNode, isActual: boolean = false) => {
-    // Extract financial data from product
-    const estLabourCost = 0 // TODO: Calculate from estimated labour resources
-    const estEquipmentCost = 0 // TODO: Calculate from estimated equipment resources
+    // Calculate estimated product cost from Operations form products data
+    const estProductCost = product.productsData?.reduce((total, prod) => {
+      return total + (prod.estimatedCost || 0)
+    }, 0) || product.est_product_cost || 0
+
+    // Calculate estimated labour cost from resource data (from Operations form)
+    const estLabourCost = RESOURCE_TYPES.reduce((total, type) => {
+      // This would come from the Operations form resource data
+      // For now, using mock calculation
+      return total + 0 // TODO: Get from actual Operations form data
+    }, 0)
+
+    // Calculate estimated equipment cost from equipment data (from Operations form)
+    const estEquipmentCost = product.equipmentData?.reduce((total, eq) => {
+      return total + (eq.totalEstimatedCost || 0)
+    }, 0) || 0
+
+    // Calculate actual revenue from harvest/sales data
     const actualRevenue = 0 // TODO: Calculate from actual sales/harvest data
 
     return {
-      product_qty: product.planned_rate || 0, // Using planned_rate as quantity proxy
+      product_qty: product.planned_rate || 0,
       rate: product.planned_rate || 0,
-      total_cost: product.est_product_cost || 0,
+      total_cost: estProductCost,
       est_resource_cost: product.est_resource_cost || 0,
-      actual_qty: product.planned_rate || 0, // Will come from actual data
+      actual_qty: product.planned_rate || 0,
       actual_rate: product.planned_rate || 0,
       actual_cost: product.act_product_cost || 0,
       act_resource_cost: product.act_resource_cost || 0,
-      // New financial fields
-      est_product_cost: product.est_product_cost || 0,
+      // Financial fields with proper calculations
+      est_product_cost: estProductCost,
       est_labour_cost: estLabourCost,
       est_equipment_cost: estEquipmentCost,
       actual_revenue: actualRevenue
@@ -543,10 +591,29 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     return resourceData
   }
 
-  const getWorkPackageFinancialData = (workPackage: WorkPackageNode) => {
-    const productCost = (workPackage.quantity || 0) * (workPackage.rate || 0)
-    const labourCost = 0 // TODO: Calculate from actual labour resource usage
-    const equipmentCost = 0 // TODO: Calculate from actual equipment usage
+  const getWorkPackageFinancialData = (workPackage: WorkPackageNode, operation?: ProductNode) => {
+    // Calculate actual product cost from DWP products form data
+    // This should come from the products table in the DWP form
+    const productCost = operation?.productsData?.reduce((total, prod) => {
+      // In a real implementation, this would get the actual cost from the DWP form
+      // For now, using estimated cost as placeholder
+      return total + (prod.estimatedCost || 0)
+    }, 0) || (workPackage.quantity || 0) * (workPackage.rate || 0)
+
+    // Calculate actual labour cost from DWP resource form data
+    const labourCost = RESOURCE_TYPES.reduce((total, type) => {
+      // This would come from the DWP form actualResourcesData
+      // For now, using mock calculation - in real implementation,
+      // this should sum up the actualCost from the DWP resource form
+      return total + 0 // TODO: Get from actual DWP form resource data
+    }, 0)
+
+    // Calculate actual equipment cost from DWP equipment form data
+    const equipmentCost = operation?.equipmentData?.reduce((total, eq) => {
+      // In a real implementation, this would get the actual cost from the DWP form
+      // For now, using estimated cost as placeholder
+      return total + (eq.totalEstimatedCost || 0)
+    }, 0) || 0
 
     return {
       actual_qty: workPackage.quantity || 0,
@@ -592,14 +659,17 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   const renderDynamicWorkPackageCells = (workPackage: WorkPackageNode, blocId: string, productId: string) => {
     const columns = columnViews[currentView].node3
 
+    // Find the operation (product) for financial calculations
+    const operation = data.find(bloc => bloc.id === blocId)?.products?.find(product => product.id === productId)
+
     return columns.map((column) => {
       switch (currentView) {
         case 'operations':
           return renderWorkPackageOperationCell(workPackage, column.key, blocId, productId)
         case 'resources':
-          return renderResourceCell(workPackage, column.key, false) // false for actual
+          return renderResourceCell(workPackage, column.key, false, blocId, productId) // false for actual
         case 'financial':
-          return renderWorkPackageFinancialCell(workPackage, column.key)
+          return renderWorkPackageFinancialCell(workPackage, column.key, operation)
         default:
           return <td key={column.key} className="px-2 py-2">-</td>
       }
@@ -659,31 +729,13 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
         return (
           <td key={key} className="px-2 py-2 w-28 text-center">
             <span className="text-sm text-green-800">
-              {product.product_name || '-'}
+              {product.productsData && product.productsData.length > 0
+                ? product.productsData[0].productName
+                : '-'}
             </span>
           </td>
         )
-      case 'rate':
-        return (
-          <td key={key} className="px-2 py-2 w-20 text-center">
-            {readOnly || !product.product_name ? (
-              <span className="text-sm text-green-800">
-                {product.planned_rate ? `${product.planned_rate}` : '-'}
-              </span>
-            ) : (
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={product.planned_rate || ''}
-                onChange={(e) => updateProductField(blocId || '', product.id, 'planned_rate', parseFloat(e.target.value) || 0)}
-                className="w-full text-green-800 bg-transparent border-none focus:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-300 rounded px-1 py-1 text-xs text-center"
-                title="Enter rate"
-                placeholder="Rate"
-              />
-            )}
-          </td>
-        )
+
       case 'start_date':
         return (
           <td key={key} className="px-2 py-2 w-24">
@@ -726,13 +778,64 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     }
   }
 
-  const renderResourceCell = (item: ProductNode | WorkPackageNode, key: string, isEstimate: boolean, blocId?: string) => {
+  const renderResourceCell = (item: ProductNode | WorkPackageNode, key: string, isEstimate: boolean, blocId?: string, productId?: string) => {
     // Handle operation column for resources view
-    if (key === 'operation' && 'product_name' in item) {
-      return renderOperationCell(item as ProductNode, key, blocId)
+    if (key === 'operation') {
+      if ('product_name' in item) {
+        return renderOperationCell(item as ProductNode, key, blocId)
+      } else {
+        // For work packages, show the operation name from the parent product
+        return (
+          <td key={key} className="px-2 py-2 w-32">
+            <span className="text-sm text-gray-900">{(item as WorkPackageNode).operationName || 'N/A'}</span>
+          </td>
+        )
+      }
     }
 
-    const resourceData = 'operationName' in item
+    // Handle date column for work packages (node 3) - only editable in operations view
+    if (key === 'date' && 'date' in item) {
+      const workPackage = item as WorkPackageNode
+      return (
+        <td key={key} className="px-3 py-2 w-32">
+          {readOnly || currentView !== 'operations' ? (
+            <span className="text-sm text-gray-900">{workPackage.date ? formatDate(workPackage.date) : 'Not set'}</span>
+          ) : (
+            <input
+              type="date"
+              value={workPackage.date || ''}
+              onChange={(e) => updateWorkPackageField(blocId || '', productId || '', workPackage.id, 'date', e.target.value)}
+              className="w-full text-gray-800 bg-transparent border-none focus:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 rounded px-2 py-1 text-sm"
+              title="Select work package date"
+            />
+          )}
+        </td>
+      )
+    }
+
+    // Handle equipment duration columns
+    if (key === 'est_equipment_duration') {
+      const product = item as ProductNode
+      const totalEstDuration = product.equipmentData?.reduce((total, eq) => total + eq.estimatedDuration, 0) || 0
+      return (
+        <td key={key} className="px-2 py-2 w-32 text-center">
+          <span className="text-sm text-gray-900">{totalEstDuration.toFixed(1)}</span>
+        </td>
+      )
+    }
+
+    if (key === 'act_equipment_duration') {
+      // For work packages, get actual equipment duration from DWP form data
+      const workPackage = item as WorkPackageNode
+      const totalActDuration = 0 // TODO: Get from DWP equipment data
+      return (
+        <td key={key} className="px-2 py-2 w-32 text-center">
+          <span className="text-sm text-gray-900">{totalActDuration.toFixed(1)}</span>
+        </td>
+      )
+    }
+
+    const resourceData = 'product_name' in item
       ? getResourceData(item as ProductNode, isEstimate)
       : getWorkPackageResourceData(item as WorkPackageNode, !isEstimate)
 
@@ -798,12 +901,21 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     }
   }
 
+  // Helper function to determine if operation is harvest-related
+  const isHarvestOperation = (operationName: string): boolean => {
+    if (!operationName) return false
+    return operationName.toLowerCase().includes('harvest')
+  }
+
   const renderWorkPackageOperationCell = (workPackage: WorkPackageNode, key: string, blocId?: string, productId?: string) => {
+    // Check if this is a harvest operation
+    const isHarvest = isHarvestOperation(workPackage.operationName || '')
+
     switch (key) {
       case 'date':
         return (
           <td key={key} className="px-3 py-2 w-32">
-            {readOnly ? (
+            {readOnly || currentView !== 'operations' ? (
               <span className="text-sm text-gray-900">{workPackage.date ? formatDate(workPackage.date) : 'Not set'}</span>
             ) : (
               <input
@@ -819,8 +931,10 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
       case 'area':
         return (
           <td key={key} className="px-3 py-2 w-24 text-center">
-            {readOnly ? (
-              <span className="text-sm text-gray-900">{workPackage.area > 0 ? `${workPackage.area}` : '-'}</span>
+            {readOnly || isHarvest ? (
+              <span className={`text-sm ${isHarvest ? 'text-gray-400' : 'text-gray-900'}`}>
+                {isHarvest ? 'n/a' : (workPackage.area > 0 ? `${workPackage.area}` : '-')}
+              </span>
             ) : (
               <input
                 type="number"
@@ -836,8 +950,10 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
       case 'quantity':
         return (
           <td key={key} className="px-3 py-2 w-24 text-center">
-            {readOnly ? (
-              <span className="text-sm text-gray-900">{workPackage.quantity > 0 ? workPackage.quantity : '-'}</span>
+            {readOnly || isHarvest ? (
+              <span className={`text-sm ${isHarvest ? 'text-gray-400' : 'text-gray-900'}`}>
+                {isHarvest ? 'n/a' : (workPackage.quantity > 0 ? workPackage.quantity : '-')}
+              </span>
             ) : (
               <input
                 type="number"
@@ -885,11 +1001,17 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     }
   }
 
-  const renderWorkPackageFinancialCell = (workPackage: WorkPackageNode, key: string) => {
-    const financialData = getWorkPackageFinancialData(workPackage)
+  const renderWorkPackageFinancialCell = (workPackage: WorkPackageNode, key: string, operation?: ProductNode) => {
+    const financialData = getWorkPackageFinancialData(workPackage, operation)
     const formatCurrency = (value: number) => `Rs ${value.toLocaleString()}`
 
     switch (key) {
+      case 'operation':
+        return (
+          <td key={key} className="px-3 py-2 w-32">
+            <span className="text-sm text-gray-900">{workPackage.operationName || 'N/A'}</span>
+          </td>
+        )
       case 'date':
         return (
           <td key={key} className="px-3 py-2 w-28 text-center">
@@ -919,31 +1041,29 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     }
   }
 
-  // Create bloc data from real bloc and crop cycle information
+  // Create bloc data from real bloc information
   useEffect(() => {
-    if (bloc && activeCycle) {
+    if (bloc) {
       const blocOverviewData: BlocOverviewNode = {
         id: bloc.uuid || bloc.localId,
         name: bloc.name || `Bloc ${bloc.localId}`,
         area_hectares: bloc.area,
-        cycle_number: [activeCycle.cycleNumber],
-        variety_name: activeCycle.sugarcaneVarietyName,
-        planned_harvest_date: activeCycle.plannedHarvestDate,
-        expected_yield_tons_ha: activeCycle.expectedYield,
-        growth_stage: calculateMonthsFromPlanting(activeCycle.plantingDate || activeCycle.ratoonPlantingDate),
+        cycle_number: activeCycle ? [activeCycle.cycleNumber] : [1],
+        variety_name: activeCycle?.sugarcaneVarietyName || 'Not set',
+        planned_harvest_date: activeCycle?.plannedHarvestDate || '',
+        expected_yield_tons_ha: activeCycle?.expectedYield || 0,
+        growth_stage: activeCycle ? calculateMonthsFromPlanting(activeCycle.plantingDate || activeCycle.ratoonPlantingDate).toString() : '0',
         progress: 0, // Will be calculated from activities
         total_est_product_cost: 0,
         total_est_resource_cost: 0,
         total_act_product_cost: 0,
         total_act_resource_cost: 0,
-        cycle_type: activeCycle.type,
-        planting_date: activeCycle.plantingDate || activeCycle.ratoonPlantingDate || '',
+        cycle_type: activeCycle?.type || 'plantation',
+        planting_date: activeCycle?.plantingDate || activeCycle?.ratoonPlantingDate || '',
         products: [] // Will be populated from activities
       }
 
       setData([blocOverviewData])
-    } else {
-      setData([])
     }
   }, [bloc, activeCycle])
 
@@ -1064,6 +1184,11 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   }
 
   const addWorkPackage = (blocId: string, productId: string) => {
+    // Find the product to get its operation name
+    const product = data
+      .find(bloc => bloc.id === blocId)
+      ?.products?.find(p => p.id === productId)
+
     const newWorkPackage: WorkPackageNode = {
       id: `wp_${Date.now()}`,
       days_after_planting: 0, // Keep for data structure but won't display
@@ -1073,7 +1198,8 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
       quantity: 0, // Empty
       notes: '', // Empty
       completed: false,
-      status: 'not-started' // Initialize with not-started status
+      status: 'not-started', // Initialize with not-started status
+      operationName: product?.product_name || '' // Set operation name from parent product
     }
 
     setData(prev => prev.map(bloc =>
@@ -1285,17 +1411,8 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     if (!bloc.products || bloc.products.length === 0) {
       return (
         <div className="p-4 m-4">
-          <div className="text-center">
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={() => addProduct(bloc.id)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Field Operation
-              </button>
-            )}
+          <div className="text-center text-gray-500">
+            No field operations added yet
           </div>
         </div>
       )
@@ -1417,22 +1534,20 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                     <tr>
                       <td colSpan={readOnly ? 7 : 8} className="p-0">
                         <div className="bg-gray-25 border-l-4 border-gray-300 ml-8">
-                          {/* Daily Work Packages Title - Only show if work packages exist */}
-                          {product.work_packages && product.work_packages.length > 0 && (
-                            <div className="bg-gray-100 border-b border-gray-300 px-3 py-2 ml-3 mr-3 mt-3 rounded-t-lg flex justify-between items-center">
-                              <h4 className="text-sm font-semibold text-gray-900">Daily Work Packages</h4>
-                              {!readOnly && (
-                                <button
-                                  type="button"
-                                  title="Add Work Package"
-                                  onClick={() => addWorkPackage(bloc.id, product.id)}
-                                  className="p-1 hover:bg-gray-200 rounded text-gray-700"
-                                >
-                                  <PlusIcon className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          {/* Daily Work Packages Title - Always show */}
+                          <div className="bg-gray-100 border-b border-gray-300 px-3 py-2 ml-3 mr-3 mt-3 rounded-t-lg flex justify-between items-center">
+                            <h4 className="text-sm font-semibold text-gray-900">Daily Work Packages</h4>
+                            {!readOnly && (
+                              <button
+                                type="button"
+                                title="Add Work Package"
+                                onClick={() => addWorkPackage(bloc.id, product.id)}
+                                className="p-1 hover:bg-gray-200 rounded text-gray-700"
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                           {renderWorkPackageTable(bloc, product)}
                         </div>
                       </td>
@@ -1446,102 +1561,7 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
           </table>
         </div>
 
-        {/* Product Footer with Financial Summary */}
-        {currentView === 'financial' ? (
-          <div className="bg-white border-t border-black px-3 py-2">
-            <div className="grid grid-cols-4 gap-3 text-sm">
-              <div className="text-center">
-                <div className="text-black font-medium">Total Act. Product</div>
-                <div className="text-black font-bold">
-                  Rs {(() => {
-                    const total = bloc.products?.reduce((acc, product) => {
-                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
-                        const dwpData = getWorkPackageFinancialData(dwp)
-                        return dwpAcc + dwpData.act_product_cost
-                      }, 0) || 0
-                      return acc + dwpTotal
-                    }, 0) || 0
-                    return total.toLocaleString()
-                  })()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Total Act. Labour</div>
-                <div className="text-black font-bold">
-                  Rs {(() => {
-                    const total = bloc.products?.reduce((acc, product) => {
-                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
-                        const dwpData = getWorkPackageFinancialData(dwp)
-                        return dwpAcc + dwpData.act_labour_cost
-                      }, 0) || 0
-                      return acc + dwpTotal
-                    }, 0) || 0
-                    return total.toLocaleString()
-                  })()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Total Act. Equipment</div>
-                <div className="text-black font-bold">
-                  Rs {(() => {
-                    const total = bloc.products?.reduce((acc, product) => {
-                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
-                        const dwpData = getWorkPackageFinancialData(dwp)
-                        return dwpAcc + dwpData.act_equipment_cost
-                      }, 0) || 0
-                      return acc + dwpTotal
-                    }, 0) || 0
-                    return total.toLocaleString()
-                  })()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Total Act. Cost</div>
-                <div className="text-black font-bold">
-                  Rs {(() => {
-                    const total = bloc.products?.reduce((acc, product) => {
-                      const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
-                        const dwpData = getWorkPackageFinancialData(dwp)
-                        return dwpAcc + dwpData.act_product_cost + dwpData.act_labour_cost + dwpData.act_equipment_cost
-                      }, 0) || 0
-                      return acc + dwpTotal
-                    }, 0) || 0
-                    return total.toLocaleString()
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white border-t border-black px-3 py-2">
-            <div className="grid grid-cols-4 gap-3 text-sm">
-              <div className="text-center">
-                <div className="text-black font-medium">Est. Cost</div>
-                <div className="text-black font-bold">
-                  Rs {(bloc.products?.reduce((acc, p) => acc + p.est_product_cost + p.est_resource_cost, 0) || 0).toLocaleString()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Act. Cost</div>
-                <div className="text-black font-bold">
-                  Rs {(bloc.products?.reduce((acc, p) => acc + p.act_product_cost + p.act_resource_cost, 0) || 0).toLocaleString()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Est. Revenue</div>
-                <div className="text-black font-bold">
-                  Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500).toLocaleString()}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-black font-medium">Act. Revenue</div>
-                <div className="text-black font-bold">
-                  Rs {(bloc.expected_yield_tons_ha * bloc.area_hectares * 2500 * (bloc.progress / 100)).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     )
   }
@@ -1550,18 +1570,18 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
   const renderWorkPackageTable = (bloc: BlocOverviewNode, product: ProductNode) => {
     if (!product.work_packages || product.work_packages.length === 0) {
       return (
-        <div className="p-3 m-3">
-          <div className="text-center">
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={() => addWorkPackage(bloc.id, product.id)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Work Package
-              </button>
-            )}
+        <div className="m-3 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className={`${DEFAULT_COLORS.workPackage.header} border-b-2 ${DEFAULT_COLORS.workPackage.border}`}>
+                <tr>
+                  {renderDynamicHeaders('node3', 'text-gray-900')}
+                  {!readOnly && (
+                    <th className="w-16"></th>
+                  )}
+                </tr>
+              </thead>
+            </table>
           </div>
         </div>
       )
@@ -1613,6 +1633,62 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
             </tbody>
           </table>
         </div>
+
+        {/* Work Package Footer - Only show in financial view */}
+        {currentView === 'financial' && (
+          <div className="bg-white border-t border-black px-3 py-2">
+            <div className="grid grid-cols-4 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Product</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = product.work_packages?.reduce((acc, dwp) => {
+                      const dwpData = getWorkPackageFinancialData(dwp, product)
+                      return acc + dwpData.act_product_cost
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Labour</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = product.work_packages?.reduce((acc, dwp) => {
+                      const dwpData = getWorkPackageFinancialData(dwp, product)
+                      return acc + dwpData.act_labour_cost
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Equipment</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = product.work_packages?.reduce((acc, dwp) => {
+                      const dwpData = getWorkPackageFinancialData(dwp, product)
+                      return acc + dwpData.act_equipment_cost
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-black font-medium">Total Act. Cost</div>
+                <div className="text-black font-bold">
+                  Rs {(() => {
+                    const total = product.work_packages?.reduce((acc, dwp) => {
+                      const dwpData = getWorkPackageFinancialData(dwp, product)
+                      return acc + dwpData.act_product_cost + dwpData.act_labour_cost + dwpData.act_equipment_cost
+                    }, 0) || 0
+                    return total.toLocaleString()
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1631,6 +1707,123 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
     setExpandedProducts(new Set())
   }
 
+  // Render footer summary for simplified structure
+  const renderFooterSummary = (bloc: BlocOverviewNode) => {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
+        <div className="grid grid-cols-5 gap-3 text-sm">
+          <div className="text-center">
+            <div className="text-black font-medium">Total Act. Product</div>
+            <div className="text-black font-bold">
+              Rs {(() => {
+                const total = bloc.products?.reduce((acc, product) => {
+                  const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                    const dwpData = getWorkPackageFinancialData(dwp, product)
+                    return dwpAcc + dwpData.act_product_cost
+                  }, 0) || 0
+                  return acc + dwpTotal
+                }, 0) || 0
+                return total.toLocaleString()
+              })()}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-black font-medium">Total Act. Labour</div>
+            <div className="text-black font-bold">
+              Rs {(() => {
+                const total = bloc.products?.reduce((acc, product) => {
+                  const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                    const dwpData = getWorkPackageFinancialData(dwp, product)
+                    return dwpAcc + dwpData.act_labour_cost
+                  }, 0) || 0
+                  return acc + dwpTotal
+                }, 0) || 0
+                return total.toLocaleString()
+              })()}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-black font-medium">Total Act. Equipment</div>
+            <div className="text-black font-bold">
+              Rs {(() => {
+                const total = bloc.products?.reduce((acc, product) => {
+                  const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                    const dwpData = getWorkPackageFinancialData(dwp, product)
+                    return dwpAcc + dwpData.act_equipment_cost
+                  }, 0) || 0
+                  return acc + dwpTotal
+                }, 0) || 0
+                return total.toLocaleString()
+              })()}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-black font-medium">Total Act. Cost</div>
+            <div className="text-black font-bold">
+              Rs {(() => {
+                const total = bloc.products?.reduce((acc, product) => {
+                  const dwpTotal = product.work_packages?.reduce((dwpAcc, dwp) => {
+                    const dwpData = getWorkPackageFinancialData(dwp, product)
+                    return dwpAcc + dwpData.act_product_cost + dwpData.act_labour_cost + dwpData.act_equipment_cost
+                  }, 0) || 0
+                  return acc + dwpTotal
+                }, 0) || 0
+                return total.toLocaleString()
+              })()}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-black font-medium">Total Act. Revenue</div>
+            <div className="text-black font-bold">
+              Rs {(() => {
+                const total = bloc.products?.reduce((acc, product) => {
+                  const financialData = getFinancialData(product, false)
+                  return acc + financialData.actual_revenue
+                }, 0) || 0
+                return total.toLocaleString()
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Render simplified structure without node 1 (bloc level) - only show node 2 and node 3
+  const renderSimplifiedStructure = () => {
+    // Get the first bloc (since we're hiding node 1, we'll work with the first bloc)
+    const bloc = data[0]
+    if (!bloc) return null
+
+    return (
+      <div className="space-y-4">
+        {/* Field Operations Section (Node 2) */}
+        <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+          {/* Field Operations Title Header - Always show */}
+          <div className="bg-green-100 border-b border-green-300 px-4 py-3 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-green-900">Field Operations</h3>
+            {!readOnly && (
+              <button
+                type="button"
+                title="Add Field Operation"
+                onClick={() => addProduct(bloc.id)}
+                className="p-2 hover:bg-green-200 rounded text-green-700"
+              >
+                <PlusIcon className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Field Operations Content */}
+          {renderProductTable(bloc)}
+        </div>
+
+        {/* Footer with Financial Summary */}
+        {renderFooterSummary(bloc)}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* View Switcher */}
@@ -1645,26 +1838,8 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
         </div>
       </div>
 
-      {/* Main Nested Tables */}
-      {data.length === 0 ? (
-        <div className="p-8 border-2 border-dashed border-blue-300 bg-blue-50 rounded-lg">
-          <div className="text-center">
-            <p className="text-blue-700 mb-4">No blocs added yet</p>
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={addBloc}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Bloc
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        renderBlocTable()
-      )}
+      {/* Main Simplified Structure - Hide Node 1, Show Only Node 2 and Node 3 */}
+      {renderSimplifiedStructure()}
 
       {/* Operation Selector Modal */}
       {showOperationSelector && (
@@ -1681,7 +1856,15 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
                       setData(prev => prev.map(bloc => ({
                         ...bloc,
                         products: bloc.products?.map(p =>
-                          p.id === selectedProductId ? { ...p, product_name: operation } : p
+                          p.id === selectedProductId ? {
+                            ...p,
+                            product_name: operation,
+                            // Update operation name in all work packages
+                            work_packages: p.work_packages?.map(wp => ({
+                              ...wp,
+                              operationName: operation
+                            }))
+                          } : p
                         )
                       })))
                     }
@@ -1773,19 +1956,27 @@ export default function OverviewTab({ bloc, readOnly = false }: OverviewTabProps
       )}
 
       {/* Edit Work Package Form Modal */}
-      {showWorkPackageForm && editingWorkPackage && (
-        <EditWorkPackageForm
-          workPackage={editingWorkPackage.workPackage}
-          blocId={editingWorkPackage.blocId}
-          productId={editingWorkPackage.productId}
-          operationEquipment={[]} // TODO: Get equipment data from operation
-          onSave={handleWorkPackageSave}
-          onCancel={() => {
-            setShowWorkPackageForm(false)
-            setEditingWorkPackage(null)
-          }}
-        />
-      )}
+      {showWorkPackageForm && editingWorkPackage && (() => {
+        // Find the operation (product) that contains this work package to get its equipment and products data
+        const bloc = data.find(bloc => bloc.id === editingWorkPackage.blocId)
+        const operation = bloc?.products?.find(product => product.id === editingWorkPackage.productId)
+
+        return (
+          <EditWorkPackageForm
+            workPackage={editingWorkPackage.workPackage}
+            blocId={editingWorkPackage.blocId}
+            productId={editingWorkPackage.productId}
+            blocArea={bloc?.area_hectares || 1}
+            operationEquipment={operation?.equipmentData || []}
+            operationProducts={operation?.productsData || []}
+            onSave={handleWorkPackageSave}
+            onCancel={() => {
+              setShowWorkPackageForm(false)
+              setEditingWorkPackage(null)
+            }}
+          />
+        )
+      })()}
 
     </div>
   )

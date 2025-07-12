@@ -39,15 +39,7 @@ export default function Header() {
           {/* Spacer for center alignment */}
           <div className="flex-1"></div>
 
-          {/* Far Right - Status */}
-          <div className="flex flex-col items-end space-y-1 mr-4">
 
-            {/* Status indicator - Bottom */}
-            <div className="flex items-center space-x-2 bg-green-600 bg-opacity-50 px-3 py-1 rounded-full">
-              <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">Satellite Services Online</span>
-            </div>
-          </div>
         </div>
       </div>
     </header>

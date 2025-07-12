@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Comfortaa } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import '@/utils/debugUtils' // Initialize debug utilities
 
 const inter = Inter({ subsets: ['latin'] })
-const comfortaa = Comfortaa({ subsets: ['latin'], variable: '--font-comfortaa' })
 
 export const metadata: Metadata = {
   title: 'Scanne',
@@ -27,14 +26,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full overflow-hidden">
-      <body className={`${inter.className} ${comfortaa.variable} h-full overflow-hidden`}>
+      <body className={`${inter.className} h-full overflow-hidden`}>
         <div className="h-full bg-gray-50 overflow-hidden">
           {children}
         </div>
         <script dangerouslySetInnerHTML={{
           __html: `
             // Auto-refresh cache on page load
-            window.addEventListener('DOMContentLoaded', async function() {
+            window.addEventListener('DOMContentLoaded', function() {
               try {
                 console.log('🔄 Auto-refreshing localStorage cache on page load...');
 
@@ -80,16 +79,25 @@ export default function RootLayout({
 
             // Global function to refresh localStorage data
             window.refreshLocalStorageData = async function() {
-              const { LocalStorageService } = await import('@/services/localStorageService');
-              await LocalStorageService.refreshAllData();
-              console.log('✅ localStorage data refreshed! Please reload the page.');
+              try {
+                const { LocalStorageService } = await import('/src/services/localStorageService.js');
+                await LocalStorageService.refreshAllData();
+                console.log('✅ localStorage data refreshed! Please reload the page.');
+              } catch (error) {
+                console.error('❌ Error refreshing localStorage data:', error);
+                console.log('Please try refreshing the page manually.');
+              }
             };
 
             // Global function to clear localStorage cache
             window.clearLocalStorageCache = function() {
-              const keys = ['scanne_sugarcane_varieties', 'scanne_intercrop_varieties', 'scanne_products', 'scanne_resources'];
-              keys.forEach(key => localStorage.removeItem(key));
-              console.log('🧹 localStorage cache cleared! Please reload the page.');
+              try {
+                const keys = ['scanne_sugarcane_varieties', 'scanne_intercrop_varieties', 'scanne_products', 'scanne_resources'];
+                keys.forEach(key => localStorage.removeItem(key));
+                console.log('🧹 localStorage cache cleared! Please reload the page.');
+              } catch (error) {
+                console.error('❌ Error clearing localStorage cache:', error);
+              }
             };
 
             console.log('🛠️ Debug functions available:');

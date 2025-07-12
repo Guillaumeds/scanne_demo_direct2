@@ -12,6 +12,7 @@ export interface WorkPackageNode {
   notes?: string;
   completed?: boolean; // Keep for backward compatibility
   status?: WorkPackageStatus; // New status field
+  operationName?: string; // Operation name from parent product
 }
 
 export interface ProductNode {
@@ -29,6 +30,22 @@ export interface ProductNode {
   act_resource_cost: number;
   status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
   work_packages?: WorkPackageNode[];
+  // New fields for multiple products and equipment support
+  productsData?: Array<{
+    id: string;
+    productName: string;
+    rate: number;
+    quantity: number;
+    unit: string;
+    estimatedCost: number;
+  }>;
+  equipmentData?: Array<{
+    id: string;
+    name: string;
+    estimatedDuration: number;
+    costPerHour: number;
+    totalEstimatedCost: number;
+  }>;
 }
 
 export interface BlocOverviewNode {

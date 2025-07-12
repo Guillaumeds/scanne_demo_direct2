@@ -10,8 +10,8 @@
 /* Leaflet CSS - we'll import this globally */
 @import 'leaflet/dist/leaflet.css';
 
-/* Weather Icons CSS */
-@import 'weather-icons/css/weather-icons.min.css';
+/* Weather Icons CSS - temporarily disabled due to CSS syntax errors */
+/* @import 'weather-icons/css/weather-icons.min.css'; */
 
 :root {
   --foreground-rgb: 0, 0, 0;

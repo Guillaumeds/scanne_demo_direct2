@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sprout, Shield } from 'lucide-react'
+import { Sprout, Shield, Menu } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
@@ -19,6 +19,8 @@ const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
 })
 
 export default function Home() {
+  const [showMenu, setShowMenu] = useState(false)
+
   return (
     <main className="h-screen flex flex-col">
       {/* Header */}
@@ -53,35 +55,36 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Module Navigation */}
-            <div className="flex items-center space-x-2">
-              {/* Agriculture Management Module - Active */}
-              <div className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 text-white shadow-sm">
-                <Sprout className="w-4 h-4" />
-                <span className="text-sm font-medium">Agriculture Management</span>
-              </div>
-
-
-
-              {/* HSE Management Module */}
-              <a
-                href="https://scanne-hse.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
+            {/* Far Right - Menu */}
+            <div className="relative mr-4">
+              <button
+                type="button"
+                onClick={() => setShowMenu(!showMenu)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
               >
-                <Shield className="w-4 h-4" />
-                <span className="text-sm font-medium">HSE Management</span>
-              </a>
-            </div>
+                <Menu className="w-5 h-5" />
+              </button>
 
-            {/* Far Right - Status */}
-            <div className="flex flex-col items-end space-y-1 mr-4">
-              {/* Status indicator */}
-              <div className="flex items-center space-x-2 bg-green-600 bg-opacity-50 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">Satellite Services Online</span>
-              </div>
+              {/* Dropdown Menu */}
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <div className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-gray-50">
+                    <Sprout className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium">Agriculture Management</span>
+                    <span className="ml-auto text-xs text-green-600 font-medium">Active</span>
+                  </div>
+                  <a
+                    href="https://scanne-hse.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                    onClick={() => setShowMenu(false)}
+                  >
+                    <Shield className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium">HSE Management</span>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -94,20 +97,7 @@ export default function Home() {
         <FarmGISLayout />
       </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white p-3">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-4">
-            <span>🌱 Sustainable Agriculture</span>
-            <span>•</span>
-            <span>Last sync: Live</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span>System Online</span>
-          </div>
-        </div>
-      </footer>
+
     </main>
   )
 }

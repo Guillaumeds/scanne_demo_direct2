@@ -112,14 +112,14 @@ export default function OperationsForm({
 
   const [notesData, setNotesData] = useState<string[]>([''])
 
-  // Equipment state
+  // Equipment state - initialize from existing operation data
   const [equipmentData, setEquipmentData] = useState<Array<{
     id: string
     name: string
     estimatedDuration: number
     costPerHour: number
     totalEstimatedCost: number
-  }>>([])
+  }>>(operation?.equipmentData || [])
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false)
   const [showEquipmentForm, setShowEquipmentForm] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<{
@@ -138,6 +138,17 @@ export default function OperationsForm({
     costPerHour: number
     totalEstimatedCost: number
   } | null>(null)
+
+  // Products data state - initialize from existing operation data
+  const [productsData, setProductsData] = useState<Array<{
+    id: string
+    productName: string
+    rate: number
+    quantity: number
+    unit: string
+    estimatedCost: number
+  }>>(operation?.productsData || [])
+  const [showProductSelector, setShowProductSelector] = useState(false)
 
   // Equipment handlers
   const addEquipment = () => {
@@ -201,6 +212,43 @@ export default function OperationsForm({
 
   const deleteEquipment = (equipmentId: string) => {
     setEquipmentData(prev => prev.filter(eq => eq.id !== equipmentId))
+  }
+
+  // Product handlers
+  const addProduct = () => {
+    setShowProductSelector(true)
+  }
+
+  const editProduct = (product: typeof productsData[0]) => {
+    // For editing, we'll remove the current product and let user add a new one
+    // This simplifies the flow by reusing the ProductSelector
+    deleteProduct(product.id)
+    setShowProductSelector(true)
+  }
+
+  const handleProductSelect = (product: Product, quantity: number, rate: number, actualCost?: number) => {
+    // Convert to our internal format
+    const productInfo = {
+      productName: product.name,
+      rate: rate,
+      quantity: quantity,
+      unit: product.unit,
+      estimatedCost: quantity * ((product as any).cost || 0)
+    }
+
+    // Add directly to products data
+    const newProduct = {
+      id: `prod_${Date.now()}`,
+      ...productInfo
+    }
+    setProductsData(prev => [...prev, newProduct])
+    setShowProductSelector(false)
+  }
+
+
+
+  const deleteProduct = (productId: string) => {
+    setProductsData(prev => prev.filter(prod => prod.id !== productId))
   }
 
   // Template selection handler
@@ -269,7 +317,10 @@ export default function OperationsForm({
       yieldData: yieldData,
       notes: notesData.filter(note => note.trim() !== '').join('\n'),
       attachments: attachmentFiles,
-      status: formData.status || 'planned'
+      status: formData.status || 'planned',
+      // New fields for multiple products and equipment
+      productsData: productsData,
+      equipmentData: equipmentData
     }
 
     try {
@@ -409,66 +460,97 @@ export default function OperationsForm({
               </div>
             </div>
 
-            {/* Product - Connected to table, compact design */}
+            {/* Products Section - Multiple Products Support */}
             <div className={`${isHarvestOperation(formData.operationName || '') ? 'opacity-50 pointer-events-none' : ''}`}>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Product {isHarvestOperation(formData.operationName || '') && <span className="text-gray-400">(not relevant for harvest operations)</span>}
+                  Products {isHarvestOperation(formData.operationName || '') && <span className="text-gray-400">(not relevant for harvest operations)</span>}
                 </label>
-                <button
-                  type="button"
-                  onClick={() => !isHarvestOperation(formData.operationName || '') && setShowMainProductSelector(true)}
-                  disabled={isHarvestOperation(formData.operationName || '')}
-                  className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg border border-dashed transition-colors ${
-                    isHarvestOperation(formData.operationName || '')
-                      ? 'text-gray-400 border-gray-200 cursor-not-allowed'
-                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300 hover:border-blue-400'
-                  }`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                  <span>{formData.mainProduct ? 'Change Product' : 'Add Product'}</span>
-                </button>
+                {productsData.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => !isHarvestOperation(formData.operationName || '') && addProduct()}
+                    disabled={isHarvestOperation(formData.operationName || '')}
+                    className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                      isHarvestOperation(formData.operationName || '')
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Product</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => !isHarvestOperation(formData.operationName || '') && addProduct()}
+                    disabled={isHarvestOperation(formData.operationName || '')}
+                    className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg border border-dashed transition-colors ${
+                      isHarvestOperation(formData.operationName || '')
+                        ? 'text-gray-400 border-gray-200 cursor-not-allowed'
+                        : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300 hover:border-blue-400'
+                    }`}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Product</span>
+                  </button>
+                )}
               </div>
 
-              {formData.mainProduct ? (
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">🧪</span>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">{formData.mainProduct.productName}</div>
-                        <div className="text-sm text-gray-600">
-                          Rate: {formData.mainProduct.rate} {formData.mainProduct.unit}/ha •
-                          Qty: {formData.mainProduct.quantity} {formData.mainProduct.unit}
-                          <br />
-                          <span className="text-blue-600">Est: Rs {(formData.mainProduct.estimatedCost || 0).toLocaleString()}</span>
-                          {formData.mainProduct.actualCost !== undefined && (
-                            <span className="text-green-600 ml-2">Act: Rs {formData.mainProduct.actualCost.toLocaleString()}</span>
-                          )}
+              <div className="space-y-3">
+                {productsData.length > 0 ? (
+                  productsData.map((product) => (
+                    <div key={product.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg">🧪</span>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{product.productName}</div>
+                            <div className="text-sm text-gray-600">
+                              Rate: {product.rate} {product.unit}/ha • Qty: {product.quantity} {product.unit}
+                              <br />
+                              <span className="text-blue-600">Est: Rs {product.estimatedCost.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => editProduct(product)}
+                            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            title="Edit product"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="m18 2 4 4-14 14H4v-4L18 2z"/>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteProduct(product.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
+                            title="Remove product"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3,6 5,6 21,6"></polyline>
+                              <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2,2h4a2,2 0 0,1,2,2v2"></path>
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, mainProduct: null })}
-                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
-                      title="Remove main product"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3,6 5,6 21,6"></polyline>
-                        <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
-                      </svg>
-                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-gray-500 text-sm">No products selected</div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="text-gray-500 text-sm">No product selected</div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
 
@@ -1034,6 +1116,17 @@ export default function OperationsForm({
           }}
         />
       )}
+
+      {/* Product Selector Modal */}
+      {showProductSelector && (
+        <ProductSelector
+          onSelect={handleProductSelect}
+          onClose={() => setShowProductSelector(false)}
+          blocArea={blocArea}
+        />
+      )}
+
+
 
     </div>
   )

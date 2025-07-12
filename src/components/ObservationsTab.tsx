@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { 
   DndContext, 
@@ -211,7 +211,7 @@ function SortableObservationItem({ observation, onEdit, onDelete, onStatusChange
   )
 }
 
-export default function ObservationsTab({ bloc }: ObservationsTabProps) {
+export default function ObservationsTab({ bloc }: ObservationsTabProps): JSX.Element {
   // Crop cycle permissions and data
   const permissions = useCropCyclePermissions()
   const validation = useCropCycleValidation()
@@ -367,181 +367,41 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
     return observation.status !== 'completed' && observationDate < today
   }
 
-  const filteredObservations = observations
-    .filter(observation => {
-      // Category filter
-      if (selectedCategory !== 'all' && observation.category !== selectedCategory) return false
-
-      // Status filter
-      if (statusFilter === 'incomplete' && observation.status === 'completed') return false
-      if (statusFilter === 'overdue' && !isOverdue(observation)) return false
-
-      // Completion filter
-      if (completionFilter === 'complete' && observation.status !== 'completed') return false
-      if (completionFilter === 'incomplete' && observation.status === 'completed') return false
-
-      return true
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'date':
-          return new Date(a.observationDate).getTime() - new Date(b.observationDate).getTime()
-        case 'date-desc':
-          return new Date(b.observationDate).getTime() - new Date(a.observationDate).getTime()
-        case 'category':
-          return OBSERVATION_CATEGORIES.findIndex(c => c.id === a.category) - OBSERVATION_CATEGORIES.findIndex(c => c.id === b.category)
-        case 'status':
-          return a.status.localeCompare(b.status)
-        default:
-          return 0
-      }
-    })
+  // Simple date sorting - newest first
+  const sortedObservations = observations.sort((a, b) => {
+    return new Date(b.observationDate).getTime() - new Date(a.observationDate).getTime()
+  });
 
   return (
-    <div className="flex h-full bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <span className="text-2xl mr-3">🔬</span>
-              Observations
-            </h2>
-          </div>
-        </div>
-
-        {/* Crop Cycle Selector */}
-        <CropCycleSelector />
-
-        {/* Totals displayed in right panel only */}
-
-        {/* Category Selection */}
-        <div className="p-6 border-b border-gray-200 flex-1 overflow-y-auto">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Categories</h3>
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('all')}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
-                selectedCategory === 'all'
-                  ? 'bg-green-100 text-green-800 border-green-200'
-                  : 'hover:bg-gray-50 text-gray-700 border-gray-200'
-              }`}
-            >
-              <span className="font-medium">All Categories</span>
-            </button>
-
-            {OBSERVATION_CATEGORIES.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategory(category.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border ${
-                  selectedCategory === category.id
-                    ? 'bg-green-100 text-green-800 border-green-200'
-                    : 'hover:bg-gray-50 text-gray-700 border-gray-200'
-                }`}
-              >
-                <span className="font-medium">{category.icon} {category.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+    <div className="h-full bg-gray-50">
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="h-full overflow-y-auto">
         <div className="p-6">
-          {/* Controls */}
-          <div className="flex justify-between items-center mb-4">
-            {/* Add Observation Button */}
+
+
+          {/* Header with Add Button */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Observations</h2>
+
             <button
               type="button"
-              onClick={handleAddObservation}
+              onClick={() => setShowAddModal(true)}
               disabled={!permissions.canAddObservations}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 permissions.canAddObservations
-                  ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                  : 'text-gray-300 cursor-not-allowed'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-              title={permissions.canAddObservations ? "Add observation" : "Cannot add observations - cycle is closed"}
+              title={permissions.canAddObservations ? 'Add new observation' : 'Cannot add observations to this cycle'}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
+              <span>Add Observation</span>
             </button>
-
-            {/* Enhanced Controls */}
-            <div className="flex items-center space-x-4">
-              {/* Completion Status Filter */}
-              <div className="flex items-center space-x-1">
-                <span className="text-sm text-gray-500">Status:</span>
-                <button
-                  type="button"
-                  onClick={() => setCompletionFilter(completionFilter === 'incomplete' ? 'all' : 'incomplete')}
-                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                    completionFilter === 'incomplete'
-                      ? 'bg-orange-100 text-orange-600 border border-orange-200'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Show incomplete observations"
-                >
-                  <span>⏳</span>
-                  <span>Incomplete</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')}
-                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                    statusFilter === 'overdue'
-                      ? 'bg-red-100 text-red-600 border border-red-200'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Show overdue observations"
-                >
-                  <span>⚠️</span>
-                  <span>Overdue</span>
-                </button>
-              </div>
-
-              {/* Sort Controls */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">Sort:</span>
-                <button
-                  type="button"
-                  onClick={() => setSortBy('date')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    sortBy === 'date'
-                      ? 'bg-green-100 text-green-600'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                  }`}
-                  title="Sort by date ascending"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M3 12h18M3 18h18"/>
-                    <path d="M8 6l4-4 4 4M8 18l4 4 4-4"/>
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSortBy('date-desc')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    sortBy === 'date-desc'
-                      ? 'bg-green-100 text-green-600'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                  }`}
-                  title="Sort by date descending"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M3 12h18M3 18h18"/>
-                    <path d="M16 10l-4-4-4 4M16 14l-4 4-4-4"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
           </div>
+
+
 
           {/* Observations List */}
           <div className="space-y-4">
@@ -563,10 +423,10 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={filteredObservations.map(o => o.id)}
+                    items={sortedObservations.map(o => o.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {filteredObservations.map((observation) => (
+                    {sortedObservations.map((observation) => (
                       <SortableObservationItem
                         key={observation.id}
                         observation={observation}
@@ -578,19 +438,16 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
                   </SortableContext>
                 </DndContext>
 
-                {filteredObservations.length === 0 && (
+                {sortedObservations.length === 0 && (
                   <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
                     <div className="text-4xl mb-4">🔬</div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No observations found</h3>
                     <p className="text-gray-600 mb-4">
-                      {selectedCategory === 'all'
-                        ? 'Start by adding your first observation'
-                        : `No observations in the ${OBSERVATION_CATEGORIES.find(c => c.id === selectedCategory)?.name} category`
-                      }
+                      Start by adding your first observation
                     </p>
                     <button
                       type="button"
-                      onClick={handleAddObservation}
+                      onClick={() => setShowAddModal(true)}
                       disabled={!permissions.canAddObservations}
                       className={`px-4 py-2 rounded-lg transition-colors ${
                         permissions.canAddObservations
@@ -608,20 +465,11 @@ export default function ObservationsTab({ bloc }: ObservationsTabProps) {
         </div>
       </div>
 
-      {/* Category Selector Modal */}
-      {showCategorySelector && (
-        <CategorySelector
-          type="observation"
-          onSelect={handleCategorySelect}
-          onClose={() => setShowCategorySelector(false)}
-        />
-      )}
-
       {/* Add/Edit Observation Modal */}
       {showAddModal && (
         <ObservationForm
           observation={editingObservation}
-          category={selectedCategory !== 'all' ? selectedCategory : undefined}
+          category={undefined}
           blocArea={bloc.area}
           onSave={async (observation) => {
             try {

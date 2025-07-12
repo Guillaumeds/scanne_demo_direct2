@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import SoilDataTab from './SoilDataTab'
 import VegetationDataTab from './VegetationDataTab'
 import WeatherDashboard from './WeatherDashboard'
@@ -60,7 +60,7 @@ interface BlocData {
 }
 
 // Inner component that uses the crop cycle context
-function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
+function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps): JSX.Element {
   // Crop cycle context hooks
   const permissions = useCropCyclePermissions()
   const { getActiveCycleInfo } = useCropCycleInfo()
@@ -78,6 +78,8 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   const [activeTab, setActiveTab] = useState('general')
   const [showSugarcaneSelector, setShowSugarcaneSelector] = useState(false)
   const [showIntercropSelector, setShowIntercropSelector] = useState(false)
+  const [isEditingBlocName, setIsEditingBlocName] = useState(false)
+  const [editedBlocName, setEditedBlocName] = useState(bloc.name || `Bloc ${bloc.localId}`)
 
   // Convert DrawnArea to legacy format expected by tab components
   const legacyBloc = {
@@ -147,12 +149,15 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
   }
 
   const tabs = [
-    { id: 'general', name: 'General Info', icon: '📋', status: getTabStatus('general') },
-    { id: 'overview', name: 'Overview', icon: '📊', status: getTabStatus('overview') },
-    { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') },
+    { id: 'general', name: 'Crop Cycle Information', icon: '📋', status: getTabStatus('general') },
+    { id: 'overview', name: 'Crop Management', icon: '📊', status: getTabStatus('overview') },
+    { id: 'observations', name: 'Observations', icon: '🔬', status: getTabStatus('observations') }
+  ]
+
+  const footerTabs = [
     { id: 'weather', name: 'Weather', icon: '🌤️', status: getTabStatus('weather') },
-    { id: 'satellite-soil', name: 'Satellite Soil', icon: '🛰️', status: getTabStatus('satellite-soil') },
-    { id: 'satellite-vegetation', name: 'Satellite Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') }
+    { id: 'satellite-soil', name: 'Soil', icon: '🛰️', status: getTabStatus('satellite-soil') },
+    { id: 'satellite-vegetation', name: 'Vegetation', icon: '🌿', status: getTabStatus('satellite-vegetation') }
   ]
 
   const handleInputChange = (field: keyof BlocData, value: string | number | boolean) => {
@@ -227,6 +232,23 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
     setActiveTab(newTabId)
   }
 
+  // Handle bloc name editing
+  const handleBlocNameSave = async () => {
+    try {
+      // Here you would typically save to database
+      // For now, just update the local state
+      bloc.name = editedBlocName
+      setIsEditingBlocName(false)
+    } catch (error) {
+      console.error('Error saving bloc name:', error)
+    }
+  }
+
+  const handleBlocNameCancel = () => {
+    setEditedBlocName(bloc.name || `Bloc ${bloc.localId}`)
+    setIsEditingBlocName(false)
+  }
+
   const handleArchiveBloc = () => {
     if (window.confirm('Are you sure you want to archive this bloc? It will be moved to archived blocs but can be restored later.')) {
       // Archive bloc by updating its status in database
@@ -275,108 +297,130 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
-      {/* Header with back button */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            <span className="font-medium">Back to Map</span>
-          </button>
-          
-          <div className="h-6 w-px bg-gray-300"></div>
-          
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{bloc.name || `Bloc ${bloc.localId}`}</h1>
-            <p className="text-sm text-gray-600">
-              Area: {bloc.area.toFixed(2)} ha
-            </p>
-
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {/* Database persistence indicator */}
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span>Database connected</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Validation Warnings */}
-      {validation.warnings.length > 0 && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-4">
-          <div className="flex items-start space-x-2">
-            <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <div className="text-sm">
-              <h4 className="font-medium text-yellow-800 mb-1">Validation Issues</h4>
-              <ul className="space-y-1">
-                {validation.warnings.map((warning, index) => (
-                  <li key={index} className="text-yellow-700">{warning}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
 
 
-
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => {
-            // Check if tab has unsaved changes
-            const hasUnsavedChanges = Boolean(
-              (tab.id === 'general' && cropCycleFormRef.current?.isDirty) ||
-              (tab.id === 'observations' && observationsFormRef.current?.isDirty)
-            )
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabChange(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 relative ${
-                  activeTab === tab.id
-                    ? 'border-green-500 text-green-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <span className="flex items-center space-x-2">
-                  <span>{tab.icon}</span>
-                  <span>{tab.name}</span>
-
-                  {/* Unsaved changes indicator */}
-                  <TabUnsavedIndicator isDirty={hasUnsavedChanges} />
-
-                  {/* Status indicator */}
-                  {tab.status === 'warning' && (
-                    <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                  )}
-                  {tab.status === 'complete' && (
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  )}
-                </span>
-              </button>
-            )
-          })}
-        </nav>
-      </div>
-
-      {/* Main Content Area with Side Panel */}
+      {/* Main Content Area with Left Navigation Panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Main Tab Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
+        {/* Left Navigation Panel */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          <nav className="flex-1 p-4">
+            {/* Bloc Name and Area */}
+            <div className="mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center space-x-2 mb-1">
+                {isEditingBlocName ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={editedBlocName}
+                      onChange={(e) => setEditedBlocName(e.target.value)}
+                      className="text-lg font-bold text-gray-900 border-b-2 border-green-500 bg-transparent focus:outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleBlocNameSave()
+                        if (e.key === 'Escape') handleBlocNameCancel()
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleBlocNameSave}
+                      className="p-1 text-green-600 hover:text-green-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleBlocNameCancel}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <h1 className="text-lg font-bold text-gray-900">{bloc.name || `Bloc ${bloc.localId}`}</h1>
+                    <button
+                      onClick={() => setIsEditingBlocName(true)}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">
+                Area: {bloc.area.toFixed(2)} ha
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {tabs.map((tab) => {
+                // Check if tab has unsaved changes
+                const hasUnsavedChanges = Boolean(
+                  (tab.id === 'general' && cropCycleFormRef.current?.isDirty) ||
+                  (tab.id === 'observations' && observationsFormRef.current?.isDirty)
+                )
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      activeTab === tab.id
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{tab.icon}</span>
+                    <span className="flex-1 text-left">{tab.name}</span>
+
+                    {/* Unsaved changes indicator */}
+                    <TabUnsavedIndicator isDirty={hasUnsavedChanges} />
+
+                    {/* Status indicator */}
+                    {tab.status === 'warning' && (
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                    )}
+                    {tab.status === 'complete' && (
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Back to Map Button */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onBack}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                <span className="text-sm font-medium">Back to Map</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Content Title */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {tabs.find(tab => tab.id === activeTab)?.name}
+            </h2>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-4xl mx-auto">
             {activeTab === 'general' && (
               <CropCycleGeneralInfo
                 ref={cropCycleFormRef}
@@ -685,8 +729,11 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
             <ObservationsTab bloc={legacyBloc} />
           )}
 
+            </div>
+          </div>
         </div>
-      </div>
+
+
 
       {/* Sugar Cane Variety Selector Modal */}
       {showSugarcaneSelector && (
@@ -698,26 +745,6 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
         />
       )}
 
-        {/* Persistent Side Panel - Hidden on General tab */}
-        {activeTab !== 'general' && (
-          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
-            <div className="p-4">
-              <CropCycleGeneralInfo
-                bloc={bloc}
-                onSave={async (data) => {
-                  try {
-                    console.log('Crop cycle data saved:', data)
-                  } catch (error) {
-                    console.error('Error handling crop cycle save:', error)
-                  }
-                }}
-                sidePanel={true}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Intercrop Variety Selector Modal */}
       {showIntercropSelector && (
         <VarietySelector
@@ -727,6 +754,7 @@ function BlocDataScreenInner({ bloc, onBack, onDelete }: BlocDataScreenProps) {
           varietyType="intercrop"
         />
       )}
+    </div>
     </div>
   )
 }

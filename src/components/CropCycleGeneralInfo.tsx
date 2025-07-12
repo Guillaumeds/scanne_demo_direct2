@@ -687,13 +687,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Crop Cycle Management</h2>
-        <p className="text-sm text-gray-600">
-          Manage plantation and ratoon cycles for this bloc. All fields marked with * are mandatory.
-        </p>
-      </div>
+    <div className="p-6">
 
       {/* Loading State */}
       {isLoadingData && (
@@ -725,15 +719,14 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         </div>
       )}
 
-      {/* Current Crop Information - Beautiful Boxes */}
+      {/* Current Crop Information */}
       {!isLoadingData && activeCycle && (
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Crop</h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Financial Overview Box */}
             {cycleMetrics[activeCycle.id] && (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-sm">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6">
                 <div className="flex items-center mb-4">
                   <div className="bg-green-100 p-2 rounded-lg mr-3">
                     <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -744,27 +737,27 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Est. Cost</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].costs.estimated}</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Actual Cost</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].costs.actual}</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Revenue</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].revenue.total}</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Profit</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].profit.total}</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Yield</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].yield.sugarcane}</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
+                  <div className="p-3">
                     <span className="text-sm text-gray-600">Margin</span>
                     <div className="font-semibold text-gray-900">{cycleMetrics[activeCycle.id].profit.margin}</div>
                   </div>
@@ -773,28 +766,28 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
             )}
 
             {/* Crop Information Box */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6">
               <div className="flex items-center mb-4">
                 <div className="bg-blue-100 p-2 rounded-lg mr-3">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Crop Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Crop Cycle Information</h3>
               </div>
 
               <div className="space-y-3">
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Type</span>
                   <div className="font-semibold text-gray-900">
                     {activeCycle.type === 'plantation' ? 'Plantation' : `Ratoon ${activeCycle.cycleNumber - 1}`}
                   </div>
                 </div>
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Sugarcane Variety</span>
                   <div className="font-semibold text-gray-900">{activeCycle.sugarcaneVarietyName}</div>
                 </div>
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Plant Date</span>
                   <div className="font-semibold text-gray-900">
                     {activeCycle.type === 'plantation'
@@ -803,11 +796,11 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                     }
                   </div>
                 </div>
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Planned Harvest</span>
                   <div className="font-semibold text-gray-900">{new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</div>
                 </div>
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Intercrop</span>
                   <div className="font-semibold text-gray-900">
                     {!activeCycle.intercropVarietyName || activeCycle.intercropVarietyName === '' || activeCycle.intercropVarietyId === 'none'
@@ -815,7 +808,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
                       : activeCycle.intercropVarietyName}
                   </div>
                 </div>
-                <div className="flex justify-between items-center bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex justify-between items-center p-3">
                   <span className="text-sm text-gray-600">Expected Yield</span>
                   <div className="font-semibold text-gray-900">{activeCycle.expectedYield} tons/ha</div>
                 </div>

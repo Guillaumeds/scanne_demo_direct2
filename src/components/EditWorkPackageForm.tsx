@@ -57,12 +57,21 @@ interface EditWorkPackageFormProps {
   productId: string
   onSave: (workPackageData: WorkPackageNode) => Promise<void>
   onCancel: () => void
+  blocArea: number // Add bloc area for calculations
   operationEquipment?: Array<{
     id: string
     name: string
     estimatedDuration: number
     costPerHour: number
     totalEstimatedCost: number
+  }>
+  operationProducts?: Array<{
+    id: string
+    productName: string
+    rate: number
+    quantity: number
+    unit: string
+    estimatedCost: number
   }>
 }
 
@@ -72,7 +81,9 @@ export default function EditWorkPackageForm({
   productId,
   onSave,
   onCancel,
-  operationEquipment = []
+  blocArea,
+  operationEquipment = [],
+  operationProducts = []
 }: EditWorkPackageFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState(() => {
@@ -144,11 +155,36 @@ export default function EditWorkPackageForm({
     ]
   })
 
-  // Debug equipment data
+  // Products data state - editable actual quantities, rates and costs (using bloc area)
+  const [productsData, setProductsData] = useState<Array<{
+    id: string
+    productName: string
+    unit: string
+    actualQuantity: number
+    actualRate: number
+    actualCost: number
+  }>>(() => {
+    // Initialize from operation products
+    if (operationProducts.length > 0) {
+      return operationProducts.map(prod => ({
+        id: prod.id,
+        productName: prod.productName,
+        unit: prod.unit,
+        actualQuantity: prod.quantity, // Start with estimated as default
+        actualRate: prod.rate, // Start with estimated as default
+        actualCost: prod.estimatedCost // Start with estimated as default
+      }))
+    }
+    return []
+  })
+
+  // Debug equipment and products data
   useEffect(() => {
     console.log('🔧 Equipment data initialized:', equipmentData)
     console.log('🔧 Operation equipment prop:', operationEquipment)
-  }, [equipmentData, operationEquipment])
+    console.log('🧪 Products data initialized:', productsData)
+    console.log('🧪 Operation products prop:', operationProducts)
+  }, [equipmentData, operationEquipment, productsData, operationProducts])
 
   // Update equipment actual duration and recalculate cost
   const updateEquipmentDuration = (equipmentId: string, duration: number) => {
@@ -156,6 +192,33 @@ export default function EditWorkPackageForm({
       eq.id === equipmentId
         ? { ...eq, actualDuration: duration, actualCost: duration * eq.costPerHour }
         : eq
+    ))
+  }
+
+  // Update product actual quantity and recalculate cost
+  const updateProductQuantity = (productId: string, quantity: number) => {
+    setProductsData(prev => prev.map(prod =>
+      prod.id === productId
+        ? {
+            ...prod,
+            actualQuantity: quantity,
+            actualCost: quantity * (prod.actualRate || 0)
+          }
+        : prod
+    ))
+  }
+
+  // Update product actual rate and recalculate quantity and cost using bloc area
+  const updateProductRate = (productId: string, rate: number) => {
+    setProductsData(prev => prev.map(prod =>
+      prod.id === productId
+        ? {
+            ...prod,
+            actualRate: rate,
+            actualQuantity: rate * blocArea, // Use bloc area for calculation
+            actualCost: (rate * blocArea) * rate
+          }
+        : prod
     ))
   }
 
@@ -201,8 +264,8 @@ export default function EditWorkPackageForm({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <form onSubmit={handleSubmit} className="h-full flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit}>
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h2 className="text-xl font-bold text-gray-900">Edit Daily Work Package</h2>
@@ -238,7 +301,7 @@ export default function EditWorkPackageForm({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="p-6">
             {/* General Tab */}
             {activeTab === 'general' && (
               <div className="space-y-6">
@@ -314,19 +377,86 @@ export default function EditWorkPackageForm({
                     onChange={(status) => setFormData({ ...formData, status })}
                   />
                 </div>
+
+                {/* Products Section */}
+                {productsData.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Actual Product Usage</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Record the actual quantities, rates, areas, and costs for products used in this work package.
+                    </p>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-blue-300">
+                            <th className="text-left py-2 px-3 font-medium text-gray-700">Product</th>
+                            <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Quantity</th>
+                            <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Rate</th>
+                            <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Cost (Rs)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productsData.map((product) => (
+                            <tr key={product.id} className="border-b border-blue-200">
+                              <td className="py-2 px-3 font-medium text-gray-900">
+                                {product.productName}
+                                <div className="text-xs text-gray-500">Unit: {product.unit}</div>
+                                <div className="text-xs text-gray-500">Area: {blocArea} ha</div>
+                              </td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  value={product.actualQuantity || ''}
+                                  onChange={(e) => updateProductQuantity(product.id, parseFloat(e.target.value) || 0)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  title={`Enter actual quantity in ${product.unit}`}
+                                />
+                              </td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  value={product.actualRate || ''}
+                                  onChange={(e) => updateProductRate(product.id, parseFloat(e.target.value) || 0)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  title={`Enter actual rate in ${product.unit}/ha`}
+                                />
+                              </td>
+                              <td className="py-2 px-3 font-medium text-blue-600">
+                                Rs {product.actualCost.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-blue-300">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-900">Total Product Cost:</span>
+                        <span className="text-lg font-bold text-blue-600">
+                          Rs {productsData.reduce((sum, prod) => sum + prod.actualCost, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Resources Tab */}
             {activeTab === 'resources' && (
               <div className="space-y-6">
-                {/* Human Resources Section */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Actual Resource Usage</h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Record the actual hours worked and costs for each resource type.
                   </p>
-                  
+
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -346,9 +476,10 @@ export default function EditWorkPackageForm({
                                 type="number"
                                 step="0.5"
                                 min="0"
-                                value={resource.actualEffort}
+                                value={resource.actualEffort || ''}
                                 onChange={(e) => updateActualResourceEffort(index, parseFloat(e.target.value) || 0)}
                                 className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                                title="Enter actual effort in hours"
                               />
                             </td>
                             <td className="py-2 px-3 text-gray-600">Rs {resource.ratePerHour}</td>
@@ -360,7 +491,7 @@ export default function EditWorkPackageForm({
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <div className="mt-4 pt-4 border-t border-blue-300">
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-gray-900">Total Actual Cost:</span>
@@ -373,131 +504,56 @@ export default function EditWorkPackageForm({
 
                 {/* Equipment Section */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipment Usage</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Actual Equipment Usage</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Actual equipment usage and costs for this work package. (Equipment count: {equipmentData.length})
+                    Record the actual duration and costs for equipment used in this work package.
                   </p>
 
-                  {true ? ( // Always show equipment section for testing
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-green-300">
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Equipment</th>
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Cost/Hour</th>
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Duration (hours)</th>
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Cost</th>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-green-300">
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Equipment</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Duration (hours)</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Rate/Hour</th>
+                          <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {equipmentData.map((equipment) => (
+                          <tr key={equipment.id} className="border-b border-green-200">
+                            <td className="py-2 px-3 font-medium text-gray-900">{equipment.name}</td>
+                            <td className="py-2 px-3">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                value={equipment.actualDuration || ''}
+                                onChange={(e) => updateEquipmentDuration(equipment.id, parseFloat(e.target.value) || 0)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                                title="Enter actual duration in hours"
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-gray-600">Rs {equipment.costPerHour}</td>
+                            <td className="py-2 px-3 font-medium text-green-600">
+                              Rs {equipment.actualCost.toLocaleString()}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {equipmentData.map((equipment) => (
-                            <tr key={equipment.id} className="border-b border-green-200">
-                              <td className="py-2 px-3 font-medium text-gray-900">{equipment.name}</td>
-                              <td className="py-2 px-3 text-gray-600">Rs {equipment.costPerHour}</td>
-                              <td className="py-2 px-3">
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  value={equipment.actualDuration}
-                                  onChange={(e) => updateEquipmentDuration(equipment.id, parseFloat(e.target.value) || 0)}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
-                                  title="Enter actual duration in hours"
-                                />
-                              </td>
-                              <td className="py-2 px-3 font-medium text-green-600">
-                                Rs {equipment.actualCost.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                      <div className="mt-4 pt-4 border-t border-green-300">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-gray-900">Total Equipment Cost:</span>
-                          <span className="text-lg font-bold text-green-600">
-                            Rs {equipmentData.reduce((sum, eq) => sum + eq.actualCost, 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+                  <div className="mt-4 pt-4 border-t border-green-300">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-900">Total Equipment Cost:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        Rs {equipmentData.reduce((sum, eq) => sum + eq.actualCost, 0).toLocaleString()}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-gray-500 mb-4">No equipment configured for this operation.</p>
-                      <p className="text-sm text-gray-400">Mock equipment data will be shown for testing:</p>
-                      <div className="mt-4 overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b border-green-300">
-                              <th className="text-left py-2 px-3 font-medium text-gray-700">Equipment</th>
-                              <th className="text-left py-2 px-3 font-medium text-gray-700">Cost/Hour</th>
-                              <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Duration (hours)</th>
-                              <th className="text-left py-2 px-3 font-medium text-gray-700">Actual Cost</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b border-green-200">
-                              <td className="py-2 px-3 font-medium text-gray-900">Tractor</td>
-                              <td className="py-2 px-3 text-gray-600">Rs 800</td>
-                              <td className="py-2 px-3">
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  defaultValue="2.5"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
-                                  title="Enter actual duration in hours"
-                                />
-                              </td>
-                              <td className="py-2 px-3 font-medium text-green-600">Rs 2,000</td>
-                            </tr>
-                            <tr className="border-b border-green-200">
-                              <td className="py-2 px-3 font-medium text-gray-900">Sprayer</td>
-                              <td className="py-2 px-3 text-gray-600">Rs 400</td>
-                              <td className="py-2 px-3">
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  defaultValue="1.0"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
-                                  title="Enter actual duration in hours"
-                                />
-                              </td>
-                              <td className="py-2 px-3 font-medium text-green-600">Rs 400</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <div className="mt-4 pt-4 border-t border-green-300">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-gray-900">Total Equipment Cost:</span>
-                            <span className="text-lg font-bold text-green-600">Rs 2,400</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Save/Cancel buttons for Resources tab */}
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save Work Package'}
-                  </button>
-                </div>
               </div>
             )}
 
@@ -557,7 +613,7 @@ export default function EditWorkPackageForm({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
             <CancelButton onClick={onCancel} disabled={isSubmitting}>
               Cancel
             </CancelButton>
