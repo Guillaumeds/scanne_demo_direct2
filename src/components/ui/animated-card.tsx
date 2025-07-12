@@ -1,10 +1,12 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardProps } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import React from 'react'
 
-interface AnimatedCardProps extends CardProps {
+interface AnimatedCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
   delay?: number
   duration?: number
   direction?: 'up' | 'down' | 'left' | 'right'

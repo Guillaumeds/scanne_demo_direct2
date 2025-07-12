@@ -10,8 +10,7 @@ import {
   CloudRain,
   CloudDrizzle,
   CloudSnow,
-  CloudLightning,
-  Clouds, // Using Clouds instead of Fog
+  CloudLightning
   Thermometer,
   Droplets,
   Wind,
@@ -140,7 +139,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
       CloudDrizzle,
       CloudSnow,
       CloudLightning,
-      Clouds // Using Clouds instead of Fog
+      Cloud
     }
 
     const IconComponent = iconComponents[iconName as keyof typeof iconComponents] || Cloud
@@ -153,7 +152,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ drawnAreas }) => {
     if (code === 1) return 'Sun'
     if (code === 2) return 'CloudSun'
     if (code === 3) return 'Cloud'
-    if (code === 45 || code === 48) return 'Clouds' // Using Clouds instead of Fog
+    if (code === 45 || code === 48) return 'Cloud'
     if (code === 51) return 'CloudDrizzle'
     if (code === 53) return 'CloudDrizzle'
     if (code === 55) return 'CloudRain'

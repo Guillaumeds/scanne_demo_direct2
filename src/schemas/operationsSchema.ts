@@ -44,7 +44,7 @@ export const resourceSchema = z.object({
 export const attachmentSchema = z.object({
   id: z.string().min(1, "Attachment ID is required"),
   name: z.string().min(1, "File name is required"),
-  url: z.string().url("Invalid URL format"),
+  url: z.string().url("Invalid URL format").optional(),
   type: z.string().min(1, "File type is required"),
   size: z.number().min(0, "File size must be positive").optional(),
   uploadedAt: z.date().optional(),
@@ -75,7 +75,7 @@ export const operationFormSchema = z.object({
   revenuePerHectare: z.number().min(0, "Revenue per hectare must be positive").optional(),
 
   // Status
-  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).default('planned'),
+  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).optional().default('planned'),
 
   // Related data
   products: z.array(productSchema).optional().default([]),

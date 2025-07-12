@@ -66,24 +66,14 @@ export function ModernBlocContent({
       case 'satellite-soil':
         return (
           <div className="p-6">
-            <SoilDataTab bloc={{
-              id: bloc.uuid || bloc.localId,
-              coordinates: bloc.coordinates,
-              area: bloc.area,
-              name: bloc.name || `Bloc ${bloc.localId}`
-            }} />
+            <SoilDataTab bloc={bloc} />
           </div>
         )
 
       case 'satellite-vegetation':
         return (
           <div className="p-6">
-            <VegetationDataTab bloc={{
-              id: bloc.uuid || bloc.localId,
-              coordinates: bloc.coordinates,
-              area: bloc.area,
-              name: bloc.name || `Bloc ${bloc.localId}`
-            }} />
+            <VegetationDataTab bloc={bloc} />
           </div>
         )
 

@@ -70,7 +70,7 @@ const mockOperationsData: BlocOverviewNode[] = [
             area: 12.5,
             rate: 1.0,
             quantity: 100,
-            status: 'completed',
+            status: 'complete',
             operationName: 'Land Preparation'
           }
         ]
@@ -97,7 +97,7 @@ const mockOperationsData: BlocOverviewNode[] = [
             area: 6.0,
             rate: 2.5,
             quantity: 150,
-            status: 'completed',
+            status: 'complete',
             operationName: 'Planting'
           },
           {
@@ -267,6 +267,7 @@ export default function TestModernPage() {
                     operation={mockOperationsData[0].products?.[0]}
                     onSave={handleOperationSave}
                     onCancel={() => alert('Form cancelled')}
+                    blocArea={5.2}
                   />
                 </div>
               )}

@@ -14,6 +14,7 @@ interface AttachmentFile {
 }
 
 interface AttachmentUploaderProps {
+  files: AttachmentFile[]
   onFilesChange: (files: AttachmentFile[]) => void
   maxFiles?: number
   maxSize?: number // in MB
@@ -23,6 +24,7 @@ interface AttachmentUploaderProps {
 }
 
 export default function AttachmentUploader({
+  files,
   onFilesChange,
   maxFiles = 10,
   maxSize = 50, // 50MB default
@@ -30,7 +32,6 @@ export default function AttachmentUploader({
   disabled = false,
   className = ''
 }: AttachmentUploaderProps) {
-  const [attachedFiles, setAttachedFiles] = useState<AttachmentFile[]>([])
   const [errors, setErrors] = useState<string[]>([])
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
@@ -51,7 +52,7 @@ export default function AttachmentUploader({
     })
 
     // Check total file count
-    if (attachedFiles.length + acceptedFiles.length > maxFiles) {
+    if (files.length + acceptedFiles.length > maxFiles) {
       newErrors.push(`Maximum ${maxFiles} files allowed`)
       setErrors(newErrors)
       return
@@ -67,14 +68,13 @@ export default function AttachmentUploader({
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }))
 
-    const updatedFiles = [...attachedFiles, ...newFiles]
-    setAttachedFiles(updatedFiles)
+    const updatedFiles = [...files, ...newFiles]
     onFilesChange(updatedFiles)
 
     if (newErrors.length > 0) {
       setErrors(newErrors)
     }
-  }, [attachedFiles, maxFiles, maxSize, onFilesChange])
+  }, [files, maxFiles, maxSize, onFilesChange])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -88,8 +88,7 @@ export default function AttachmentUploader({
   })
 
   const removeFile = (fileId: string) => {
-    const updatedFiles = attachedFiles.filter(f => f.id !== fileId)
-    setAttachedFiles(updatedFiles)
+    const updatedFiles = files.filter(f => f.id !== fileId)
     onFilesChange(updatedFiles)
   }
 
@@ -154,14 +153,14 @@ export default function AttachmentUploader({
       )}
 
       {/* Attached Files List */}
-      {attachedFiles.length > 0 && (
+      {files.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700 flex items-center">
             <Paperclip className="w-4 h-4 mr-1" />
-            Attached Files ({attachedFiles.length})
+            Attached Files ({files.length})
           </h4>
           <div className="space-y-2">
-            {attachedFiles.map((file) => (
+            {files.map((file) => (
               <div key={file.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <div className="text-gray-500">

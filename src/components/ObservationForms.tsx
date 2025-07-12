@@ -558,6 +558,7 @@ export default function ObservationForm({
                 Add New Attachments
               </label>
               <AttachmentUploader
+                files={attachmentFiles}
                 onFilesChange={setAttachmentFiles}
                 maxFiles={10}
                 maxSize={50}

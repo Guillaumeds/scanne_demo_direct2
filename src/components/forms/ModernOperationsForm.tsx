@@ -679,7 +679,7 @@ export function ModernOperationsForm({
                         files={attachmentFiles}
                         onFilesChange={setAttachmentFiles}
                         maxFiles={10}
-                        maxFileSize={50 * 1024 * 1024} // 50MB
+                        maxSize={50} // 50MB
                         acceptedFileTypes={[
                           'image/*',
                           'application/pdf',
@@ -726,10 +726,10 @@ export function ModernOperationsForm({
           </form>
         </Form>
       </div>
-    </div>
+      </div>
 
-    {/* Modal Selectors */}
-    <AnimatePresence>
+      {/* Modal Selectors */}
+      <AnimatePresence>
       {/* Operation Selector Modal */}
       {showOperationSelector && (
         <motion.div
@@ -839,5 +839,6 @@ export function ModernOperationsForm({
         />
       )}
     </AnimatePresence>
+    </div>
   )
 }

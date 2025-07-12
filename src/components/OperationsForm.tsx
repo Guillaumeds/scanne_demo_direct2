@@ -959,6 +959,7 @@ export default function OperationsForm({
 
                 <div>
                   <AttachmentUploader
+                    files={attachmentFiles}
                     onFilesChange={setAttachmentFiles}
                     maxFiles={10}
                     maxSize={50}

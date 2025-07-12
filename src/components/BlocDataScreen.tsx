@@ -826,7 +826,7 @@ export default function BlocDataScreen({ bloc, onBack, onDelete }: BlocDataScree
       <ModernBlocScreen
         bloc={bloc}
         onBack={onBack}
-        onDelete={onDelete}
+        onDelete={onDelete ? () => onDelete(bloc.uuid || bloc.localId) : undefined}
       />
     )
   }

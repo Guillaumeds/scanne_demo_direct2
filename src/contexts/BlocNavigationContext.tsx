@@ -69,6 +69,18 @@ export function BlocNavigationProvider({
     subView: BlocSubView
   }>>([])
 
+  const resetNavigation = useCallback(() => {
+    setCurrentTab('information')
+    setCurrentSubView('overview')
+    setNavigationHistory([])
+    setHasUnsavedChanges(false)
+    setCanNavigateAway(true)
+    setBreadcrumbs([
+      { label: 'Farm', onClick: onNavigateAway },
+      { label: blocName, isActive: true }
+    ])
+  }, [blocName, onNavigateAway])
+
   const navigateToTab = useCallback((tab: BlocTab, subView: BlocSubView = 'overview') => {
     // Check if we can navigate away
     if (!canNavigateAway && hasUnsavedChanges) {
@@ -99,7 +111,10 @@ export function BlocNavigationProvider({
     const tabLabels: Record<BlocTab, string> = {
       'information': 'Information',
       'crop-management': 'Crop Management',
-      'observations': 'Observations'
+      'observations': 'Observations',
+      'weather': 'Weather',
+      'satellite-soil': 'Soil Data',
+      'satellite-vegetation': 'Vegetation Data'
     }
     
     newBreadcrumbs.push({
@@ -158,18 +173,6 @@ export function BlocNavigationProvider({
       setCurrentSubView('overview')
     }
   }, [navigationHistory, navigateToTab])
-
-  const resetNavigation = useCallback(() => {
-    setCurrentTab('information')
-    setCurrentSubView('overview')
-    setNavigationHistory([])
-    setHasUnsavedChanges(false)
-    setCanNavigateAway(true)
-    setBreadcrumbs([
-      { label: 'Farm', onClick: onNavigateAway },
-      { label: blocName, isActive: true }
-    ])
-  }, [blocName, onNavigateAway])
 
   const contextValue: BlocNavigationContextType = {
     // State

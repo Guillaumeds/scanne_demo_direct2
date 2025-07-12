@@ -54,7 +54,8 @@ const mockObservations = [
 ]
 
 export function ModernObservationsTab({ bloc, currentSubView }: ModernObservationsTabProps) {
-  const { activeCycleInfo } = useCropCycleInfo()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const activeCycleInfo = getActiveCycleInfo()
   const { setCurrentSubView } = useBlocNavigation()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
 

@@ -84,7 +84,7 @@ export default function ModernOverviewTab({
       area: 0, // Empty
       rate: 0, // Empty
       quantity: 0, // Empty
-      status: 'planned',
+      status: 'not-started',
       operationName: product?.product_name || '' // Set operation name from parent product
     }
 
@@ -345,6 +345,7 @@ export default function ModernOverviewTab({
             operation={editingOperation}
             onSave={handleOperationSave}
             onCancel={handleBack}
+            blocArea={5.2}
           />
         </FormLayout>
       </PageTransition>

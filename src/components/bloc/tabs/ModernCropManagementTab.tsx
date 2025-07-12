@@ -18,11 +18,12 @@ interface ModernCropManagementTabProps {
 }
 
 export function ModernCropManagementTab({ bloc, currentSubView }: ModernCropManagementTabProps) {
-  const { activeCycleInfo } = useCropCycleInfo()
+  const { getActiveCycleInfo } = useCropCycleInfo()
+  const activeCycleInfo = getActiveCycleInfo()
 
   // State to manage operations data
   const [operationsData, setOperationsData] = useState<BlocOverviewNode[]>([{
-    id: bloc.uuid,
+    id: bloc.uuid || bloc.localId,
     name: bloc.name || `Bloc ${bloc.localId}`,
     area: bloc.area,
     products: [] // Empty products array - will show "Add Operation" button

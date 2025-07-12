@@ -147,16 +147,10 @@ export function ModernWorkPackageForm({
             <IconButton
               icon="close"
               variant="ghost"
-                </Badge>
-              </div>
-            )}
+              onClick={onCancel}
+              className="text-slate-500 hover:text-slate-700"
+            />
           </div>
-          <IconButton 
-            icon="close"
-            variant="ghost"
-            onClick={onCancel}
-            className="text-slate-500 hover:text-slate-700"
-          />
         </div>
       </div>
 
@@ -487,7 +481,7 @@ export function ModernWorkPackageForm({
                       files={attachmentFiles}
                       onFilesChange={setAttachmentFiles}
                       maxFiles={10}
-                      maxFileSize={50 * 1024 * 1024} // 50MB
+                      maxSize={50} // 50MB
                       acceptedFileTypes={[
                         'image/*',
                         'application/pdf',

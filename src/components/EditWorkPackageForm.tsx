@@ -605,6 +605,7 @@ export default function EditWorkPackageForm({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">Work Package Attachments</h3>
                 <AttachmentUploader
+                  files={attachmentFiles}
                   onFilesChange={setAttachmentFiles}
                   maxFiles={10}
                 />

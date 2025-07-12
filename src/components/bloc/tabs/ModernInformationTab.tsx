@@ -18,7 +18,9 @@ interface ModernInformationTabProps {
 
 export function ModernInformationTab({ bloc, currentSubView }: ModernInformationTabProps) {
   const { navigateToTab, setCurrentSubView } = useBlocNavigation()
-  const { activeCycleInfo, cropCycles } = useCropCycleInfo()
+  const { getActiveCycleInfo, allCycles } = useCropCycleInfo()
+  const activeCycleInfo = getActiveCycleInfo()
+  const cropCycles = allCycles
 
   // If we're in a sub-view, render the appropriate component
   if (currentSubView === 'form') {
