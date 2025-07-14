@@ -95,7 +95,7 @@ export function ModernBlocContent({
 
   return (
     <div className="h-full overflow-hidden">
-      <PageTransition key={`${currentTab}-${currentSubView}`}>
+      <PageTransition transitionKey={`${currentTab}-${currentSubView}`}>
         {renderTabContent()}
       </PageTransition>
     </div>

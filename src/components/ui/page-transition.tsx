@@ -5,15 +5,15 @@ import { cn } from '@/lib/utils'
 
 interface PageTransitionProps {
   children: React.ReactNode
-  key?: string
+  transitionKey?: string
   direction?: 'horizontal' | 'vertical' | 'fade' | 'scale'
   duration?: number
   className?: string
 }
 
-export function PageTransition({ 
-  children, 
-  key, 
+export function PageTransition({
+  children,
+  transitionKey,
   direction = 'horizontal',
   duration = 0.3,
   className = ''
@@ -58,7 +58,7 @@ export function PageTransition({
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={key}
+        key={transitionKey}
         initial={variants.initial}
         animate={variants.animate}
         exit={variants.exit}
