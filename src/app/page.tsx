@@ -1,9 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+
 import { Sprout, Shield, Menu } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 
 // Dynamically import the layout component to avoid SSR issues with Leaflet
 const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
@@ -19,7 +28,6 @@ const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
 })
 
 export default function Home() {
-  const [showMenu, setShowMenu] = useState(false)
 
   return (
     <main className="h-screen flex flex-col">
@@ -57,36 +65,65 @@ export default function Home() {
             </div>
 
             {/* Far Right - Menu */}
-            <div className="relative mr-4">
-              <button
-                type="button"
-                onClick={() => setShowMenu(!showMenu)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-
-              {/* Dropdown Menu */}
-              {showMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-gray-50">
-                    <Sprout className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium">Agriculture Management</span>
-                    <span className="ml-auto text-xs text-green-600 font-medium">Active</span>
-                  </div>
-                  <a
-                    href="https://scanne-hse.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                    onClick={() => setShowMenu(false)}
+            <div className="mr-4">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
                   >
-                    <Shield className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium">HSE Management</span>
-                  </a>
+                    <Menu className="w-5 h-5" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Sprout className="w-5 h-5 text-emerald-600" />
+                      Scanne Applications
+                    </SheetTitle>
+                    <SheetDescription>
+                      Access all your management applications
+                    </SheetDescription>
+                  </SheetHeader>
 
-                </div>
-              )}
+                  <div className="mt-6 space-y-4">
+                    {/* Current Application */}
+                    <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Sprout className="w-5 h-5 text-emerald-600" />
+                          <div>
+                            <h3 className="font-medium text-emerald-900">Agriculture Management</h3>
+                            <p className="text-sm text-emerald-700">Farm GIS & Operations</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-emerald-600 text-white px-2 py-1 rounded-full font-medium">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Other Applications */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Other Applications</h4>
+                      <a
+                        href="https://scanne-hse.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
+                      >
+                        <Shield className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <h3 className="font-medium text-slate-900">Health & Safety</h3>
+                          <p className="text-sm text-slate-600">HSE Management System</p>
+                        </div>
+                      </a>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
