@@ -8,7 +8,7 @@ import DrawingToolbar from './DrawingToolbar'
 import DrawnAreasList from './DrawnAreasList'
 import PolygonInfoModal from './PolygonInfoModal'
 
-import BlocDataScreen from './BlocDataScreen'
+import { ModernBlocScreen } from './bloc/ModernBlocScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { LocalStorageService } from '@/services/localStorageService'
@@ -459,10 +459,10 @@ export default function FarmGISLayout() {
           {/* Data Screen Overlay - Shows on top of map when needed */}
           {showDataScreen && dataScreenBloc && (
             <div className="absolute inset-0 z-[2000]">
-              <BlocDataScreen
+              <ModernBlocScreen
                 bloc={dataScreenBloc}
                 onBack={handleBackToMap}
-                onDelete={handlePolygonDelete}
+                onDelete={() => handlePolygonDelete(dataScreenBloc.uuid || dataScreenBloc.localId)}
               />
             </div>
           )}
