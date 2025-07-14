@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { fetchSoilAnalysis, SoilAnalysis, SoilDepth, SOIL_DEPTHS } from '@/services/soilDataService'
 import { fetchSatelliteAnalysis, SatelliteAnalysis } from '@/services/satelliteDataService'
 import { calculatePolygonCenter, formatCoordinates } from '@/utils/geoUtils'
-import { format } from 'date-fns'
+// Using native JavaScript Intl.DateTimeFormat instead of date-fns
 
 interface DrawnArea {
   id?: string
@@ -291,7 +291,13 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
             <div>
               <span className="text-gray-600">Last Updated:</span>
               <div className="font-medium text-gray-900">
-                {format(new Date(soilAnalysis.lastUpdated), 'MMM dd, yyyy HH:mm')}
+                {new Date(soilAnalysis.lastUpdated).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
               </div>
             </div>
           </div>
@@ -328,7 +334,11 @@ export default function SoilDataTab({ bloc }: SoilDataTabProps) {
                 <div className="text-xs text-blue-600 font-medium">Analysis Quality</div>
                 <div className="text-lg font-bold text-blue-900">{satelliteAnalysis.quality}</div>
                 <div className="text-xs text-blue-600 mt-1">
-                  Acquired: {format(new Date(satelliteAnalysis.acquisitionDate), 'MMM dd, yyyy')}
+                  Acquired: {new Date(satelliteAnalysis.acquisitionDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric'
+                  })}
                 </div>
               </div>
               <div className="bg-green-50 rounded-lg p-3">
