@@ -1,0 +1,331 @@
+{
+  "timestamp": "2025-07-14T04:22:47.928Z",
+  "preserved": [],
+  "removed": [
+    {
+      "item": "aifs_single_test.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "aifs_test.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "analyze_tiff_files.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "BrowserTools-1.2.0-extension.zip",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "BrowserTools-Extension-Fresh",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "BROWSER_TOOLS_SETUP.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "CC_Management_Table_Form_Restructure__2025-07-12T11-17-07.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "cleanup-analysis-baseline.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "CLEANUP_COMPLETION_REPORT.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "comprehensive_vector_extractor.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "create_summary_table.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "create_tile_server.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "csv_to_geojson.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "database",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "DATABASE_DESIGN.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "database_setup_complete.sql",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "DEBUGGING_GUIDE.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "docs",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "estate_fields.csv",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "estate_fields.geojson",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "extract_ercane_advanced.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "extract_ercane_images.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "extract_m_series_clean.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "extract_m_series_images.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "extract_svg_from_pdf.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "extract_vector_images.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "fix_rpc_function.sql",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "ifs_test.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "INTEGRATION_PACKAGE",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "knip-output.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "legacy ts",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "logo-omnicane.png",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "pdf_analysis_results.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "pdf_image_extractor.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "pdf_to_high_res_images.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "pdf_to_images_pymupdf.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "quick-analysis-results.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "README.md",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "rename_tiff_files.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "SAFE_CLEANUP_GUIDE.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "sample_data_excel_view.sql",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "Scanne.png",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "sentinel_integration.js",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "simple_raster_overlay.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "sugarcane-emoji-options.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "sugarcane-soil-compatibility.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "sugarcane_varieties_characteristics.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "SUPABASE_CLI_SETUP.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "svg_editing_guide.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "svg_extracts",
+      "category": "legacy_folders",
+      "type": "directory"
+    },
+    {
+      "item": "svg_to_geojson.py",
+      "category": "python_scripts",
+      "type": "file"
+    },
+    {
+      "item": "TABLE_COMPARISON_ANALYSIS.md",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "TEMP DEV FOLDER",
+      "category": "miscellaneous",
+      "type": "directory"
+    },
+    {
+      "item": "temp_types.txt",
+      "category": "documentation",
+      "type": "file"
+    },
+    {
+      "item": "test-activity-load.js",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "test-foreign-key-fix.js",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "test-postgis.js",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "test_fields.sql",
+      "category": "miscellaneous",
+      "type": "file"
+    },
+    {
+      "item": "typescript-unused-analysis.json",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "unified_climate_data.csv",
+      "category": "data_files",
+      "type": "file"
+    },
+    {
+      "item": "unused-files-report.json",
+      "category": "data_files",
+      "type": "file"
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "totalRemoved": 61,
+    "totalPreserved": 0,
+    "totalErrors": 0,
+    "gisAssetsProtected": 10
+  },
+  "gisAssetsProtected": [
+    "public/msiri_soil_map/",
+    "public/sentinel_overlays/",
+    "public/estate_fields.csv",
+    "public/estate_fields.geojson",
+    "public/leaflet.snap.js",
+    "public/logo-omnicane.png",
+    "public/scanne-logo.png",
+    "public/images/varieties/",
+    "public/images/intercrops/",
+    "public/sugarcane_varieties_leaflets/"
+  ],
+  "restorationNote": "Items moved to system trash - can be restored from there"
+}

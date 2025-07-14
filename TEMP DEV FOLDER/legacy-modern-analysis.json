@@ -1,0 +1,1077 @@
+{
+  "timestamp": "2025-07-14T06:29:31.559Z",
+  "summary": {
+    "totalComponents": 62,
+    "duplicates": 3,
+    "modernOnly": 9,
+    "legacyOnly": 50
+  },
+  "duplicates": [
+    {
+      "name": "ObservationsTab",
+      "legacy": {
+        "path": "src\\components\\ObservationsTab.tsx",
+        "fileName": "ObservationsTab.tsx",
+        "fullName": "ObservationsTab"
+      },
+      "modern": {
+        "path": "src\\components\\bloc\\tabs\\ModernObservationsTab.tsx",
+        "fileName": "ModernObservationsTab.tsx",
+        "fullName": "ModernObservationsTab"
+      },
+      "legacyUsageCount": 1,
+      "modernUsageCount": 1,
+      "legacyUsedIn": [
+        "src\\components\\BlocDataScreen.tsx"
+      ],
+      "modernUsedIn": [
+        "src\\components\\bloc\\ModernBlocContent.tsx"
+      ],
+      "recommendation": "MIGRATE_LEGACY_TO_MODERN"
+    },
+    {
+      "name": "OperationsForm",
+      "legacy": {
+        "path": "src\\components\\OperationsForm.tsx",
+        "fileName": "OperationsForm.tsx",
+        "fullName": "OperationsForm"
+      },
+      "modern": {
+        "path": "src\\components\\forms\\ModernOperationsForm.tsx",
+        "fileName": "ModernOperationsForm.tsx",
+        "fullName": "ModernOperationsForm"
+      },
+      "legacyUsageCount": 1,
+      "modernUsageCount": 1,
+      "legacyUsedIn": [
+        "src\\components\\OverviewTab.tsx"
+      ],
+      "modernUsedIn": [
+        "src\\components\\ModernOverviewTab.tsx"
+      ],
+      "recommendation": "MIGRATE_LEGACY_TO_MODERN"
+    },
+    {
+      "name": "OverviewTab",
+      "legacy": {
+        "path": "src\\components\\OverviewTab.tsx",
+        "fileName": "OverviewTab.tsx",
+        "fullName": "OverviewTab"
+      },
+      "modern": {
+        "path": "src\\components\\ModernOverviewTab.tsx",
+        "fileName": "ModernOverviewTab.tsx",
+        "fullName": "ModernOverviewTab"
+      },
+      "legacyUsageCount": 1,
+      "modernUsageCount": 3,
+      "legacyUsedIn": [
+        "src\\components\\BlocDataScreen.tsx"
+      ],
+      "modernUsedIn": [
+        "src\\components\\bloc\\tabs\\ModernCropManagementTab.tsx",
+        "src\\components\\BlocDataScreen.tsx",
+        "src\\components\\__tests__\\ModernOverviewTab.test.tsx"
+      ],
+      "recommendation": "MIGRATE_LEGACY_TO_MODERN"
+    }
+  ],
+  "allComponents": [
+    {
+      "name": "AttachmentUploader",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\AttachmentUploader.tsx",
+        "fileName": "AttachmentUploader.tsx",
+        "fullName": "AttachmentUploader"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "BlocBreadcrumbs",
+      "modern": {
+        "path": "src\\components\\bloc\\ModernBlocBreadcrumbs.tsx",
+        "fileName": "ModernBlocBreadcrumbs.tsx",
+        "fullName": "ModernBlocBreadcrumbs"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocScreen.tsx",
+          "importPath": "./ModernBlocBreadcrumbs",
+          "line": "import { ModernBlocBreadcrumbs } from './ModernBlocBreadcrumbs'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "BlocContent",
+      "modern": {
+        "path": "src\\components\\bloc\\ModernBlocContent.tsx",
+        "fileName": "ModernBlocContent.tsx",
+        "fullName": "ModernBlocContent"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocScreen.tsx",
+          "importPath": "./ModernBlocContent",
+          "line": "import { ModernBlocContent } from './ModernBlocContent'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "BlocNavigation",
+      "modern": {
+        "path": "src\\components\\bloc\\ModernBlocNavigation.tsx",
+        "fileName": "ModernBlocNavigation.tsx",
+        "fullName": "ModernBlocNavigation"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocScreen.tsx",
+          "importPath": "./ModernBlocNavigation",
+          "line": "import { ModernBlocNavigation } from './ModernBlocNavigation'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "BlocScreen",
+      "modern": {
+        "path": "src\\components\\bloc\\ModernBlocScreen.tsx",
+        "fileName": "ModernBlocScreen.tsx",
+        "fullName": "ModernBlocScreen"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./bloc/ModernBlocScreen",
+          "line": "import { ModernBlocScreen } from './bloc/ModernBlocScreen'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "CropManagementTab",
+      "modern": {
+        "path": "src\\components\\bloc\\tabs\\ModernCropManagementTab.tsx",
+        "fileName": "ModernCropManagementTab.tsx",
+        "fullName": "ModernCropManagementTab"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "./tabs/ModernCropManagementTab",
+          "line": "import { ModernCropManagementTab } from './tabs/ModernCropManagementTab'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "InformationTab",
+      "modern": {
+        "path": "src\\components\\bloc\\tabs\\ModernInformationTab.tsx",
+        "fileName": "ModernInformationTab.tsx",
+        "fullName": "ModernInformationTab"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "./tabs/ModernInformationTab",
+          "line": "import { ModernInformationTab } from './tabs/ModernInformationTab'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "ObservationsTab",
+      "modern": {
+        "path": "src\\components\\bloc\\tabs\\ModernObservationsTab.tsx",
+        "fileName": "ModernObservationsTab.tsx",
+        "fullName": "ModernObservationsTab"
+      },
+      "legacy": {
+        "path": "src\\components\\ObservationsTab.tsx",
+        "fileName": "ObservationsTab.tsx",
+        "fullName": "ObservationsTab"
+      },
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "./tabs/ModernObservationsTab",
+          "line": "import { ModernObservationsTab } from './tabs/ModernObservationsTab'"
+        }
+      ],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./ObservationsTab",
+          "line": "import ObservationsTab from './ObservationsTab'"
+        }
+      ]
+    },
+    {
+      "name": "BlocDataScreen",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\BlocDataScreen.tsx",
+        "fileName": "BlocDataScreen.tsx",
+        "fullName": "BlocDataScreen"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./BlocDataScreen",
+          "line": "import BlocDataScreen from './BlocDataScreen'"
+        }
+      ]
+    },
+    {
+      "name": "BlocList",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\BlocList.tsx",
+        "fileName": "BlocList.tsx",
+        "fullName": "BlocList"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./BlocList",
+          "line": "import BlocList from './BlocList'"
+        }
+      ]
+    },
+    {
+      "name": "CategorySelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\CategorySelector.tsx",
+        "fileName": "CategorySelector.tsx",
+        "fullName": "CategorySelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\ObservationsTab.tsx",
+          "importPath": "./CategorySelector",
+          "line": "import CategorySelector from './CategorySelector'"
+        }
+      ]
+    },
+    {
+      "name": "CropCycleGeneralInfo",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\CropCycleGeneralInfo.tsx",
+        "fileName": "CropCycleGeneralInfo.tsx",
+        "fullName": "CropCycleGeneralInfo"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./CropCycleGeneralInfo",
+          "line": "import CropCycleGeneralInfo from './CropCycleGeneralInfo'"
+        }
+      ]
+    },
+    {
+      "name": "CropCycleSelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\CropCycleSelector.tsx",
+        "fileName": "CropCycleSelector.tsx",
+        "fullName": "CropCycleSelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\ObservationsTab.tsx",
+          "importPath": "./CropCycleSelector",
+          "line": "import CropCycleSelector from './CropCycleSelector'"
+        }
+      ]
+    },
+    {
+      "name": "CycleClosureModal",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\CycleClosureModal.tsx",
+        "fileName": "CycleClosureModal.tsx",
+        "fullName": "CycleClosureModal"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\CropCycleGeneralInfo.tsx",
+          "importPath": "./CycleClosureModal",
+          "line": "import CycleClosureModal from './CycleClosureModal'"
+        }
+      ]
+    },
+    {
+      "name": "CycleSummaryReport",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\CycleSummaryReport.tsx",
+        "fileName": "CycleSummaryReport.tsx",
+        "fullName": "CycleSummaryReport"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\CycleClosureModal.tsx",
+          "importPath": "./CycleSummaryReport",
+          "line": "import CycleSummaryReport from './CycleSummaryReport'"
+        }
+      ]
+    },
+    {
+      "name": "DrawingManager",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\DrawingManager.tsx",
+        "fileName": "DrawingManager.tsx",
+        "fullName": "DrawingManager"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\MapComponent.tsx",
+          "importPath": "./DrawingManager",
+          "line": "import DrawingManager from './DrawingManager'"
+        }
+      ]
+    },
+    {
+      "name": "DrawingProgress",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\DrawingProgress.tsx",
+        "fileName": "DrawingProgress.tsx",
+        "fullName": "DrawingProgress"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\MapComponent.tsx",
+          "importPath": "./DrawingProgress",
+          "line": "import DrawingProgress from './DrawingProgress'"
+        }
+      ]
+    },
+    {
+      "name": "DrawingToolbar",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\DrawingToolbar.tsx",
+        "fileName": "DrawingToolbar.tsx",
+        "fullName": "DrawingToolbar"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./DrawingToolbar",
+          "line": "import DrawingToolbar from './DrawingToolbar'"
+        }
+      ]
+    },
+    {
+      "name": "DrawnAreasList",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\DrawnAreasList.tsx",
+        "fileName": "DrawnAreasList.tsx",
+        "fullName": "DrawnAreasList"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./DrawnAreasList",
+          "line": "import DrawnAreasList from './DrawnAreasList'"
+        }
+      ]
+    },
+    {
+      "name": "EditWorkPackageForm",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\EditWorkPackageForm.tsx",
+        "fileName": "EditWorkPackageForm.tsx",
+        "fullName": "EditWorkPackageForm"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\OverviewTab.tsx",
+          "importPath": "@/components/EditWorkPackageForm",
+          "line": "import EditWorkPackageForm from '@/components/EditWorkPackageForm'"
+        }
+      ]
+    },
+    {
+      "name": "EquipmentForm",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\EquipmentForm.tsx",
+        "fileName": "EquipmentForm.tsx",
+        "fullName": "EquipmentForm"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\OperationsForm.tsx",
+          "importPath": "./EquipmentForm",
+          "line": "import EquipmentForm from './EquipmentForm'"
+        }
+      ]
+    },
+    {
+      "name": "EquipmentSelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\EquipmentSelector.tsx",
+        "fileName": "EquipmentSelector.tsx",
+        "fullName": "EquipmentSelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\forms\\ModernOperationsForm.tsx",
+          "importPath": "@/components/EquipmentSelector",
+          "line": "import EquipmentSelector from '@/components/EquipmentSelector'"
+        },
+        {
+          "usedIn": "src\\components\\OperationsForm.tsx",
+          "importPath": "./EquipmentSelector",
+          "line": "import EquipmentSelector from './EquipmentSelector'"
+        }
+      ]
+    },
+    {
+      "name": "FarmGISLayout",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\FarmGISLayout.tsx",
+        "fileName": "FarmGISLayout.tsx",
+        "fullName": "FarmGISLayout"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "FloatingInfoBox",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\FloatingInfoBox.tsx",
+        "fileName": "FloatingInfoBox.tsx",
+        "fullName": "FloatingInfoBox"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./FloatingInfoBox",
+          "line": "import FloatingInfoBox from './FloatingInfoBox'"
+        }
+      ]
+    },
+    {
+      "name": "OperationsForm",
+      "modern": {
+        "path": "src\\components\\forms\\ModernOperationsForm.tsx",
+        "fileName": "ModernOperationsForm.tsx",
+        "fullName": "ModernOperationsForm"
+      },
+      "legacy": {
+        "path": "src\\components\\OperationsForm.tsx",
+        "fileName": "OperationsForm.tsx",
+        "fullName": "OperationsForm"
+      },
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\ModernOverviewTab.tsx",
+          "importPath": "@/components/forms/ModernOperationsForm",
+          "line": "import { ModernOperationsForm } from '@/components/forms/ModernOperationsForm'"
+        }
+      ],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\OverviewTab.tsx",
+          "importPath": "@/components/OperationsForm",
+          "line": "import OperationsForm from '@/components/OperationsForm'"
+        }
+      ]
+    },
+    {
+      "name": "WorkPackageForm",
+      "modern": {
+        "path": "src\\components\\forms\\ModernWorkPackageForm.tsx",
+        "fileName": "ModernWorkPackageForm.tsx",
+        "fullName": "ModernWorkPackageForm"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\ModernOverviewTab.tsx",
+          "importPath": "@/components/forms/ModernWorkPackageForm",
+          "line": "import { ModernWorkPackageForm } from '@/components/forms/ModernWorkPackageForm'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "LayerSelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\LayerSelector.tsx",
+        "fileName": "LayerSelector.tsx",
+        "fullName": "LayerSelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\MapComponent.tsx",
+          "importPath": "./LayerSelector",
+          "line": "import LayerSelector from './LayerSelector'"
+        }
+      ]
+    },
+    {
+      "name": "FormLayout",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\layouts\\FormLayout.tsx",
+        "fileName": "FormLayout.tsx",
+        "fullName": "FormLayout"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\ModernOverviewTab.tsx",
+          "importPath": "@/components/layouts/FormLayout",
+          "line": "import { FormLayout } from '@/components/layouts/FormLayout'"
+        }
+      ]
+    },
+    {
+      "name": "MapComponent",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\MapComponent.tsx",
+        "fileName": "MapComponent.tsx",
+        "fullName": "MapComponent"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./MapComponent",
+          "line": "import MapComponent from './MapComponent'"
+        }
+      ]
+    },
+    {
+      "name": "MapLegend",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\MapLegend.tsx",
+        "fileName": "MapLegend.tsx",
+        "fullName": "MapLegend"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\MapComponent.tsx",
+          "importPath": "./MapLegend",
+          "line": "import MapLegend from './MapLegend'"
+        }
+      ]
+    },
+    {
+      "name": "OverviewTab",
+      "modern": {
+        "path": "src\\components\\ModernOverviewTab.tsx",
+        "fileName": "ModernOverviewTab.tsx",
+        "fullName": "ModernOverviewTab"
+      },
+      "legacy": {
+        "path": "src\\components\\OverviewTab.tsx",
+        "fileName": "OverviewTab.tsx",
+        "fullName": "OverviewTab"
+      },
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\tabs\\ModernCropManagementTab.tsx",
+          "importPath": "@/components/ModernOverviewTab",
+          "line": "import ModernOverviewTab from '@/components/ModernOverviewTab'"
+        },
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./ModernOverviewTab",
+          "line": "import ModernOverviewTab from './ModernOverviewTab'"
+        },
+        {
+          "usedIn": "src\\components\\__tests__\\ModernOverviewTab.test.tsx",
+          "importPath": "../ModernOverviewTab",
+          "line": "import ModernOverviewTab from '../ModernOverviewTab'"
+        }
+      ],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./OverviewTab",
+          "line": "import OverviewTab from './OverviewTab'"
+        }
+      ]
+    },
+    {
+      "name": "ObservationForms",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ObservationForms.tsx",
+        "fileName": "ObservationForms.tsx",
+        "fullName": "ObservationForms"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "PolygonInfoModal",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\PolygonInfoModal.tsx",
+        "fileName": "PolygonInfoModal.tsx",
+        "fullName": "PolygonInfoModal"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\FarmGISLayout.tsx",
+          "importPath": "./PolygonInfoModal",
+          "line": "import PolygonInfoModal from './PolygonInfoModal'"
+        }
+      ]
+    },
+    {
+      "name": "ProductSelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ProductSelector.tsx",
+        "fileName": "ProductSelector.tsx",
+        "fullName": "ProductSelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\forms\\ModernOperationsForm.tsx",
+          "importPath": "@/components/ProductSelector",
+          "line": "import ProductSelector from '@/components/ProductSelector'"
+        },
+        {
+          "usedIn": "src\\components\\OperationsForm.tsx",
+          "importPath": "./ProductSelector",
+          "line": "import ProductSelector from './ProductSelector'"
+        },
+        {
+          "usedIn": "src\\components\\OverviewTab.tsx",
+          "importPath": "@/components/ProductSelector",
+          "line": "import ProductSelector from '@/components/ProductSelector'"
+        }
+      ]
+    },
+    {
+      "name": "ResourceSelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ResourceSelector.tsx",
+        "fileName": "ResourceSelector.tsx",
+        "fullName": "ResourceSelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\OperationsForm.tsx",
+          "importPath": "./ResourceSelector",
+          "line": "import ResourceSelector from './ResourceSelector'"
+        }
+      ]
+    },
+    {
+      "name": "SentinelOverlaySelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\SentinelOverlaySelector.tsx",
+        "fileName": "SentinelOverlaySelector.tsx",
+        "fullName": "SentinelOverlaySelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\MapComponent.tsx",
+          "importPath": "./SentinelOverlaySelector",
+          "line": "import SentinelOverlaySelector from './SentinelOverlaySelector'"
+        }
+      ]
+    },
+    {
+      "name": "SoilDataTab",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\SoilDataTab.tsx",
+        "fileName": "SoilDataTab.tsx",
+        "fullName": "SoilDataTab"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "@/components/SoilDataTab",
+          "line": "import SoilDataTab from '@/components/SoilDataTab'"
+        },
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./SoilDataTab",
+          "line": "import SoilDataTab from './SoilDataTab'"
+        }
+      ]
+    },
+    {
+      "name": "OverviewTable",
+      "modern": {
+        "path": "src\\components\\tables\\ModernOverviewTable.tsx",
+        "fileName": "ModernOverviewTable.tsx",
+        "fullName": "ModernOverviewTable"
+      },
+      "legacy": null,
+      "modernUsage": [
+        {
+          "usedIn": "src\\components\\ModernOverviewTab.tsx",
+          "importPath": "@/components/tables/ModernOverviewTable",
+          "line": "import { ModernOverviewTable } from '@/components/tables/ModernOverviewTable'"
+        }
+      ],
+      "legacyUsage": []
+    },
+    {
+      "name": "animated-card",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\animated-card.tsx",
+        "fileName": "animated-card.tsx",
+        "fullName": "animated-card"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "badge",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\badge.tsx",
+        "fileName": "badge.tsx",
+        "fullName": "badge"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "breadcrumb",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\breadcrumb.tsx",
+        "fileName": "breadcrumb.tsx",
+        "fullName": "breadcrumb"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "button",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\button.tsx",
+        "fileName": "button.tsx",
+        "fullName": "button"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "card",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\card.tsx",
+        "fileName": "card.tsx",
+        "fullName": "card"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "ContentSwitcher",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\ContentSwitcher.tsx",
+        "fileName": "ContentSwitcher.tsx",
+        "fullName": "ContentSwitcher"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\ModernOverviewTab.tsx",
+          "importPath": "@/components/ui/ContentSwitcher",
+          "line": "import { ContentSwitcher } from '@/components/ui/ContentSwitcher'"
+        },
+        {
+          "usedIn": "src\\components\\OverviewTab.tsx",
+          "importPath": "@/components/ui/ContentSwitcher",
+          "line": "import ContentSwitcher from '@/components/ui/ContentSwitcher'"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\form.tsx",
+        "fileName": "form.tsx",
+        "fullName": "form"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "icon",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\icon.tsx",
+        "fileName": "icon.tsx",
+        "fullName": "icon"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "icons",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\icons.tsx",
+        "fileName": "icons.tsx",
+        "fullName": "icons"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "input",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\input.tsx",
+        "fileName": "input.tsx",
+        "fullName": "input"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "label",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\label.tsx",
+        "fileName": "label.tsx",
+        "fullName": "label"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "page-transition",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\page-transition.tsx",
+        "fileName": "page-transition.tsx",
+        "fullName": "page-transition"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "progress",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\progress.tsx",
+        "fileName": "progress.tsx",
+        "fullName": "progress"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "select",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\select.tsx",
+        "fileName": "select.tsx",
+        "fullName": "select"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "separator",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\separator.tsx",
+        "fileName": "separator.tsx",
+        "fullName": "separator"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "SubmitButton",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\SubmitButton.tsx",
+        "fileName": "SubmitButton.tsx",
+        "fullName": "SubmitButton"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "table",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\table.tsx",
+        "fileName": "table.tsx",
+        "fullName": "table"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "tabs",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\tabs.tsx",
+        "fileName": "tabs.tsx",
+        "fullName": "tabs"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "textarea",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\ui\\textarea.tsx",
+        "fileName": "textarea.tsx",
+        "fullName": "textarea"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "UnsavedChangesIndicator",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\UnsavedChangesIndicator.tsx",
+        "fileName": "UnsavedChangesIndicator.tsx",
+        "fullName": "UnsavedChangesIndicator"
+      },
+      "modernUsage": [],
+      "legacyUsage": []
+    },
+    {
+      "name": "VarietySelector",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\VarietySelector.tsx",
+        "fileName": "VarietySelector.tsx",
+        "fullName": "VarietySelector"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./VarietySelector",
+          "line": "import VarietySelector from './VarietySelector'"
+        },
+        {
+          "usedIn": "src\\components\\CropCycleGeneralInfo.tsx",
+          "importPath": "./VarietySelector",
+          "line": "import VarietySelector from './VarietySelector'"
+        }
+      ]
+    },
+    {
+      "name": "VegetationDataTab",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\VegetationDataTab.tsx",
+        "fileName": "VegetationDataTab.tsx",
+        "fullName": "VegetationDataTab"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "@/components/VegetationDataTab",
+          "line": "import VegetationDataTab from '@/components/VegetationDataTab'"
+        },
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./VegetationDataTab",
+          "line": "import VegetationDataTab from './VegetationDataTab'"
+        }
+      ]
+    },
+    {
+      "name": "WeatherDashboard",
+      "modern": null,
+      "legacy": {
+        "path": "src\\components\\WeatherDashboard.tsx",
+        "fileName": "WeatherDashboard.tsx",
+        "fullName": "WeatherDashboard"
+      },
+      "modernUsage": [],
+      "legacyUsage": [
+        {
+          "usedIn": "src\\components\\bloc\\ModernBlocContent.tsx",
+          "importPath": "@/components/WeatherDashboard",
+          "line": "import WeatherDashboard from '@/components/WeatherDashboard'"
+        },
+        {
+          "usedIn": "src\\components\\BlocDataScreen.tsx",
+          "importPath": "./WeatherDashboard",
+          "line": "import WeatherDashboard from './WeatherDashboard'"
+        }
+      ]
+    },
+    {
+      "name": "OverviewTab.test",
+      "modern": {
+        "path": "src\\components\\__tests__\\ModernOverviewTab.test.tsx",
+        "fileName": "ModernOverviewTab.test.tsx",
+        "fullName": "ModernOverviewTab.test"
+      },
+      "legacy": null,
+      "modernUsage": [],
+      "legacyUsage": []
+    }
+  ]
+}

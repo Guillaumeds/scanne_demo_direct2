@@ -292,7 +292,7 @@ export default function TestModernPage() {
                     Full Bloc Screen Experience
                   </h3>
                   <p className="text-slate-600 mb-4">
-                    Click the "Bloc Screen" button above to open the full modern bloc screen experience.
+                    Click the &ldquo;Bloc Screen&rdquo; button above to open the full modern bloc screen experience.
                   </p>
                   <Button 
                     onClick={() => setShowBlocScreen(true)}
@@ -312,7 +312,7 @@ export default function TestModernPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Icon name="info" className="text-blue-600" />
-              What's New in Modern Components
+              What&rsquo;s New in Modern Components
             </CardTitle>
           </CardHeader>
           <CardContent>

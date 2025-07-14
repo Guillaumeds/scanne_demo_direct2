@@ -19,7 +19,7 @@ export interface FormCommitRef {
  * Hook for managing form data with manual save + strategic auto-commit
  * Perfect for Scanne's simple forms with minimal API calls
  */
-export function useFormWithAutoCommit<T>(
+function useFormWithAutoCommit<T>(
   initialData: T,
   onSave: (data: T) => Promise<void>,
   options: FormCommitOptions = {}
@@ -110,7 +110,7 @@ export function useFormWithAutoCommit<T>(
  * Note: This is a utility function - actual implementation should be done
  * directly in components using forwardRef and useImperativeHandle
  */
-export const withFormCommit = <P extends object>(
+const withFormCommit = <P extends object>(
   Component: React.ComponentType<P>
 ) => {
   // This is a placeholder - implement directly in components instead

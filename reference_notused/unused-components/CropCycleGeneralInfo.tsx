@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { CropCycle, CreateCycleRequest, CycleClosureValidation } from '@/types/cropCycles'
 import { CropVariety } from '@/types/varieties'
 import { useSugarcaneVarieties, useIntercropVarieties } from '@/hooks/useLocalStorageData'
@@ -85,7 +85,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
   // No need to load crop cycles - context already provides them!
 
   // Calculate metrics from actual activities and observations data
-  const loadCycleMetrics = async () => {
+  const loadCycleMetrics = useCallback(async () => {
     if (allCycles.length === 0) {
       setCycleMetrics({})
       return
@@ -209,7 +209,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
 
     setCycleMetrics(metricsData)
     setIsLoadingData(false)
-  }
+  }, [allCycles])
 
   // Load metrics when cycles change (calculate from activities and observations)
   useEffect(() => {
@@ -221,7 +221,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
         console.error('❌ Error loading cycle metrics:', error)
       })
     }
-  }, [allCycles])
+  }, [allCycles, loadCycleMetrics])
 
   // Listen for crop cycle totals updates from activities and observations
   useEffect(() => {
@@ -249,7 +249,7 @@ const CropCycleGeneralInfo = forwardRef<any, CropCycleGeneralInfoProps>(
     return () => {
       window.removeEventListener('cropCycleTotalsCalculated', handleTotalsUpdate as EventListener)
     }
-  }, [])  // Empty dependency array - this effect should only run once
+  }, [loadCycleMetrics])  // Include loadCycleMetrics in dependencies
 
 
 

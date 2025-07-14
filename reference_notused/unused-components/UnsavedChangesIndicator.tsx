@@ -10,7 +10,7 @@ interface UnsavedChangesIndicatorProps {
   showLastSaved?: boolean
 }
 
-export default function UnsavedChangesIndicator({
+function UnsavedChangesIndicator({
   isDirty,
   isSaving,
   lastSaved,
