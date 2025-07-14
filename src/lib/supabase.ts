@@ -13,12 +13,7 @@ function getSupabaseConfig() {
 
   // Debug logging for production troubleshooting
   if (typeof window !== 'undefined') {
-    console.log('🔍 Supabase Config Debug:', {
-      hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseAnonKey,
-      urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 20) + '...' : 'undefined',
-      keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'undefined'
-    })
+    // Supabase config validated
   }
 
   if (!supabaseUrl) {

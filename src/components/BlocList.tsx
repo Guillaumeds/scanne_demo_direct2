@@ -65,7 +65,7 @@ export default function BlocList({
       if (savedAreas.length === 0) return
 
       try {
-        console.log('🔄 Loading crop cycle data for', savedAreas.length, 'saved blocs')
+        // Loading crop cycle data
 
         // Get all bloc IDs
         const blocIds = savedAreas.map(bloc => DrawnAreaUtils.getEntityKey(bloc))
@@ -74,7 +74,7 @@ export default function BlocList({
         const batchData = await CropCycleService.getBlocSummariesBatch(blocIds)
 
         setCropCycleDataMap(batchData)
-        console.log('✅ Batch crop cycle data loaded successfully')
+        // Batch crop cycle data loaded
       } catch (error) {
         console.error('❌ Error loading crop cycle data batch:', error)
         // Fallback: set all blocs as having no cycles
@@ -94,14 +94,13 @@ export default function BlocList({
     loadCropCycleData()
   }, [savedAreas]) // Re-run when saved areas change
 
-  // Debug props
-  console.log('📋 BlocList props:', {
-    selectedAreaId,
-    drawnAreasCount: drawnAreas.length,
-    savedAreasCount: savedAreas.length,
-    allBlocsCount: allBlocs.length,
-    allBlocIds: allBlocs.map(b => DrawnAreaUtils.getEntityKey(b))
-  })
+  // Props validation
+  if (process.env.NODE_ENV === 'development') {
+    // Only log in development if there are issues
+    if (allBlocs.length === 0 && (drawnAreas.length > 0 || savedAreas.length > 0)) {
+      console.warn('⚠️ BlocList: Areas provided but allBlocs is empty')
+    }
+  }
 
   // Refs for scrolling to specific bloc cards
   const listContainerRef = useRef<HTMLDivElement>(null)
@@ -109,7 +108,6 @@ export default function BlocList({
 
   // Function to scroll to a specific bloc card
   const scrollToBlocCard = (areaId: string) => {
-    console.log('📜 Attempting to scroll to bloc card:', areaId)
     const cardElement = blocCardRefs.current.get(areaId)
     const container = listContainerRef.current
 
@@ -136,19 +134,14 @@ export default function BlocList({
       })
 
       // Card will be highlighted through selection state, no need for temporary animation
-    } else {
-      console.log('❌ Could not find card element for:', areaId, {
-        cardElement,
-        listContainer: container,
-        availableCards: Array.from(blocCardRefs.current.keys())
-      })
+    } else if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Could not find card element for scroll:', areaId)
     }
   }
 
   // Scroll to bloc when requested externally (from map clicks)
   useEffect(() => {
     if (scrollToBloc) {
-      console.log('📜 External scroll trigger for:', scrollToBloc)
       scrollToBlocCard(scrollToBloc)
     }
   }, [scrollToBloc])
@@ -156,7 +149,6 @@ export default function BlocList({
   // Also scroll when selection changes (for consistency)
   useEffect(() => {
     if (selectedAreaId) {
-      console.log('📜 Selection scroll trigger for:', selectedAreaId)
       scrollToBlocCard(selectedAreaId)
     }
   }, [selectedAreaId])
@@ -242,13 +234,7 @@ export default function BlocList({
 
               // Debug selection state
               if (blocKey === selectedAreaId) {
-                console.log('🎨 Rendering selected bloc:', {
-                  blocKey,
-                  selectedAreaId,
-                  isSelected,
-                  isDrawn,
-                  isSaved
-                })
+                // Rendering selected bloc
               }
 
               return (
@@ -271,8 +257,8 @@ export default function BlocList({
                     borderColor: isSelected ? '#93c5fd' : undefined
                   }}
                   onClick={() => handleCardClick(blocKey)}
-                  onMouseEnter={() => onAreaHover?.(blocKey)}
-                  onMouseLeave={() => onAreaHover?.(null)}
+                  onMouseEnter={() => !isSelected && onAreaHover?.(blocKey)}
+                  onMouseLeave={() => !isSelected && onAreaHover?.(null)}
                 >
                   {/* Bloc header */}
                   <div className="flex items-center justify-between mb-2">

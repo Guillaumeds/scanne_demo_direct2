@@ -121,20 +121,17 @@ export class BlocService {
    */
   static async getAllBlocs(): Promise<any[]> {
     try {
-      console.log('🔍 Fetching blocs from database...')
+      // Fetching blocs from database
 
       // Use RPC function to get blocs with complete data including WKT coordinates
       const { data, error } = await supabase.rpc('get_blocs_with_wkt')
 
-      console.log('🔍 RPC blocs query result:', { data, error })
+      // RPC blocs query completed
 
       if (error) throw error
 
       // Transform database records to DrawnArea format with new naming convention
-      console.log('🔄 Raw database data:', data)
-
       // Return raw database objects - transformation happens in calling code
-      console.log('🔄 Returning raw blocs:', data.length, 'blocs')
 
       return data
     } catch (error) {
@@ -158,7 +155,7 @@ export class BlocService {
         throw error
       }
 
-      console.log('✅ Farms loaded:', data?.length || 0)
+      // Farms loaded
       return data || []
     } catch (error) {
       console.error('❌ Error fetching farms:', error)
@@ -181,7 +178,7 @@ export class BlocService {
         throw error
       }
 
-      console.log('✅ Companies loaded:', data?.length || 0)
+      // Companies loaded
       return data || []
     } catch (error) {
       console.error('❌ Error fetching companies:', error)

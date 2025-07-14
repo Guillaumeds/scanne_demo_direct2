@@ -147,11 +147,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     debugConsole
   }
   
-  // Log debug functions availability
-  console.log('🛠️ Debug utilities available:')
-  console.log('- debugUtils.clearCache() - Clear browser cache')
-  console.log('- debugUtils.logEnvironment() - Log environment info')
-  console.log('- debugUtils.logPerformance() - Log performance metrics')
+  // Debug utilities available in development
   
   // Start performance monitoring
   performanceMonitor.logPageLoad()

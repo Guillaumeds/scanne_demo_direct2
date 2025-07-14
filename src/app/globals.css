@@ -149,6 +149,18 @@ body {
   min-height: 400px;
 }
 
+/* Map background effects for overlay content */
+.map-dimmed {
+  filter: grayscale(60%) contrast(0.7) brightness(0.8);
+  transition: filter 0.3s ease-in-out;
+}
+
+/* Ensure the dimming effect applies to the entire map */
+.leaflet-container.map-dimmed {
+  filter: grayscale(60%) contrast(0.7) brightness(0.8);
+  transition: filter 0.3s ease-in-out;
+}
+
 /* App title font */
 .app-title {
   font-family: var(--font-comfortaa), 'Nunito', 'Inter', sans-serif;

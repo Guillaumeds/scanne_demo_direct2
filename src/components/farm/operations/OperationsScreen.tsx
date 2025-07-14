@@ -19,7 +19,7 @@ type Perspective = 'operations' | 'resources' | 'financial'
 
 export function OperationsScreen() {
   const { bloc } = useBlocContext()
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [viewMode, setViewMode] = useState<ViewMode>('rows')
   const [perspective, setPerspective] = useState<Perspective>('operations')
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -168,14 +168,14 @@ export function OperationsScreen() {
     }
 
     switch (viewMode) {
-      case 'table':
-        return <OperationsTable {...commonProps} />
-      case 'cards':
-        return <OperationsCards {...commonProps} />
       case 'rows':
         return <OperationsRows {...commonProps} />
-      default:
+      case 'cards':
+        return <OperationsCards {...commonProps} />
+      case 'table':
         return <OperationsTable {...commonProps} />
+      default:
+        return <OperationsRows {...commonProps} />
     }
   }
 

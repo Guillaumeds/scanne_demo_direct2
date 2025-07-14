@@ -15,10 +15,10 @@ interface ViewSwitcherProps {
 export function ViewSwitcher({ currentView, onViewChange }: ViewSwitcherProps) {
   const views = [
     {
-      id: 'table' as const,
-      label: 'Table',
-      icon: Table,
-      description: 'Detailed table view with sorting and filtering'
+      id: 'rows' as const,
+      label: 'Rows',
+      icon: List,
+      description: 'Compact row layout optimized for mobile'
     },
     {
       id: 'cards' as const,
@@ -27,10 +27,10 @@ export function ViewSwitcher({ currentView, onViewChange }: ViewSwitcherProps) {
       description: 'Card-based layout for visual overview'
     },
     {
-      id: 'rows' as const,
-      label: 'Rows',
-      icon: List,
-      description: 'Compact row layout optimized for mobile'
+      id: 'table' as const,
+      label: 'Table',
+      icon: Table,
+      description: 'Detailed table view with sorting and filtering'
     }
   ]
 

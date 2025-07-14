@@ -74,9 +74,10 @@ export default function DrawingManager({
   const getPolygonColor = (area: DrawnArea, isSelected: boolean, isHovered: boolean) => {
     // Default styling for selection and hover states
     if (isSelected) {
-      return { color: '#2563eb', fillColor: '#2563eb', weight: 4, fillOpacity: 0.5 }
+      return { color: '#2563eb', fillColor: '#2563eb', weight: 4, fillOpacity: 0 } // No fill when selected
     }
-    if (isHovered) {
+    // Only show hover effect if not selected
+    if (isHovered && !isSelected) {
       return { color: '#f59e0b', fillColor: '#f59e0b', weight: 3, fillOpacity: 0.4 }
     }
 
@@ -234,7 +235,7 @@ export default function DrawingManager({
     if (!map) return
 
     // Clear layer tracking when map is initialized/changed
-    console.log('🔄 Initializing drawing layers - clearing layer map')
+    // Initializing drawing layers
     layerMapRef.current.clear()
 
     // Add drawn layers group to map
@@ -261,34 +262,23 @@ export default function DrawingManager({
     ])
     const sizeDifference = Math.abs((savedAreas.length + drawnAreas.length) - layerMapRef.current.size)
 
-    console.log('🎯 ROBUST UPDATE: Analyzing polygon state:', {
-      existing: existingKeys.size,
-      current: currentKeys.size,
-      sizeDifference,
-      savedAreas: savedAreas.length,
-      drawnAreas: drawnAreas.length
-    })
+    // Analyzing polygon state
 
     // SMART DECISION TREE for most robust handling
     if (layerMapRef.current.size === 0 && (savedAreas.length > 0 || drawnAreas.length > 0)) {
       // First load: full creation
-      console.log('🎯 ROBUST UPDATE: First load - creating all polygons')
       createAllPolygonsRobustly()
     } else if (sizeDifference <= 3 && sizeDifference > 0) {
       // Small changes: incremental update (most common case)
-      console.log('🎯 ROBUST UPDATE: Small change - incremental update')
       updateIncrementallyRobustly(existingKeys, currentKeys)
     } else if (sizeDifference > 10) {
       // Major changes: full recreation with validation
-      console.log('🎯 ROBUST UPDATE: Major change - full recreation')
       recreateWithValidationRobustly()
     } else if (sizeDifference === 0) {
       // No size change: validate consistency
-      console.log('🎯 ROBUST UPDATE: No size change - validating consistency')
       validateConsistencyRobustly(existingKeys, currentKeys)
     } else {
       // Edge cases: validate and decide
-      console.log('🎯 ROBUST UPDATE: Edge case - validate and decide')
       validateAndDecideRobustly(existingKeys, currentKeys)
     }
   }
@@ -297,7 +287,7 @@ export default function DrawingManager({
   const setupClickHandlersRobustly = () => {
     const totalAreas = drawnAreas.length + savedAreas.length
     if (totalAreas > 0) {
-      console.log('🔗 ROBUST HANDLERS: Setting up click handlers for', totalAreas, 'polygons')
+      // Setting up click handlers
       // Click handlers are set up during polygon creation
     }
   }
@@ -328,7 +318,7 @@ export default function DrawingManager({
     })
 
     if (highlightedCount > 0) {
-      console.log('🎨 ROBUST HIGHLIGHTING: Applied highlighting to', highlightedCount, 'polygons')
+      // Applied highlighting
     }
   }
 
@@ -346,17 +336,13 @@ export default function DrawingManager({
   const handleMapClick = (e: L.LeafletMouseEvent) => {
     if (!isDrawingRef.current || activeTool !== 'polygon') return
 
-    console.log('🎯 STEP D: Drawing click handler - adding point', drawingPointsRef.current.length + 1)
-
     // Apply snapping with proper GIS tolerance
     const snappedPoint = findNearestFieldPoint(e.latlng)
 
     // Check for overlap with saved areas and field boundaries
     const overlapCheck = checkOverlapWithSavedAreas(snappedPoint)
     if (overlapCheck.isOverlap) {
-      console.log('❌ STEP D: Point rejected due to overlap:', overlapCheck.reason)
       // Red polygon indication is sufficient - no need for big red circle
-      // showOverlapIndicator(snappedPoint, overlapCheck.reason)
       return // Don't add the point
     }
 
@@ -367,7 +353,7 @@ export default function DrawingManager({
     }
 
     drawingPointsRef.current.push(snappedPoint)
-    console.log('🎯 STEP D2: Point added, total points:', drawingPointsRef.current.length)
+    // Point added to drawing
 
     // Update drawing progress
     onDrawingProgress?.(drawingPointsRef.current.length, true)
@@ -377,7 +363,7 @@ export default function DrawingManager({
 
     // Create or update the polygon
     if (drawingPointsRef.current.length >= 2) {
-      console.log('🎯 STEP D3: Creating/updating polygon with', drawingPointsRef.current.length, 'points')
+      // Creating/updating polygon
       if (currentDrawingRef.current) {
         map?.removeLayer(currentDrawingRef.current)
       }
@@ -391,7 +377,7 @@ export default function DrawingManager({
       })
 
       map?.addLayer(currentDrawingRef.current)
-      console.log('🎯 STEP D3: Polygon updated on map')
+      // Polygon updated on map
     }
   }
 
@@ -404,7 +390,7 @@ export default function DrawingManager({
   const handleRightClick = (e: L.LeafletMouseEvent) => {
     if (!isDrawingRef.current || activeTool !== 'polygon') return
 
-    console.log('🎯 STEP E: Right-click detected - finishing polygon with', drawingPointsRef.current.length, 'points')
+    // Right-click detected - finishing polygon
     e.originalEvent.preventDefault()
     finishPolygonDrawing()
   }
@@ -491,7 +477,6 @@ export default function DrawingManager({
   const removeLastPoint = () => {
     if (drawingPointsRef.current.length > 0) {
       drawingPointsRef.current.pop()
-      console.log('🎯 Removed last point, remaining:', drawingPointsRef.current.length)
 
       // Update the polygon if we still have enough points
       if (drawingPointsRef.current.length >= 2) {
@@ -524,7 +509,7 @@ export default function DrawingManager({
 
   // ROBUST HELPER FUNCTIONS for layer management (moved after event handlers)
   const createAllPolygonsRobustly = () => {
-    console.log('🔄 Creating all polygons from scratch')
+    // Creating all polygons from scratch
 
     // Clean up vertex markers before clearing layers
     drawnLayersRef.current.eachLayer((layer) => {
@@ -548,7 +533,7 @@ export default function DrawingManager({
         const color = isSaved ? '#22c55e' : '#3b82f6'  // Green for saved, blue for drawn
         const fillColor = isSaved ? '#22c55e' : '#3b82f6'
 
-        console.log('🎨 ROBUST COLOR:', { areaKey: areaKey.substring(0, 8), isSaved, isDrawn, color })
+        // Applied color styling
 
         const polygon = L.polygon(area.coordinates, {
           color,
@@ -611,7 +596,7 @@ export default function DrawingManager({
         const color = isSaved ? '#22c55e' : '#3b82f6'  // Green for saved, blue for drawn
         const fillColor = isSaved ? '#22c55e' : '#3b82f6'
 
-        console.log('🎨 INCREMENTAL COLOR:', { areaKey: areaKey.substring(0, 8), isSaved, isDrawn, color })
+        // Applied incremental color
 
         const polygon = L.polygon(area.coordinates, {
           color,
@@ -650,7 +635,7 @@ export default function DrawingManager({
       console.log('🔄 Consistency issues found, recreating:', { missing: missingKeys.length, extra: extraKeys.length })
       createAllPolygonsRobustly()
     } else {
-      console.log('✅ Consistency validated - no changes needed')
+      // Consistency validated
     }
   }
 
@@ -740,18 +725,7 @@ export default function DrawingManager({
 
   // CONSOLIDATED: Main map operations effect - handles rendering, click handlers, and highlighting
   useEffect(() => {
-    console.log('🎯 CONSOLIDATED EFFECT: Map operations triggered')
-    console.log('🎯 State:', {
-      mapReady: !!map,
-      savedAreas: savedAreas.length,
-      drawnAreas: drawnAreas.length,
-      layerMapSize: layerMapRef.current.size,
-      selectedAreaId,
-      hoveredAreaId
-    })
-
     if (!map) {
-      console.log('❌ Map not ready for operations')
       return
     }
 
@@ -764,13 +738,13 @@ export default function DrawingManager({
     // STEP 3: Apply highlighting to selected/hovered areas
     applyHighlightingRobustly()
 
-    console.log('✅ CONSOLIDATED EFFECT: All map operations completed')
+    // All map operations completed
   }, [map, savedAreas.length, drawnAreas.length, selectedAreaId, hoveredAreaId])
 
   // OPTIMIZED: Clear totals and remove text labels when areas are saved (specific dependency)
   useEffect(() => {
     if (savedAreas.length > lastSavedAreasCount) {
-      console.log('🧹 OPTIMIZED: Clearing drawing totals after save')
+      // Clearing drawing totals after save
       setTotalDrawnArea(0)
       setCurrentCropCycleId('')
 

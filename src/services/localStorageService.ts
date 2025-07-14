@@ -41,7 +41,7 @@ export class LocalStorageService {
       // Try to get from localStorage first
       const stored = this.getFromStorage<T>(key)
       if (stored && this.isValid(stored)) {
-        console.log(`📦 Using localStorage data for: ${key}`)
+        // Using localStorage data
         return stored.data
       }
 
@@ -271,10 +271,9 @@ export class LocalStorageService {
       })
 
       if (needsRefresh) {
-        console.log('🔄 Auto-refreshing stale cache...')
         await this.refreshAllData()
       } else {
-        console.log('✅ Cache is fresh, no auto-refresh needed')
+        // Cache is fresh
       }
     } catch (error) {
       console.error('❌ Error during auto-refresh check:', error)

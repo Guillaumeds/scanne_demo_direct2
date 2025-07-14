@@ -31,6 +31,7 @@ interface MapComponentProps {
   onMapClick?: () => void
   onDrawingStart?: () => void
   onDrawingEnd?: () => void
+  onMapReady?: (mapInstance: L.Map) => void
 }
 
 export default function MapComponent({
@@ -46,7 +47,8 @@ export default function MapComponent({
   onPolygonClick,
   onMapClick,
   onDrawingStart,
-  onDrawingEnd
+  onDrawingEnd,
+  onMapReady
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -277,14 +279,7 @@ export default function MapComponent({
 
   // Initialize map
   useEffect(() => {
-    console.log('🗺️ Map initialization effect triggered:', {
-      hasContainer: !!mapRef.current,
-      hasMapInstance: !!mapInstanceRef.current,
-      isInitializing: initializingRef.current
-    })
-
     if (!mapRef.current || mapInstanceRef.current || initializingRef.current) {
-      console.log('🚫 Map initialization skipped')
       return
     }
 
@@ -312,14 +307,6 @@ export default function MapComponent({
     // Initialize map with better error handling
     const initMap = () => {
       try {
-        console.log('🗺️ Initializing map instance...')
-        console.log('Container dimensions:', {
-          width: mapRef.current?.offsetWidth,
-          height: mapRef.current?.offsetHeight,
-          clientWidth: mapRef.current?.clientWidth,
-          clientHeight: mapRef.current?.clientHeight
-        })
-
         // Ensure container has dimensions
         if (!mapRef.current?.offsetWidth || !mapRef.current?.offsetHeight) {
           console.error('❌ Map container has no dimensions!')
@@ -333,8 +320,6 @@ export default function MapComponent({
           zoomControl: true,
           attributionControl: true
         })
-
-        console.log('✅ Map instance created')
 
         // Add initial layer
         const config = getTileLayerConfig(currentLayer)
@@ -355,7 +340,6 @@ export default function MapComponent({
           })
           soilOverlay.addTo(map)
           soilOverlayRef.current = soilOverlay
-          console.log('✅ Composite layer added: Satellite + Soil overlay')
         } else if (config.type === 'image' && 'overlayBounds' in config && config.overlayBounds) {
           // Create image overlay for PNG/image files
           const imageOverlay = L.imageOverlay(config.url, config.overlayBounds, {
@@ -365,7 +349,6 @@ export default function MapComponent({
           })
           imageOverlay.addTo(map)
           currentTileLayerRef.current = imageOverlay as any
-          console.log('✅ Image overlay added')
         } else {
           // Create tile layer for standard tiles
           const tileLayer = L.tileLayer(config.url, {
@@ -374,7 +357,6 @@ export default function MapComponent({
           })
           tileLayer.addTo(map)
           currentTileLayerRef.current = tileLayer
-          console.log('✅ Tile layer added')
         }
 
         // Field functionality removed - blocs are the primary entities
@@ -387,7 +369,11 @@ export default function MapComponent({
             mapInstanceRef.current.invalidateSize()
             setMapReady(true)
             initializingRef.current = false
-            console.log('✅ Map is ready and size invalidated')
+
+            // Notify parent component that map is ready
+            if (onMapReady) {
+              onMapReady(mapInstanceRef.current)
+            }
           }
         }, 200)
 
@@ -414,7 +400,6 @@ export default function MapComponent({
     // Use multiple timing strategies to ensure DOM is ready
     const timeoutId = setTimeout(() => {
       if (mapRef.current && !mapInstanceRef.current) {
-        console.log('🕐 Attempting map initialization via timeout...')
         initMap()
       }
     }, 100)
@@ -423,7 +408,6 @@ export default function MapComponent({
     requestAnimationFrame(() => {
       setTimeout(() => {
         if (mapRef.current && !mapInstanceRef.current) {
-          console.log('🕐 Attempting map initialization via RAF...')
           initMap()
         }
       }, 50)
