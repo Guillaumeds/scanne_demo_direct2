@@ -1,0 +1,26 @@
+{
+  "totalFiles": 127,
+  "legacyFiles": [],
+  "suspiciousFiles": [
+    "src/components/ConfigurationHealthCheck.tsx",
+    "src/components/DateInput.tsx",
+    "src/components/FarmGISLayout.tsx",
+    "src/components/Header.tsx",
+    "src/components/navigation/ModernNavigation.tsx",
+    "src/components/ProductForm.tsx",
+    "src/components/SVGOverlay.tsx",
+    "src/components/ui/dialog.tsx",
+    "src/components/ui/dropdown-menu.tsx",
+    "src/components/ui/navigation-menu.tsx",
+    "src/components/ui/sheet.tsx",
+    "src/components/ui/toaster.tsx",
+    "src/components/__tests__/ModernOverviewTab.test.tsx",
+    "src/data/overviewSampleData.ts",
+    "src/schemas/cropCycleSchema.ts",
+    "src/services/attachmentService.ts",
+    "src/services/blocService.ts",
+    "src/utils/csvParser.ts",
+    "src/utils/uuidHelpers.ts"
+  ],
+  "timestamp": "2025-07-14T03:07:00.456Z"
+}

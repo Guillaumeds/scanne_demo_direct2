@@ -1,0 +1,1542 @@
+{
+  "timestamp": "2025-07-14T03:21:19.810Z",
+  "description": "Knip-based cleanup session",
+  "knipVersion": "5.61.3",
+  "movedFiles": [
+    {
+      "originalPath": "src/components/ConfigurationHealthCheck.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ConfigurationHealthCheck.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.642Z"
+    },
+    {
+      "originalPath": "src/components/DateInput.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\DateInput.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.646Z"
+    },
+    {
+      "originalPath": "src/components/Header.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\Header.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.647Z"
+    },
+    {
+      "originalPath": "src/components/ProductForm.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ProductForm.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.649Z"
+    },
+    {
+      "originalPath": "src/components/SVGOverlay.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\SVGOverlay.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.650Z"
+    },
+    {
+      "originalPath": "src/data/overviewSampleData.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\data\\overviewSampleData.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.653Z"
+    },
+    {
+      "originalPath": "src/hooks/use-toast.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\hooks\\use-toast.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.654Z"
+    },
+    {
+      "originalPath": "src/schemas/cropCycleSchema.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\schemas\\cropCycleSchema.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.656Z"
+    },
+    {
+      "originalPath": "src/services/attachmentService.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\services\\attachmentService.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.657Z"
+    },
+    {
+      "originalPath": "src/types/database.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\types\\database.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.660Z"
+    },
+    {
+      "originalPath": "src/utils/csvParser.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\utils\\csvParser.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.662Z"
+    },
+    {
+      "originalPath": "src/utils/uuidHelpers.ts",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\utils\\uuidHelpers.ts",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.663Z"
+    },
+    {
+      "originalPath": "src/components/navigation/ModernNavigation.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\navigation\\ModernNavigation.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.665Z"
+    },
+    {
+      "originalPath": "src/components/ui/dialog.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\dialog.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.666Z"
+    },
+    {
+      "originalPath": "src/components/ui/dropdown-menu.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\dropdown-menu.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.667Z"
+    },
+    {
+      "originalPath": "src/components/ui/navigation-menu.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\navigation-menu.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.669Z"
+    },
+    {
+      "originalPath": "src/components/ui/sheet.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\sheet.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.671Z"
+    },
+    {
+      "originalPath": "src/components/ui/toast.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\toast.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.672Z"
+    },
+    {
+      "originalPath": "src/components/ui/toaster.tsx",
+      "backupPath": "reference_notused\\knip_cleanup_2025-07-14\\src\\components\\ui\\toaster.tsx",
+      "reason": "Knip unused file",
+      "timestamp": "2025-07-14T03:21:21.673Z"
+    }
+  ],
+  "removedDependencies": [],
+  "totalMoved": 19,
+  "knipResults": {
+    "files": [
+      "src/components/ConfigurationHealthCheck.tsx",
+      "src/components/DateInput.tsx",
+      "src/components/Header.tsx",
+      "src/components/ProductForm.tsx",
+      "src/components/SVGOverlay.tsx",
+      "src/data/overviewSampleData.ts",
+      "src/hooks/use-toast.ts",
+      "src/schemas/cropCycleSchema.ts",
+      "src/services/attachmentService.ts",
+      "src/types/database.ts",
+      "src/utils/csvParser.ts",
+      "src/utils/uuidHelpers.ts",
+      "src/components/navigation/ModernNavigation.tsx",
+      "src/components/ui/dialog.tsx",
+      "src/components/ui/dropdown-menu.tsx",
+      "src/components/ui/navigation-menu.tsx",
+      "src/components/ui/sheet.tsx",
+      "src/components/ui/toast.tsx",
+      "src/components/ui/toaster.tsx"
+    ],
+    "issues": [
+      {
+        "file": "package.json",
+        "dependencies": [
+          {
+            "name": "@carbon/react",
+            "line": 32,
+            "col": 6,
+            "pos": 1353
+          },
+          {
+            "name": "@radix-ui/react-dialog",
+            "line": 38,
+            "col": 6,
+            "pos": 1565
+          },
+          {
+            "name": "@radix-ui/react-dropdown-menu",
+            "line": 39,
+            "col": 6,
+            "pos": 1607
+          },
+          {
+            "name": "@radix-ui/react-navigation-menu",
+            "line": 41,
+            "col": 6,
+            "pos": 1696
+          },
+          {
+            "name": "@radix-ui/react-toast",
+            "line": 46,
+            "col": 6,
+            "pos": 1911
+          },
+          {
+            "name": "@tabler/icons",
+            "line": 48,
+            "col": 6,
+            "pos": 1993
+          },
+          {
+            "name": "@tanstack/react-table",
+            "line": 49,
+            "col": 6,
+            "pos": 2027
+          },
+          {
+            "name": "@tremor/react",
+            "line": 50,
+            "col": 6,
+            "pos": 2068
+          },
+          {
+            "name": "critters",
+            "line": 54,
+            "col": 6,
+            "pos": 2196
+          },
+          {
+            "name": "leaflet-draw",
+            "line": 60,
+            "col": 6,
+            "pos": 2365
+          },
+          {
+            "name": "playwright",
+            "line": 63,
+            "col": 6,
+            "pos": 2454
+          },
+          {
+            "name": "react-arborist",
+            "line": 65,
+            "col": 6,
+            "pos": 2505
+          },
+          {
+            "name": "react-beautiful-dnd",
+            "line": 66,
+            "col": 6,
+            "pos": 2538
+          },
+          {
+            "name": "react-icons",
+            "line": 70,
+            "col": 6,
+            "pos": 2671
+          },
+          {
+            "name": "react-leaflet",
+            "line": 71,
+            "col": 6,
+            "pos": 2701
+          },
+          {
+            "name": "weather-icons",
+            "line": 74,
+            "col": 6,
+            "pos": 2804
+          }
+        ],
+        "devDependencies": [
+          {
+            "name": "tsx",
+            "line": 96,
+            "col": 6,
+            "pos": 3456
+          }
+        ],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": ".vscode/test-console-integration.js",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [
+          {
+            "name": "ws"
+          }
+        ],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "jest.config.js",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [
+          {
+            "name": "jest-environment-jsdom"
+          }
+        ],
+        "exports": [],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/utils/debugUtils.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "performanceMonitor",
+            "line": 6,
+            "col": 14,
+            "pos": 110
+          },
+          {
+            "name": "debugConsole",
+            "line": 43,
+            "col": 14,
+            "pos": 1175
+          },
+          {
+            "name": "networkMonitor",
+            "line": 80,
+            "col": 14,
+            "pos": 1973
+          },
+          {
+            "name": "devHelpers",
+            "line": 103,
+            "col": 14,
+            "pos": 2700
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/button.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "buttonVariants",
+            "line": 57,
+            "col": 17,
+            "pos": 1884
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/card.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "CardFooter",
+            "line": 76,
+            "col": 27,
+            "pos": 1773
+          },
+          {
+            "name": "CardDescription",
+            "line": 76,
+            "col": 50,
+            "pos": 1796
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/badge.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "badgeVariants",
+            "line": 36,
+            "col": 16,
+            "pos": 1123
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/icon.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "WeatherIcon",
+            "line": 96,
+            "col": 17,
+            "pos": 2167
+          },
+          {
+            "name": "OperationIcon",
+            "line": 122,
+            "col": 17,
+            "pos": 2624
+          },
+          {
+            "name": "IconWithText",
+            "line": 202,
+            "col": 17,
+            "pos": 4417
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/contexts/BlocNavigationContext.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "useBlocTab",
+            "line": 215,
+            "col": 17,
+            "pos": 6860
+          },
+          {
+            "name": "useBlocBreadcrumbs",
+            "line": 220,
+            "col": 17,
+            "pos": 6998
+          },
+          {
+            "name": "useBlocUnsavedChanges",
+            "line": 225,
+            "col": 17,
+            "pos": 7148
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/cropCycles.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "GROWTH_STAGES",
+            "line": 17,
+            "col": 14,
+            "pos": 633
+          },
+          {
+            "name": "calculateCycleDuration",
+            "line": 330,
+            "col": 14,
+            "pos": 9120
+          },
+          {
+            "name": "OPTIONAL_YIELD_OBSERVATIONS",
+            "line": 350,
+            "col": 14,
+            "pos": 9778
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/lib/featureFlags.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "saveFeatureFlags",
+            "line": 128,
+            "col": 14,
+            "pos": 3821
+          },
+          {
+            "name": "useFeatureFlag",
+            "line": 155,
+            "col": 14,
+            "pos": 4583
+          },
+          {
+            "name": "getMigrationPhase",
+            "line": 161,
+            "col": 14,
+            "pos": 4739
+          },
+          {
+            "name": "enableNextPhase",
+            "line": 172,
+            "col": 14,
+            "pos": 5047
+          },
+          {
+            "name": "resetFeatureFlags",
+            "line": 208,
+            "col": 14,
+            "pos": 5839
+          },
+          {
+            "name": "logFeatureFlags",
+            "line": 215,
+            "col": 14,
+            "pos": 5994
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/UnsavedChangesIndicator.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "default",
+            "line": 13,
+            "col": 25,
+            "pos": 241
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/hooks/useFormWithAutoCommit.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "useFormWithAutoCommit",
+            "line": 22,
+            "col": 17,
+            "pos": 549
+          },
+          {
+            "name": "withFormCommit",
+            "line": 113,
+            "col": 14,
+            "pos": 2906
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/hooks/useLocalStorageData.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "useRefreshConfiguration",
+            "line": 110,
+            "col": 17,
+            "pos": 2538
+          },
+          {
+            "name": "useStorageDebug",
+            "line": 132,
+            "col": 17,
+            "pos": 3063
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/SubmitButton.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "DeleteButton",
+            "line": 120,
+            "col": 17,
+            "pos": 3381
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/observations.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "createObservationId",
+            "line": 18,
+            "col": 14,
+            "pos": 564
+          },
+          {
+            "name": "createCropCycleId",
+            "line": 19,
+            "col": 14,
+            "pos": 651
+          },
+          {
+            "name": "isObservationCategory",
+            "line": 494,
+            "col": 14,
+            "pos": 16034
+          },
+          {
+            "name": "isObservationStatus",
+            "line": 499,
+            "col": 14,
+            "pos": 16300
+          }
+        ],
+        "types": [
+          {
+            "name": "ObservationDataKey",
+            "line": 443,
+            "col": 13,
+            "pos": 14070
+          },
+          {
+            "name": "ObservationWithData",
+            "line": 467,
+            "col": 13,
+            "pos": 15232
+          },
+          {
+            "name": "ObservationResult",
+            "line": 473,
+            "col": 13,
+            "pos": 15441
+          },
+          {
+            "name": "ObservationUpdate",
+            "line": 478,
+            "col": 13,
+            "pos": 15590
+          },
+          {
+            "name": "ObservationQuery",
+            "line": 481,
+            "col": 18,
+            "pos": 15725
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/attachments.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "getFileIcon",
+            "line": 160,
+            "col": 17,
+            "pos": 4156
+          },
+          {
+            "name": "formatFileSize",
+            "line": 173,
+            "col": 17,
+            "pos": 4732
+          },
+          {
+            "name": "validateFileUpload",
+            "line": 186,
+            "col": 17,
+            "pos": 5067
+          }
+        ],
+        "types": [
+          {
+            "name": "AttachmentUpload",
+            "line": 49,
+            "col": 18,
+            "pos": 941
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/layouts/FormLayout.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "TableLayout",
+            "line": 111,
+            "col": 17,
+            "pos": 3159
+          },
+          {
+            "name": "DashboardLayout",
+            "line": 203,
+            "col": 17,
+            "pos": 5716
+          },
+          {
+            "name": "ModalLayout",
+            "line": 260,
+            "col": 17,
+            "pos": 7135
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/page-transition.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "SlideTransition",
+            "line": 82,
+            "col": 17,
+            "pos": 1929
+          },
+          {
+            "name": "StaggeredList",
+            "line": 113,
+            "col": 17,
+            "pos": 2666
+          },
+          {
+            "name": "AnimatedFormField",
+            "line": 156,
+            "col": 17,
+            "pos": 3543
+          },
+          {
+            "name": "LoadingSkeleton",
+            "line": 181,
+            "col": 17,
+            "pos": 4049
+          },
+          {
+            "name": "AnimatedProgress",
+            "line": 216,
+            "col": 17,
+            "pos": 4692
+          },
+          {
+            "name": "FloatingActionButton",
+            "line": 257,
+            "col": 17,
+            "pos": 5785
+          },
+          {
+            "name": "TypewriterText",
+            "line": 298,
+            "col": 17,
+            "pos": 6743
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/activities.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "validateActivityForCycleClosure",
+            "line": 762,
+            "col": 14,
+            "pos": 19943
+          },
+          {
+            "name": "getAllActivitiesValidationErrors",
+            "line": 797,
+            "col": 14,
+            "pos": 20963
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/services/weatherDataService.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "getWeatherInfo",
+            "line": 71,
+            "col": 17,
+            "pos": 1573
+          },
+          {
+            "name": "fetch35DayWeatherForecast",
+            "line": 111,
+            "col": 23,
+            "pos": 3811
+          },
+          {
+            "name": "fetch7DayWeatherForecast",
+            "line": 253,
+            "col": 23,
+            "pos": 8729
+          },
+          {
+            "name": "fetchWeatherData",
+            "line": 704,
+            "col": 23,
+            "pos": 23654
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/lib/database.types.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "Constants",
+            "line": 2743,
+            "col": 14,
+            "pos": 77636
+          }
+        ],
+        "types": [
+          {
+            "name": "Tables",
+            "line": 2640,
+            "col": 13,
+            "pos": 73767
+          },
+          {
+            "name": "TablesInsert",
+            "line": 2667,
+            "col": 13,
+            "pos": 74771
+          },
+          {
+            "name": "TablesUpdate",
+            "line": 2690,
+            "col": 13,
+            "pos": 75542
+          },
+          {
+            "name": "Enums",
+            "line": 2713,
+            "col": 13,
+            "pos": 76313
+          },
+          {
+            "name": "CompositeTypes",
+            "line": 2728,
+            "col": 13,
+            "pos": 76931
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/schemas/operationsSchema.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "validateOperation",
+            "line": 166,
+            "col": 14,
+            "pos": 6861
+          },
+          {
+            "name": "validateProduct",
+            "line": 193,
+            "col": 14,
+            "pos": 7697
+          },
+          {
+            "name": "validateEquipment",
+            "line": 197,
+            "col": 14,
+            "pos": 7795
+          },
+          {
+            "name": "validateResource",
+            "line": 201,
+            "col": 14,
+            "pos": 7897
+          },
+          {
+            "name": "basicOperationSchema",
+            "line": 206,
+            "col": 14,
+            "pos": 8054
+          },
+          {
+            "name": "operationDatesSchema",
+            "line": 215,
+            "col": 14,
+            "pos": 8258
+          },
+          {
+            "name": "operationFinancialsSchema",
+            "line": 222,
+            "col": 14,
+            "pos": 8430
+          }
+        ],
+        "types": [
+          {
+            "name": "ProductData",
+            "line": 160,
+            "col": 13,
+            "pos": 6595
+          },
+          {
+            "name": "EquipmentData",
+            "line": 161,
+            "col": 13,
+            "pos": 6652
+          },
+          {
+            "name": "ResourceData",
+            "line": 162,
+            "col": 13,
+            "pos": 6713
+          },
+          {
+            "name": "AttachmentData",
+            "line": 163,
+            "col": 13,
+            "pos": 6772
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/schemas/workPackageSchema.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "workPackageProgressSchema",
+            "line": 5,
+            "col": 14,
+            "pos": 177
+          },
+          {
+            "name": "validateWorkPackage",
+            "line": 47,
+            "col": 14,
+            "pos": 1800
+          },
+          {
+            "name": "basicWorkPackageSchema",
+            "line": 82,
+            "col": 14,
+            "pos": 2933
+          },
+          {
+            "name": "workPackageStatusSchema",
+            "line": 91,
+            "col": 14,
+            "pos": 3122
+          }
+        ],
+        "types": [
+          {
+            "name": "WorkPackageProgressData",
+            "line": 44,
+            "col": 13,
+            "pos": 1693
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/utils.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "createBlocId",
+            "line": 19,
+            "col": 14,
+            "pos": 658
+          },
+          {
+            "name": "createObservationId",
+            "line": 21,
+            "col": 14,
+            "pos": 800
+          },
+          {
+            "name": "createAttachmentId",
+            "line": 22,
+            "col": 14,
+            "pos": 886
+          },
+          {
+            "name": "createCropCycleId",
+            "line": 23,
+            "col": 14,
+            "pos": 969
+          },
+          {
+            "name": "isString",
+            "line": 210,
+            "col": 14,
+            "pos": 5361
+          },
+          {
+            "name": "isNumber",
+            "line": 211,
+            "col": 14,
+            "pos": 5448
+          },
+          {
+            "name": "isBoolean",
+            "line": 212,
+            "col": 14,
+            "pos": 5552
+          },
+          {
+            "name": "isObject",
+            "line": 213,
+            "col": 14,
+            "pos": 5642
+          },
+          {
+            "name": "isArray",
+            "line": 214,
+            "col": 14,
+            "pos": 5747
+          },
+          {
+            "name": "delay",
+            "line": 217,
+            "col": 14,
+            "pos": 5851
+          },
+          {
+            "name": "createError",
+            "line": 253,
+            "col": 14,
+            "pos": 6624
+          }
+        ],
+        "types": [
+          {
+            "name": "ApiResponse",
+            "line": 31,
+            "col": 13,
+            "pos": 1230
+          },
+          {
+            "name": "RequiredFields",
+            "line": 66,
+            "col": 13,
+            "pos": 1912
+          },
+          {
+            "name": "OptionalFields",
+            "line": 69,
+            "col": 13,
+            "pos": 2013
+          },
+          {
+            "name": "Entity",
+            "line": 98,
+            "col": 13,
+            "pos": 2572
+          },
+          {
+            "name": "TypedEvent",
+            "line": 123,
+            "col": 18,
+            "pos": 3314
+          },
+          {
+            "name": "CRUDService",
+            "line": 131,
+            "col": 18,
+            "pos": 3451
+          },
+          {
+            "name": "ValidationRule",
+            "line": 140,
+            "col": 18,
+            "pos": 3807
+          },
+          {
+            "name": "ValidationResult",
+            "line": 150,
+            "col": 18,
+            "pos": 4052
+          },
+          {
+            "name": "AppConfig",
+            "line": 160,
+            "col": 18,
+            "pos": 4214
+          },
+          {
+            "name": "EnvConfig",
+            "line": 178,
+            "col": 13,
+            "pos": 4597
+          },
+          {
+            "name": "TypedStorage",
+            "line": 181,
+            "col": 18,
+            "pos": 4687
+          },
+          {
+            "name": "User",
+            "line": 202,
+            "col": 18,
+            "pos": 5250
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/entityIdentifiers.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "EntityStateGuards",
+            "line": 129,
+            "col": 14,
+            "pos": 3604
+          },
+          {
+            "name": "EntityIdentifierError",
+            "line": 161,
+            "col": 14,
+            "pos": 4357
+          },
+          {
+            "name": "MissingUUIDError",
+            "line": 183,
+            "col": 14,
+            "pos": 4903
+          },
+          {
+            "name": "ENTITY_PREFIXES",
+            "line": 195,
+            "col": 14,
+            "pos": 5245
+          }
+        ],
+        "types": [
+          {
+            "name": "EntityPrefix",
+            "line": 205,
+            "col": 13,
+            "pos": 5431
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/services/dataAdapters.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "transformDbSugarcaneVariety",
+            "line": 26,
+            "col": 14,
+            "pos": 859
+          },
+          {
+            "name": "transformDbIntercropVariety",
+            "line": 46,
+            "col": 14,
+            "pos": 1672
+          },
+          {
+            "name": "transformDbProduct",
+            "line": 64,
+            "col": 14,
+            "pos": 2354
+          },
+          {
+            "name": "transformDbResource",
+            "line": 81,
+            "col": 14,
+            "pos": 2931
+          },
+          {
+            "name": "safeTransform",
+            "line": 114,
+            "col": 14,
+            "pos": 4135
+          },
+          {
+            "name": "validateTransformedData",
+            "line": 130,
+            "col": 14,
+            "pos": 4461
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/breadcrumb.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "BreadcrumbEllipsis",
+            "line": 113,
+            "col": 23,
+            "pos": 2687
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/form.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "useFormField",
+            "line": 169,
+            "col": 9,
+            "pos": 4018
+          },
+          {
+            "name": "FormDescription",
+            "line": 174,
+            "col": 15,
+            "pos": 4082
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "SelectGroup",
+            "line": 149,
+            "col": 10,
+            "pos": 5580
+          },
+          {
+            "name": "SelectLabel",
+            "line": 153,
+            "col": 17,
+            "pos": 5644
+          },
+          {
+            "name": "SelectSeparator",
+            "line": 155,
+            "col": 14,
+            "pos": 5673
+          },
+          {
+            "name": "SelectScrollUpButton",
+            "line": 156,
+            "col": 19,
+            "pos": 5692
+          },
+          {
+            "name": "SelectScrollDownButton",
+            "line": 157,
+            "col": 24,
+            "pos": 5716
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/table.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "TableFooter",
+            "line": 114,
+            "col": 13,
+            "pos": 2787
+          },
+          {
+            "name": "TableCaption",
+            "line": 118,
+            "col": 13,
+            "pos": 2840
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/components/ui/animated-card.tsx",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [
+          {
+            "name": "AnimatedListItem",
+            "line": 135,
+            "col": 17,
+            "pos": 2902
+          },
+          {
+            "name": "AnimatedCollapse",
+            "line": 172,
+            "col": 17,
+            "pos": 3686
+          },
+          {
+            "name": "AnimatedBackdrop",
+            "line": 209,
+            "col": 17,
+            "pos": 4580
+          },
+          {
+            "name": "AnimatedNotification",
+            "line": 252,
+            "col": 17,
+            "pos": 5676
+          },
+          {
+            "name": "AnimatedCounter",
+            "line": 290,
+            "col": 17,
+            "pos": 6594
+          }
+        ],
+        "types": [],
+        "duplicates": []
+      },
+      {
+        "file": "src/lib/supabase.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [],
+        "types": [
+          {
+            "name": "Inserts",
+            "line": 57,
+            "col": 13,
+            "pos": 1764
+          },
+          {
+            "name": "Updates",
+            "line": 58,
+            "col": 13,
+            "pos": 1875
+          },
+          {
+            "name": "Company",
+            "line": 61,
+            "col": 13,
+            "pos": 2055
+          },
+          {
+            "name": "Farm",
+            "line": 62,
+            "col": 13,
+            "pos": 2098
+          },
+          {
+            "name": "CropCycle",
+            "line": 65,
+            "col": 13,
+            "pos": 2235
+          },
+          {
+            "name": "Activity",
+            "line": 66,
+            "col": 13,
+            "pos": 2282
+          },
+          {
+            "name": "Observation",
+            "line": 67,
+            "col": 13,
+            "pos": 2327
+          },
+          {
+            "name": "Attachment",
+            "line": 68,
+            "col": 13,
+            "pos": 2377
+          }
+        ],
+        "duplicates": []
+      },
+      {
+        "file": "src/types/varieties.ts",
+        "dependencies": [],
+        "devDependencies": [],
+        "optionalPeerDependencies": [],
+        "unlisted": [],
+        "binaries": [],
+        "unresolved": [],
+        "exports": [],
+        "types": [],
+        "duplicates": [
+          [
+            {
+              "name": "SEASON_CATEGORIES",
+              "line": 40,
+              "col": 13,
+              "pos": 1104
+            },
+            {
+              "name": "SEASON_FILTERS",
+              "line": 72,
+              "col": 30,
+              "pos": 1985
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

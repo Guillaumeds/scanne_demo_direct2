@@ -1,0 +1,52 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/loading.tsx",
+    "src/app/**/error.tsx",
+    "src/app/**/not-found.tsx",
+    "scripts/*.{js,ts}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,js,jsx}",
+    "scripts/**/*.{ts,tsx,js,jsx}",
+    "!src/**/*.test.{ts,tsx,js,jsx}",
+    "!src/**/*.spec.{ts,tsx,js,jsx}"
+  ],
+  "ignore": [
+    "src/types/supabase.ts",
+    "src/app/globals.css",
+    "src/styles/animations.css",
+    "public/**",
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "build/**"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "critters"
+  ],
+  "ignoreBinaries": [],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "exports": "error",
+    "nsExports": "error",
+    "classMembers": "off",
+    "enumMembers": "off",
+    "types": "error",
+    "nsTypes": "error",
+    "duplicates": "error"
+  },
+  "next": true,
+  "jest": true,
+  "eslint": true
+}
