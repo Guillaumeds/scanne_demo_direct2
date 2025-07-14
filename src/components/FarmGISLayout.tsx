@@ -8,7 +8,7 @@ import DrawingToolbar from './DrawingToolbar'
 import DrawnAreasList from './DrawnAreasList'
 import PolygonInfoModal from './PolygonInfoModal'
 
-import { ModernBlocScreen } from './bloc/ModernBlocScreen'
+import { BlocScreen } from './farm/BlocScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { LocalStorageService } from '@/services/localStorageService'
@@ -386,7 +386,7 @@ export default function FarmGISLayout() {
   }
 
   return (
-    <div className="h-full w-full flex">
+    <div className="gis-layout h-full w-full flex">
       {/* Main content area */}
       <div className="flex-1 flex">
         {/* Conditionally show sidebar only when not in data screen mode */}
@@ -459,7 +459,7 @@ export default function FarmGISLayout() {
           {/* Data Screen Overlay - Shows on top of map when needed */}
           {showDataScreen && dataScreenBloc && (
             <div className="absolute inset-0 z-[2000]">
-              <ModernBlocScreen
+              <BlocScreen
                 bloc={dataScreenBloc}
                 onBack={handleBackToMap}
                 onDelete={() => handlePolygonDelete(dataScreenBloc.uuid || dataScreenBloc.localId)}

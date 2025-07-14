@@ -1,0 +1,89 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
+import { DrawnArea } from '@/types/drawnArea'
+import { BlocProvider } from './contexts/BlocContext'
+import { BlocLayout } from './layout/BlocLayout'
+import { LoadingSpinner } from './shared/LoadingSpinner'
+
+interface BlocScreenProps {
+  bloc: DrawnArea
+  onBack: () => void
+  onDelete?: () => void
+}
+
+export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Validate that bloc is saved and has UUID
+  if (!bloc.uuid) {
+    throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
+  }
+
+  // Simulate loading for demonstration (in real app, this would be data fetching)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{
+        duration: 0.4,
+        ease: [0.4, 0, 0.2, 1],
+        layout: { duration: 0.3 }
+      }}
+      className="h-full w-full"
+      layout
+    >
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full flex items-center justify-center bg-background"
+          >
+            <LoadingSpinner size="lg" message="Loading bloc data..." />
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="h-full w-full flex items-center justify-center bg-background"
+          >
+            <div className="text-center">
+              <div className="text-destructive text-4xl mb-4">⚠️</div>
+              <h2 className="text-xl font-bold text-foreground mb-2">Error Loading Bloc</h2>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="h-full w-full"
+          >
+            <BlocProvider bloc={bloc} onBack={onBack} onDelete={onDelete}>
+              <BlocLayout />
+            </BlocProvider>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}

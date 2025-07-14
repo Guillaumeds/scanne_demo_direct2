@@ -103,6 +103,27 @@
 /* Leaflet CSS - we'll import this globally */
 @import 'leaflet/dist/leaflet.css';
 
+/* GIS-specific styling - preserve original map functionality */
+.gis-layout {
+  /* Override emerald theme for GIS components only */
+  --background: 210 40% 98%; /* slate-50 */
+  --foreground: 222.2 84% 4.9%; /* slate-900 */
+  --border: 220 13% 91%; /* slate-200 */
+  --muted: 210 40% 96%; /* slate-100 */
+  --muted-foreground: 215.4 16.3% 46.9%; /* slate-500 */
+}
+
+/* Ensure GIS components use their specific styling */
+.gis-layout .leaflet-container,
+.gis-layout .bloc-list,
+.gis-layout .drawing-toolbar,
+.gis-layout .floating-info-box {
+  /* Preserve original GIS styling */
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+
 /* Weather Icons CSS - temporarily disabled due to CSS syntax errors */
 /* @import 'weather-icons/css/weather-icons.min.css'; */
 
@@ -248,30 +269,31 @@ main {
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* slate-50 */
-    --foreground: 222.2 84% 4.9%; /* slate-900 */
+    /* Emerald-based color palette for the main application */
+    --background: 0 0% 100%; /* white */
+    --foreground: 158 64% 14%; /* emerald-900 */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%; /* slate-900 */
+    --card-foreground: 158 64% 14%; /* emerald-900 */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%; /* slate-900 */
+    --popover-foreground: 158 64% 14%; /* emerald-900 */
     --primary: 160 84% 39%; /* emerald-600 */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 210 40% 98%; /* slate-50 */
-    --secondary-foreground: 222.2 84% 4.9%; /* slate-900 */
-    --muted: 210 40% 96%; /* slate-100 */
-    --muted-foreground: 215.4 16.3% 46.9%; /* slate-500 */
-    --accent: 210 40% 96%; /* slate-100 */
-    --accent-foreground: 222.2 84% 4.9%; /* slate-900 */
+    --primary-foreground: 152 81% 96%; /* emerald-50 */
+    --secondary: 155 100% 97%; /* emerald-25 */
+    --secondary-foreground: 158 64% 14%; /* emerald-900 */
+    --muted: 155 100% 97%; /* emerald-25 */
+    --muted-foreground: 156 39% 54%; /* emerald-500 */
+    --accent: 154 100% 95%; /* emerald-50 */
+    --accent-foreground: 158 64% 14%; /* emerald-900 */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%; /* slate-200 */
-    --input: 220 13% 91%; /* slate-200 */
+    --border: 155 100% 94%; /* emerald-100 */
+    --input: 155 100% 94%; /* emerald-100 */
     --ring: 160 84% 39%; /* emerald-600 */
     --chart-1: 160 84% 39%; /* emerald-600 */
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-2: 158 58% 30%; /* emerald-700 */
+    --chart-3: 156 39% 54%; /* emerald-500 */
+    --chart-4: 152 76% 64%; /* emerald-400 */
+    --chart-5: 149 80% 90%; /* emerald-200 */
     --radius: 0.5rem;
   }
   .dark {
