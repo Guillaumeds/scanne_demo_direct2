@@ -84,16 +84,7 @@ export default function Home() {
                     <Shield className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium">HSE Management</span>
                   </a>
-                  <div className="border-t border-gray-200 my-2"></div>
-                  <a
-                    href="/test-modern"
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                    onClick={() => setShowMenu(false)}
-                  >
-                    <Sprout className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-medium">🧪 Modern UI Preview</span>
-                    <span className="ml-auto text-xs text-purple-600 font-medium">NEW</span>
-                  </a>
+
                 </div>
               )}
             </div>
