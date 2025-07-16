@@ -302,7 +302,7 @@ export function OperationForm() {
           transition={{ duration: 0.3 }}
         >
           {/* Header */}
-          <div className="mb-6">
+          <div className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

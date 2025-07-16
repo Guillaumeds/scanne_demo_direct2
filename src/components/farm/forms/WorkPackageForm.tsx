@@ -420,7 +420,7 @@ export function WorkPackageForm() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="mb-6"
+          className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50"
         >
           <div className="flex items-center justify-between">
             <div>
