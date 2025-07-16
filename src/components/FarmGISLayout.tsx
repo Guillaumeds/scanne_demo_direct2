@@ -62,13 +62,14 @@ export default function FarmGISLayout() {
 
   // Initial zoom to farm view when map and blocs are ready
   useEffect(() => {
-    if (mapInstance && savedAreas.length > 0) {
-      // Small delay to ensure everything is loaded
+    if (mapInstance && savedAreas.length > 0 && !showDataScreen) {
+      // Only zoom if not in data screen mode
+      console.log('🔍 Initial zoom to farm view with', savedAreas.length, 'blocs')
       setTimeout(() => {
         zoomToFarmViewInitial(mapInstance)
-      }, 300)
+      }, 200) // Shorter delay
     }
-  }, [mapInstance]) // Remove savedAreas.length dependency to prevent re-zoom on save
+  }, [mapInstance, savedAreas.length, showDataScreen]) // Include showDataScreen to prevent zoom during bloc info
 
   // Auto-refresh cache and initialize
   useEffect(() => {
@@ -417,28 +418,30 @@ export default function FarmGISLayout() {
 
     console.log('🔍 Farm view bounds:', { minLat, maxLat, minLng, maxLng })
 
-    // Create bounds with no padding for farm view
+    // Validate bounds are reasonable (not world-wide)
+    const latRange = maxLat - minLat
+    const lngRange = maxLng - minLng
+
+    if (latRange > 10 || lngRange > 10) {
+      console.error('❌ Bounds too large for farm view, skipping zoom:', { latRange, lngRange })
+      return
+    }
+
+    // Create bounds with reasonable padding for farm view
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
 
     mapInstance.fitBounds(bounds, {
       animate: true,
-      duration: 5.0, // Much slower animation for farm view
-      easeLinearity: 0.02, // Very smooth easing (lower = smoother)
-      padding: [5, 5] // Minimal padding to avoid edge clipping
+      duration: 0.8, // Fast animation for farm view
+      easeLinearity: 0.25, // Standard easing
+      padding: [20, 20] // Reasonable padding to keep blocs visible
     })
   }
 
   // Handle map ready callback
   const handleMapReady = (map: L.Map) => {
     setMapInstance(map)
-
-    // Once map is ready and we have blocs, zoom to farm view
-    if (savedAreas.length > 0) {
-      // Small delay to ensure map is fully initialized
-      setTimeout(() => {
-        zoomToFarmViewInitial(map)
-      }, 500)
-    }
+    // Initial zoom is handled by the useEffect below - no duplicate zoom here
   }
 
   // Initial farm view zoom (no animation for startup)
@@ -472,12 +475,23 @@ export default function FarmGISLayout() {
     const minLng = Math.min(...lngs)
     const maxLng = Math.max(...lngs)
 
-    // Create bounds with no padding for initial view
+    console.log('🔍 Initial farm view bounds:', { minLat, maxLat, minLng, maxLng })
+
+    // Validate bounds are reasonable (not world-wide)
+    const latRange = maxLat - minLat
+    const lngRange = maxLng - minLng
+
+    if (latRange > 10 || lngRange > 10) {
+      console.error('❌ Bounds too large for initial zoom, skipping:', { latRange, lngRange })
+      return
+    }
+
+    // Create bounds with reasonable padding for initial view
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
 
     map.fitBounds(bounds, {
       animate: false, // No animation for initial load
-      padding: [5, 5] // Minimal padding to avoid edge clipping
+      padding: [20, 20] // Reasonable padding to keep blocs visible
     })
   }
 
@@ -572,21 +586,17 @@ export default function FarmGISLayout() {
   }
 
   const handleBackToMap = () => {
-    // Start graceful exit animation: gradually remove dimming
+    // Remove dimming immediately
     applyMapDimming(false)
 
-    // Close the data screen after dimming transition completes
-    setTimeout(() => {
-      setShowDataScreen(false)
-      setDataScreenBloc(null)
+    // Close the data screen immediately
+    setShowDataScreen(false)
+    setDataScreenBloc(null)
 
-      // After screen closes gracefully, zoom to farm view
-      setTimeout(() => {
-        zoomToFarmView()
-        // Keep the bloc selected (blue border, no fill) after returning to farm view
-        // selectedAreaId remains unchanged so bloc stays selected
-      }, 300) // Longer delay for screen to close gracefully
-    }, 400) // Match CSS transition duration for dimming
+    // Zoom to farm view immediately - no delays
+    zoomToFarmView()
+    // Keep the bloc selected (blue border, no fill) after returning to farm view
+    // selectedAreaId remains unchanged so bloc stays selected
   }
 
   if (loading) {
