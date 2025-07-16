@@ -130,7 +130,7 @@
 /* Additional body styles */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
-  overflow: hidden !important;
+  /* Allow natural scrolling - overflow will be managed by specific containers */
 }
 
 /* Ensure emojis render properly */
@@ -188,29 +188,20 @@ html {
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Prevent zoom on iOS Safari */
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
   /* Ensure consistent font rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent all scrolling */
-  overflow: hidden;
-  height: 100vh;
+  /* Proper height management */
+  height: 100%;
 }
 
 body {
   margin: 0;
   padding: 0;
-  height: 100vh;
+  height: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent all scrolling and ensure consistent layout */
-  overflow: hidden;
+  /* Allow natural document flow */
   width: 100%;
   position: relative;
 }
@@ -244,37 +235,73 @@ body {
   size-adjust: 100% !important;
 }
 
-/* Force consistent scaling across all environments */
+/* Proper responsive design without scaling hacks */
 html {
-  font-size: 16px !important;
-  line-height: 1.5 !important;
-  /* Force scale down to counteract Vercel's enlargement */
-  transform: scale(0.8) !important;
-  transform-origin: 0 0 !important;
-  width: 125% !important;
-  min-height: 125vh !important;
-  overflow-x: hidden !important;
+  font-size: 16px;
+  line-height: 1.5;
+  /* Use proper viewport management */
+  width: 100%;
+  height: 100%;
 }
 
 body {
-  font-size: 16px !important;
-  line-height: 1.5 !important;
-  min-height: 125vh !important;
-  width: 100% !important;
+  font-size: 16px;
+  line-height: 1.5;
+  width: 100%;
+  height: 100%;
 }
 
-/* Prevent any additional zoom or scale transformations */
-* {
-  zoom: 1 !important;
+/* Dynamic viewport height for mobile compatibility */
+.min-h-screen-dynamic {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for modern browsers */
+  min-height: calc(var(--vh, 1vh) * 100); /* Fallback using CSS custom property */
 }
 
-/* Ensure main containers fill the scaled viewport */
-.min-h-screen {
-  min-height: 125vh !important;
+.h-screen-dynamic {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for modern browsers */
+  height: calc(var(--vh, 1vh) * 100); /* Fallback using CSS custom property */
 }
 
 main {
-  min-height: 125vh !important;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for modern browsers */
+  height: calc(var(--vh, 1vh) * 100); /* Fallback using CSS custom property */
+  overflow: hidden; /* Prevent main container from scrolling */
+}
+
+/* Scrollable container styles */
+.scrollable-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  /* Improve scrolling performance on mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Contain scrolling to this element */
+  overscroll-behavior: contain;
+  /* Improve touch responsiveness */
+  touch-action: pan-y;
+}
+
+/* Map container specific styles */
+.map-container {
+  overflow: hidden;
+  /* Allow all touch gestures for map interaction */
+  touch-action: manipulation;
+}
+
+/* Basic mobile improvements */
+@media screen and (max-width: 768px) {
+  /* Prevent horizontal scrolling */
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Prevent content jumping during scroll */
+* {
+  box-sizing: border-box;
 }
 
 

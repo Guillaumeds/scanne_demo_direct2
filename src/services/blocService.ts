@@ -32,36 +32,26 @@ export class BlocService {
         throw new Error(`Bloc "${drawnArea.localId}" is already saved to database`)
       }
 
-      // Convert coordinates from Leaflet format [lat, lng] to PostGIS WKT format
+      // Convert coordinates from DrawnArea format [lng, lat] to PostGIS WKT format
       // PostGIS WKT expects "longitude latitude" format with SRID 4326 for GPS coordinates
 
-      // drawnArea.coordinates is in Leaflet format: [[lat, lng], [lat, lng], ...]
+      // drawnArea.coordinates is in [lng, lat] format: [[lng, lat], [lng, lat], ...]
       // Convert to PostGIS format: "lng lat, lng lat, ..."
       const coordinatesString = drawnArea.coordinates
-        .map(coord => `${coord[1]} ${coord[0]}`) // Convert [lat, lng] to "lng lat"
+        .map(coord => `${coord[0]} ${coord[1]}`) // Use [lng, lat] directly as "lng lat"
         .join(', ')
 
       // Ensure polygon is properly closed by adding the first coordinate at the end
       const firstCoord = drawnArea.coordinates[0]
-      const closingCoord = `${firstCoord[1]} ${firstCoord[0]}`
+      const closingCoord = `${firstCoord[0]} ${firstCoord[1]}` // Keep same [lng, lat] format
 
       // Create WKT POLYGON string with proper SRID 4326 format
       const polygonWKT = `POLYGON((${coordinatesString}, ${closingCoord}))`
-
-      console.log('🔧 Converting coordinates for PostGIS SRID 4326:', {
-        localId: drawnArea.localId,
-        leafletFormat: drawnArea.coordinates.slice(0, 3), // Show first 3 coords
-        postgisWKT: polygonWKT.substring(0, 100) + '...',
-        totalCoords: drawnArea.coordinates.length
-      })
 
       // Validate farm_id is provided
       if (!farmId) {
         throw new Error('farm_id is required to save bloc')
       }
-
-      // Save bloc directly to database without field association
-      console.log('💾 Saving bloc to database:', drawnArea.localId, 'to farm:', farmId)
 
       // Insert bloc - submit localId as bloc.name, let DB generate UUID
       const { data, error } = await supabase
@@ -77,8 +67,14 @@ export class BlocService {
         .single()
       
       if (error) {
-        console.error('Error saving bloc:', error)
-        throw error
+        console.error('Error saving bloc:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          fullError: error
+        })
+        throw new Error(`Database error saving bloc: ${error.message || 'Unknown error'}`)
       }
 
       if (!data) {
@@ -87,7 +83,12 @@ export class BlocService {
 
       return data // .single() returns the object directly
     } catch (error) {
-      console.error('Failed to save drawn area as bloc:', error)
+      console.error('Failed to save drawn area as bloc:', {
+        blocName: drawnArea.localId,
+        errorMessage: (error as any)?.message,
+        errorDetails: (error as any)?.details,
+        fullError: error
+      })
       throw error
     }
   }

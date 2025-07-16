@@ -163,8 +163,8 @@ export default function FarmGISLayout() {
         const savedBlocs: DrawnArea[] = blocsData.map(bloc => {
           // Parse WKT coordinates using the existing utility function (returns [lng, lat] format)
           const wktCoordinates = DrawnAreaUtils.parseWKTToCoordinates(bloc.coordinates_wkt || '')
-          // Keep [lng, lat] format - no swap needed for Leaflet
-          const coordinates: [number, number][] = wktCoordinates.map(([lng, lat]) => [lng, lat])
+          // WKT parsing already returns [lng, lat] format - use directly
+          const coordinates: [number, number][] = wktCoordinates
 
           return {
             uuid: bloc.id,
@@ -220,27 +220,11 @@ export default function FarmGISLayout() {
   }
 
   const handleAreaDrawn = (area: DrawnArea) => {
-    console.log('🎯 STEP G: FarmGISLayout.handleAreaDrawn called')
-    console.log('🎯 STEP G1: Adding area to drawnAreas state - area:', area.area.toFixed(2), 'ha')
-    setDrawnAreas(prev => {
-      const newAreas = [...prev, area]
-      console.log('🎯 STEP G1: Total drawn areas now:', newAreas.length)
-      return newAreas
-    })
-
-    console.log('✅ STEP G: Area successfully added to state')
-    // Show success message
+    setDrawnAreas(prev => [...prev, area])
   }
 
   const handleAreaDelete = (areaKey: string) => {
-    console.log('🎯 STEP J: Area deletion requested for:', areaKey)
-    console.log('🎯 STEP J1: Removing from drawnAreas state')
-    setDrawnAreas(prev => {
-      const filtered = prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaKey)
-      console.log('🎯 STEP J1: Drawn areas count:', prev.length, '→', filtered.length)
-      return filtered
-    })
-    console.log('✅ STEP J: Area deletion completed')
+    setDrawnAreas(prev => prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaKey))
   }
 
   const handleAreaSelect = (areaKey: string) => {
@@ -268,7 +252,6 @@ export default function FarmGISLayout() {
     setDrawnAreas(prev => prev.map(area =>
       DrawnAreaUtils.getEntityKey(area) === DrawnAreaUtils.getEntityKey(updatedArea) ? updatedArea : area
     ))
-    console.log('Area updated:', updatedArea)
   }
 
   const handlePolygonClick = (areaId: string) => {
@@ -326,33 +309,15 @@ export default function FarmGISLayout() {
       return
     }
 
-    // Debug: Log first coordinate to understand format
-    console.log('🔍 First coordinate:', coordinates[0], 'Total coords:', coordinates.length)
-
-    // Check if coordinates are in Mauritius range
-    // Mauritius is approximately: lat -20.5 to -19.9, lng 57.3 to 57.8
-    const firstCoord = coordinates[0]
-    const isLatFirst = firstCoord[0] >= -21 && firstCoord[0] <= -19 && firstCoord[1] >= 57 && firstCoord[1] <= 58
-
-    let lats, lngs
-    if (isLatFirst) {
-      // Coordinates are [latitude, longitude]
-      lats = coordinates.map(coord => coord[0])
-      lngs = coordinates.map(coord => coord[1])
-      console.log('🔍 Using [lat, lng] format')
-    } else {
-      // Coordinates are [longitude, latitude]
-      lats = coordinates.map(coord => coord[1])
-      lngs = coordinates.map(coord => coord[0])
-      console.log('🔍 Using [lng, lat] format')
-    }
+    // Our coordinates are always in [lng, lat] format (GeoJSON standard)
+    // Extract lat/lng consistently
+    const lats = coordinates.map(coord => coord[1]) // latitude is second element
+    const lngs = coordinates.map(coord => coord[0]) // longitude is first element
 
     const minLat = Math.min(...lats)
     const maxLat = Math.max(...lats)
     const minLng = Math.min(...lngs)
     const maxLng = Math.max(...lngs)
-
-    console.log('🔍 Calculated bounds:', { minLat, maxLat, minLng, maxLng })
 
     // Create bounds with minimal padding
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
@@ -396,20 +361,10 @@ export default function FarmGISLayout() {
       return
     }
 
-    // Use same coordinate detection logic as bloc zoom
-    const firstCoord = allCoordinates[0]
-    const isLatFirst = firstCoord[0] >= -21 && firstCoord[0] <= -19 && firstCoord[1] >= 57 && firstCoord[1] <= 58
-
-    let lats, lngs
-    if (isLatFirst) {
-      // Coordinates are [latitude, longitude]
-      lats = allCoordinates.map(coord => coord[0])
-      lngs = allCoordinates.map(coord => coord[1])
-    } else {
-      // Coordinates are [longitude, latitude]
-      lats = allCoordinates.map(coord => coord[1])
-      lngs = allCoordinates.map(coord => coord[0])
-    }
+    // Our coordinates are always in [lng, lat] format (GeoJSON standard)
+    // Extract lat/lng consistently
+    const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
+    const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
 
     const minLat = Math.min(...lats)
     const maxLat = Math.max(...lats)
@@ -446,53 +401,94 @@ export default function FarmGISLayout() {
 
   // Initial farm view zoom (no animation for startup)
   const zoomToFarmViewInitial = (map: L.Map) => {
-    const allBlocs = [...drawnAreas, ...savedAreas]
-    if (allBlocs.length === 0) return
+    try {
+      const allBlocs = [...drawnAreas, ...savedAreas]
+      if (allBlocs.length === 0) {
+        console.log('🔍 No blocs available for initial zoom')
+        return
+      }
 
-    // Collect all coordinates from all blocs
-    const allCoordinates: [number, number][] = []
-    allBlocs.forEach(bloc => {
-      allCoordinates.push(...bloc.coordinates)
-    })
+      // Collect all coordinates from all blocs with validation
+      const allCoordinates: [number, number][] = []
+      allBlocs.forEach(bloc => {
+        if (bloc.coordinates && Array.isArray(bloc.coordinates)) {
+          // Validate each coordinate pair
+          const validCoords = bloc.coordinates.filter(coord =>
+            Array.isArray(coord) &&
+            coord.length === 2 &&
+            typeof coord[0] === 'number' &&
+            typeof coord[1] === 'number' &&
+            !isNaN(coord[0]) &&
+            !isNaN(coord[1])
+          )
+          allCoordinates.push(...validCoords)
+        }
+      })
 
-    if (allCoordinates.length === 0) return
+      if (allCoordinates.length === 0) {
+        console.warn('⚠️ No valid coordinates found in blocs')
+        return
+      }
 
-    // Use same coordinate detection logic
-    const firstCoord = allCoordinates[0]
-    const isLatFirst = firstCoord[0] >= -21 && firstCoord[0] <= -19 && firstCoord[1] >= 57 && firstCoord[1] <= 58
+      // Our coordinates are always in [lng, lat] format (GeoJSON standard)
+      // Extract lat/lng consistently
+      const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
+      const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
 
-    let lats, lngs
-    if (isLatFirst) {
-      lats = allCoordinates.map(coord => coord[0])
-      lngs = allCoordinates.map(coord => coord[1])
-    } else {
-      lats = allCoordinates.map(coord => coord[1])
-      lngs = allCoordinates.map(coord => coord[0])
+      // Validate that we have valid numbers
+      const validLats = lats.filter(lat => !isNaN(lat) && isFinite(lat))
+      const validLngs = lngs.filter(lng => !isNaN(lng) && isFinite(lng))
+
+      if (validLats.length === 0 || validLngs.length === 0) {
+        console.error('❌ No valid lat/lng values found')
+        return
+      }
+
+      const minLat = Math.min(...validLats)
+      const maxLat = Math.max(...validLats)
+      const minLng = Math.min(...validLngs)
+      const maxLng = Math.max(...validLngs)
+
+      console.log('🔍 Initial farm view bounds:', { minLat, maxLat, minLng, maxLng })
+
+      // Validate bounds are reasonable (not world-wide)
+      const latRange = maxLat - minLat
+      const lngRange = maxLng - minLng
+
+      if (isNaN(latRange) || isNaN(lngRange) || latRange > 10 || lngRange > 10 || latRange <= 0 || lngRange <= 0) {
+        console.error('❌ Bounds too large or invalid for initial zoom, skipping:', {
+          latRange: isNaN(latRange) ? 'NaN' : latRange,
+          lngRange: isNaN(lngRange) ? 'NaN' : lngRange,
+          minLat, maxLat, minLng, maxLng,
+          coordinateCount: allCoordinates.length
+        })
+        // Fallback to default Mauritius view
+        const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
+        map.fitBounds(mauritiusBounds, {
+          animate: false,
+          padding: [50, 50]
+        })
+        return
+      }
+
+      // Create bounds with reasonable padding for initial view
+      const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
+
+      map.fitBounds(bounds, {
+        animate: false, // No animation for initial load
+        padding: [20, 20] // Reasonable padding to keep blocs visible
+      })
+
+      console.log('✅ Initial zoom completed successfully')
+    } catch (error) {
+      console.error('❌ Error in zoomToFarmViewInitial:', error)
+      // Fallback to default Mauritius view
+      const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
+      map.fitBounds(mauritiusBounds, {
+        animate: false,
+        padding: [50, 50]
+      })
     }
-
-    const minLat = Math.min(...lats)
-    const maxLat = Math.max(...lats)
-    const minLng = Math.min(...lngs)
-    const maxLng = Math.max(...lngs)
-
-    console.log('🔍 Initial farm view bounds:', { minLat, maxLat, minLng, maxLng })
-
-    // Validate bounds are reasonable (not world-wide)
-    const latRange = maxLat - minLat
-    const lngRange = maxLng - minLng
-
-    if (latRange > 10 || lngRange > 10) {
-      console.error('❌ Bounds too large for initial zoom, skipping:', { latRange, lngRange })
-      return
-    }
-
-    // Create bounds with reasonable padding for initial view
-    const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
-
-    map.fitBounds(bounds, {
-      animate: false, // No animation for initial load
-      padding: [20, 20] // Reasonable padding to keep blocs visible
-    })
   }
 
   const handleBlocCardClick = (areaId: string) => {
@@ -504,7 +500,6 @@ export default function FarmGISLayout() {
     setDrawnAreas(prev => prev.filter(area => DrawnAreaUtils.getEntityKey(area) !== areaId))
     setSelectedPolygon(null)
     setSelectedAreaId(null)
-    console.log('Area deleted:', areaId)
   }
 
   const handleSaveAll = async () => {
@@ -517,14 +512,27 @@ export default function FarmGISLayout() {
     }
 
     try {
-      console.log('💾 Saving blocs to database...', drawnAreas)
+      // STEP 1: Remove text labels from drawn areas BEFORE database save
+      if (mapInstance) {
+        drawnAreas.forEach(area => {
+          // Iterate through all map layers to find and remove text labels
+          mapInstance.eachLayer((layer: any) => {
+            // Check if this layer has a text label and matches our area
+            if (layer._areaLabel && layer._localId === area.localId) {
+              if (mapInstance.hasLayer(layer._areaLabel)) {
+                mapInstance.removeLayer(layer._areaLabel)
+              }
+              layer._areaLabel = null
+            }
+          })
+        })
+      }
 
-      // Import BlocService dynamically to avoid import issues
+      // STEP 2: Import BlocService dynamically to avoid import issues
       const { BlocService } = await import('@/services/blocService')
 
-      // Save all drawn areas to database with farm ID
+      // STEP 3: Save all drawn areas to database with farm ID
       const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas, defaultFarmId)
-      console.log('✅ Blocs saved successfully:', savedBlocs)
 
       // Transform saved blocs to DrawnArea format with UUIDs from database
       const savedDrawnAreas: DrawnArea[] = drawnAreas.map((drawnArea, index) => {
@@ -544,9 +552,18 @@ export default function FarmGISLayout() {
 
       // Move to saved areas in local state with proper UUIDs
       setSavedAreas(prev => [...prev, ...savedDrawnAreas])
-      setDrawnAreas([])
-      setSelectedPolygon(null)
-      setSelectedAreaId(null)
+
+      // Clear drawn areas AFTER setting saved areas to ensure proper layer updates
+      setTimeout(() => {
+        setDrawnAreas([])
+        setSelectedPolygon(null)
+        setSelectedAreaId(null)
+
+        // Force map refresh to ensure polygons are visible
+        if (mapInstance) {
+          mapInstance.invalidateSize()
+        }
+      }, 100) // Small delay to ensure state updates are processed
 
       // Show success message
       alert(`Successfully saved ${savedBlocs.length} bloc(s) to database!`)
@@ -601,7 +618,7 @@ export default function FarmGISLayout() {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-100">
+      <div className="h-screen-dynamic w-full flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading farm data...</p>
@@ -612,7 +629,7 @@ export default function FarmGISLayout() {
 
   if (error) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-100">
+      <div className="h-screen-dynamic w-full flex items-center justify-center bg-gray-100">
         <div className="text-center max-w-md">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Data</h2>

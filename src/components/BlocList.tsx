@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { CropCycleService } from '@/services/cropCycleService'
 import { DrawnArea, DrawnAreaUtils, DrawnAreaGuards } from '@/types/drawnArea'
 import SubmitButton, { SaveButton, CancelButton } from '@/components/ui/SubmitButton'
@@ -53,7 +53,13 @@ export default function BlocList({
   onToolSelect,
   scrollToBloc
 }: BlocListProps) {
-  const allBlocs = [...drawnAreas, ...savedAreas]
+  // Combine areas but avoid duplicates (prioritize saved areas over drawn areas)
+  const allBlocs = React.useMemo(() => {
+    const savedKeys = new Set(savedAreas.map(area => DrawnAreaUtils.getEntityKey(area)))
+    const uniqueDrawnAreas = drawnAreas.filter(area => !savedKeys.has(DrawnAreaUtils.getEntityKey(area)))
+    return [...savedAreas, ...uniqueDrawnAreas]
+  }, [drawnAreas, savedAreas])
+
   const totalArea = allBlocs.reduce((sum, bloc) => sum + bloc.area, 0)
 
   // Crop cycle data for all blocs
@@ -176,7 +182,7 @@ export default function BlocList({
 
 
   return (
-    <div className="w-80 h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300">
+    <div className="w-80 h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-2">
@@ -231,7 +237,7 @@ export default function BlocList({
       )}
 
       {/* Bloc list */}
-      <div ref={listContainerRef} className="flex-1 overflow-y-auto">
+      <div ref={listContainerRef} className="flex-1 scrollable-container">
         {allBlocs.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <div className="text-4xl mb-4">🎯</div>

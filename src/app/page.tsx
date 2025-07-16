@@ -1,7 +1,7 @@
 'use client'
 
-
 import { Sprout, Shield, Menu } from 'lucide-react'
+import { useDynamicViewportHeight } from '@/hooks/useViewportHeight'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
@@ -28,9 +28,11 @@ const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
 })
 
 export default function Home() {
+  // Initialize dynamic viewport height for mobile compatibility
+  useDynamicViewportHeight()
 
   return (
-    <main className="h-screen flex flex-col">
+    <main className="h-screen-dynamic flex flex-col">
       {/* Header */}
       <header className="bg-gradient-to-r from-green-800 via-green-700 to-green-600 text-white shadow-lg">
         <div className="w-full px-4 py-4">

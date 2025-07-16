@@ -83,12 +83,22 @@ export class DrawnAreaUtils {
         const coordsString = wktMatch[1]
         const coordPairs = coordsString.split(',').map(pair => pair.trim())
 
-        return coordPairs
+        const coordinates = coordPairs
           .map(pair => {
-            const [lng, lat] = pair.split(' ').map(Number)
-            return [lng, lat] as [number, number]
+            const [first, second] = pair.split(' ').map(Number)
+            // Database WKT is stored as "lng lat" but our existing data might be "lat lng"
+            // Check if first value looks like latitude (Mauritius: -20.5 to -19.9)
+            if (first >= -21 && first <= -19 && second >= 57 && second <= 58) {
+              // Data is stored as "lat lng" - swap to our standard [lng, lat]
+              return [second, first] as [number, number] // [lng, lat]
+            } else {
+              // Data is stored as "lng lat" - use directly
+              return [first, second] as [number, number] // [lng, lat]
+            }
           })
           .filter(coord => coord !== null) as [number, number][]
+
+        return coordinates
       }
       return []
     } catch (error) {

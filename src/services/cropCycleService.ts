@@ -438,7 +438,13 @@ export class CropCycleService {
       .order('cycle_number', { ascending: false }) // Latest cycles first
 
     if (cyclesError) {
-      console.error('❌ Error fetching crop cycles:', cyclesError)
+      console.error('❌ Error fetching crop cycles:', {
+        message: cyclesError.message,
+        details: cyclesError.details,
+        hint: cyclesError.hint,
+        code: cyclesError.code,
+        fullError: cyclesError
+      })
       // Return all blocs as having no cycles
       const result: Record<string, any> = {}
       blocIds.forEach(blocId => {

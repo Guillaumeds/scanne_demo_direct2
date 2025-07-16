@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1.0,
-  minimumScale: 1.0,
-  maximumScale: 1.0,
-  userScalable: false,
+  minimumScale: 0.5,
+  maximumScale: 3.0,
+  userScalable: true,
   viewportFit: 'cover',
 }
 
@@ -25,9 +25,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full overflow-hidden">
-      <body className={`${inter.className} h-full overflow-hidden`}>
-        <div className="h-full bg-gray-50 overflow-hidden">
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full`}>
+        <div className="h-full bg-gray-50">
           {children}
         </div>
         <script dangerouslySetInnerHTML={{

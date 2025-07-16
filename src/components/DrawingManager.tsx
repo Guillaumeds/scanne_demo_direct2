@@ -535,7 +535,10 @@ export default function DrawingManager({
 
         // Applied color styling
 
-        const polygon = L.polygon(area.coordinates, {
+        // Our coordinates are [lng, lat], but Leaflet expects [lat, lng]
+        const leafletCoords = area.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+
+        const polygon = L.polygon(leafletCoords, {
           color,
           fillColor,
           fillOpacity: 0.3,
@@ -569,7 +572,7 @@ export default function DrawingManager({
     // Remove deleted polygons
     const toRemove = Array.from(existingKeys).filter(key => !currentKeys.has(key))
 
-    console.log('🔄 Incremental update:', { toAdd: toAdd.length, toRemove: toRemove.length })
+
 
     // Remove deleted polygons
     toRemove.forEach(key => {
@@ -588,7 +591,18 @@ export default function DrawingManager({
     const allAreas = [...savedAreas, ...drawnAreas]
     allAreas.forEach(area => {
       const areaKey = DrawnAreaUtils.getEntityKey(area)
-      const existingLayer = layerMapRef.current.get(areaKey)
+      let existingLayer = layerMapRef.current.get(areaKey)
+
+      // If layer not found under UUID key, try localId key (for newly saved areas)
+      if (!existingLayer && area.localId) {
+        existingLayer = layerMapRef.current.get(area.localId)
+
+        // If found under localId, remap it to the UUID key
+        if (existingLayer) {
+          layerMapRef.current.delete(area.localId) // Remove old key
+          layerMapRef.current.set(areaKey, existingLayer) // Add under new key
+        }
+      }
 
       if (existingLayer) {
         // Update the layer styling based on current status
@@ -602,6 +616,17 @@ export default function DrawingManager({
           fillOpacity: 0.3,
           weight: 2
         })
+
+        // Text labels are now removed directly in the save handler
+        // Only remove vertex markers for saved areas (make them non-editable)
+        if (isSaved && (existingLayer as any)._vertexMarkers) {
+          ;(existingLayer as any)._vertexMarkers.forEach((marker: L.CircleMarker) => {
+            if (map && map.hasLayer(marker)) {
+              map.removeLayer(marker)
+            }
+          })
+          ;(existingLayer as any)._vertexMarkers = null
+        }
       }
     })
 
@@ -619,7 +644,10 @@ export default function DrawingManager({
 
         // Applied incremental color
 
-        const polygon = L.polygon(area.coordinates, {
+        // Our coordinates are [lng, lat], but Leaflet expects [lat, lng]
+        const leafletCoords = area.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+
+        const polygon = L.polygon(leafletCoords, {
           color,
           fillColor,
           fillOpacity: 0.3,
@@ -767,49 +795,17 @@ export default function DrawingManager({
     // All map operations completed
   }, [map, savedAreas, drawnAreas, selectedAreaId, hoveredAreaId]) // Use full arrays to detect content changes
 
-  // OPTIMIZED: Clear totals and remove text labels when areas are saved (specific dependency)
+  // OPTIMIZED: Clear totals when areas are saved (text labels now removed in save handler)
   useEffect(() => {
     if (savedAreas.length > lastSavedAreasCount) {
       // Clearing drawing totals after save
       setTotalDrawnArea(0)
       setCurrentCropCycleId('')
-
-      // Remove text labels and vertex markers from ALL layers that have them
-      // This ensures we clean up labels from newly saved areas
-      console.log('🧹 Cleaning up text labels and vertex markers after save')
-
-      layerMapRef.current.forEach((layer, areaKey) => {
-        // Check if this layer has text labels or vertex markers
-        if ((layer as any)._areaLabel || (layer as any)._vertexMarkers) {
-          // Find if this is a saved area (should be clean)
-          const isSavedArea = savedAreas.some(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
-
-          if (isSavedArea) {
-            // Remove text label from saved areas
-            if ((layer as any)._areaLabel) {
-              console.log('🧹 Removing text label from saved area:', areaKey)
-              if (map && map.hasLayer((layer as any)._areaLabel)) {
-                map.removeLayer((layer as any)._areaLabel)
-              }
-              ;(layer as any)._areaLabel = null
-            }
-
-            // Remove vertex markers (editing handles) from saved areas
-            if ((layer as any)._vertexMarkers) {
-              console.log('🧹 Removing vertex markers from saved area:', areaKey)
-              ;(layer as any)._vertexMarkers.forEach((marker: L.CircleMarker) => {
-                if (map && map.hasLayer(marker)) {
-                  map.removeLayer(marker)
-                }
-              })
-              ;(layer as any)._vertexMarkers = null
-            }
-          }
-        }
-      })
     }
     setLastSavedAreasCount(savedAreas.length)
-  }, [savedAreas.length, lastSavedAreasCount])
+  }, [savedAreas.length, lastSavedAreasCount, map])
+
+  // Text labels are now removed directly in the save handler - no complex cleanup needed
 
   // REMOVED: Click handlers now handled in consolidated effect
 
@@ -1404,17 +1400,13 @@ export default function DrawingManager({
 
 
   const finishPolygonDrawing = () => {
-    console.log('🎯 STEP F: Starting polygon completion process')
-
     // Clean up preview line immediately
     if (previewLineRef.current) {
       map?.removeLayer(previewLineRef.current)
       previewLineRef.current = null
-      console.log('🧹 STEP F0: Cleaned up preview line')
     }
 
     if (!currentDrawingRef.current || drawingPointsRef.current.length < 3) {
-      console.log('❌ STEP F1: Validation failed - insufficient points or no current drawing')
       // Cancel drawing if not enough points
       if (currentDrawingRef.current) {
         map?.removeLayer(currentDrawingRef.current)
@@ -1423,15 +1415,11 @@ export default function DrawingManager({
       return
     }
 
-    console.log('✅ STEP F1: Validation passed -', drawingPointsRef.current.length, 'points available')
-
     // Check if the completed polygon overlaps with existing blocs
-    console.log('🎯 STEP F3: Checking for overlaps with existing areas')
     const tempPolygon = L.polygon(drawingPointsRef.current)
     const polygonOverlap = checkPolygonOverlapWithExistingBlocs(tempPolygon)
 
     if (polygonOverlap.isOverlap) {
-      console.log('❌ STEP F4: Overlap detected -', polygonOverlap.reason)
       // Red polygon indication is sufficient - no need for big red circle
       // const centerPoint = calculatePolygonCentroid(drawingPointsRef.current)
       // showOverlapIndicator(centerPoint, polygonOverlap.reason)
@@ -1451,10 +1439,7 @@ export default function DrawingManager({
       return
     }
 
-    console.log('✅ STEP F4: No overlap detected - proceeding with polygon creation')
-
     // Finalize the polygon
-    console.log('🎯 STEP F6: Creating final polygon')
     const finalPolygon = L.polygon(drawingPointsRef.current, {
       color: '#3b82f6',
       fillColor: '#3b82f6',
@@ -1462,44 +1447,31 @@ export default function DrawingManager({
       weight: 2
     })
 
-    console.log('🎯 STEP F6: Replacing drawing polygon with final polygon')
     map?.removeLayer(currentDrawingRef.current)
     drawnLayersRef.current.addLayer(finalPolygon)
 
     // Create drawn area object FIRST to get proper ID
-    console.log('🎯 STEP F7: Creating DrawnArea object with proper ID convention')
     const coordinates = drawingPointsRef.current.map(latlng => [latlng.lng, latlng.lat] as [number, number])
     const area = calculateArea(coordinates)
     const drawnArea = DrawnAreaUtils.createNew(coordinates, area, 'polygon')
 
-    console.log('🎯 STEP F7: Generated DrawnArea:', {
-      localId: drawnArea.localId,
-      uuid: drawnArea.uuid,
-      area: drawnArea.area.toFixed(2) + ' ha',
-      coordinateCount: drawnArea.coordinates.length,
-      isSaved: drawnArea.isSaved,
-      isDirty: drawnArea.isDirty
-    })
-
     // Get proper entity key for layer map
     const areaKey = DrawnAreaUtils.getEntityKey(drawnArea)
-    console.log('🎯 STEP F8: Using entity key for layer map:', areaKey)
 
-    // Store in layer map with proper key
+    // Store in layer map with proper key and set identifier on polygon
     try {
       layerMapRef.current.set(areaKey, finalPolygon)
-      console.log('✅ STEP F8: Successfully stored polygon in layer map')
+      // Set localId on polygon for easy identification during cleanup
+      ;(finalPolygon as any)._localId = drawnArea.localId
     } catch (error) {
-      console.error('❌ STEP F8: Failed to store polygon in layer map:', error)
+      console.error('❌ Failed to store polygon in layer map:', error)
       throw new Error(`Failed to store polygon in layer map: ${error}`)
     }
 
     // Add vertex markers for editing
-    console.log('🎯 STEP F11: Adding vertex markers')
     addVertexMarkers(finalPolygon)
 
     // Make polygon clickable for highlighting (not info modal)
-    console.log('🎯 STEP F9: Adding click handler to polygon')
     finalPolygon.on('click', (e) => {
       // Stop event propagation more aggressively
       if (e.originalEvent) {
@@ -1567,20 +1539,16 @@ export default function DrawingManager({
       ;(finalPolygon as any)._cropCycleId = currentCropCycleId
     }
 
-    console.log('🎯 STEP F13: Triggering onAreaDrawn callback')
     onAreaDrawn(drawnArea)
     onDrawingEnd()
     onDrawingProgress?.(0, false)
 
-    console.log('🎯 STEP F12: Cleaning up drawing state')
     // Reset drawing state but keep stats for display
     currentDrawingRef.current = null
     drawingPointsRef.current = []
     isDrawingRef.current = false
     setDrawingStats(null)
     hideSnapIndicator()
-
-    console.log('✅ STEP F: Polygon completion process finished successfully')
 
     // Reset snap state
     setCurrentSnapPoint(null)
