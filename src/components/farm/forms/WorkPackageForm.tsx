@@ -629,8 +629,8 @@ export function WorkPackageForm() {
                                 <FormLabel className="flex items-center gap-2">
                                   <motion.div
                                     animate={{
-                                      rotate: field.value > 0 ? [0, 360] : 0,
-                                      scale: field.value > 0 ? [1, 1.2, 1] : 1
+                                      rotate: (field.value ?? 0) > 0 ? [0, 360] : 0,
+                                      scale: (field.value ?? 0) > 0 ? [1, 1.2, 1] : 1
                                     }}
                                     transition={{ duration: 0.5 }}
                                   >
@@ -664,23 +664,23 @@ export function WorkPackageForm() {
                                         className="h-3"
                                         animated
                                         variant={
-                                          field.value >= 100 ? 'success' :
-                                          field.value >= 75 ? 'default' :
-                                          field.value >= 50 ? 'warning' : 'default'
+                                          (field.value ?? 0) >= 100 ? 'success' :
+                                          (field.value ?? 0) >= 75 ? 'default' :
+                                          (field.value ?? 0) >= 50 ? 'warning' : 'default'
                                         }
                                       />
                                     </motion.div>
                                     <motion.p
                                       className="text-sm text-muted-foreground text-center"
                                       animate={{
-                                        color: field.value >= 100 ? '#22c55e' : 'hsl(var(--muted-foreground))'
+                                        color: (field.value ?? 0) >= 100 ? '#22c55e' : 'hsl(var(--muted-foreground))'
                                       }}
                                       transition={{ duration: 0.3 }}
                                     >
-                                      {field.value >= 100 ? '🎉 Work Complete!' :
-                                       field.value >= 75 ? '🚀 Almost Done!' :
-                                       field.value >= 50 ? '⚡ Good Progress!' :
-                                       field.value > 0 ? '📈 Getting Started!' : 'Ready to Begin'}
+                                      {(field.value ?? 0) >= 100 ? '🎉 Work Complete!' :
+                                       (field.value ?? 0) >= 75 ? '🚀 Almost Done!' :
+                                       (field.value ?? 0) >= 50 ? '⚡ Good Progress!' :
+                                       (field.value ?? 0) > 0 ? '📈 Getting Started!' : 'Ready to Begin'}
                                     </motion.p>
                                   </div>
                                 </FormControl>
@@ -1257,7 +1257,7 @@ export function WorkPackageForm() {
                                         <Star
                                           key={star}
                                           className={`h-5 w-5 ${
-                                            star <= field.value
+                                            star <= (field.value ?? 0)
                                               ? 'text-yellow-500 fill-yellow-500'
                                               : 'text-muted-foreground'
                                           }`}

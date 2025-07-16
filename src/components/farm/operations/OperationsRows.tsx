@@ -124,8 +124,8 @@ export function OperationsRows({ data, perspective, searchQuery }: OperationsRow
 
     if (perspective === 'resources') {
       const totalHours = operation.workPackages.reduce((acc, wp) => acc + wp.hours, 0)
-      const uniqueEquipment = [...new Set(operation.workPackages.map(wp => wp.equipment))]
-      const uniqueCrews = [...new Set(operation.workPackages.map(wp => wp.crew))]
+      const uniqueEquipment = Array.from(new Set(operation.workPackages.map(wp => wp.equipment)))
+      const uniqueCrews = Array.from(new Set(operation.workPackages.map(wp => wp.crew)))
 
       return (
         <div className="flex items-center gap-4 flex-1">
