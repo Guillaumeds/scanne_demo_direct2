@@ -357,17 +357,17 @@ export default function FarmGISLayout() {
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
     const paddedBounds = bounds.pad(0.05) // Minimal padding (5%)
 
-    // Use very slow and smooth zoom with professional easing
+    // Fast zoom for immediate response
     mapInstance.fitBounds(paddedBounds, {
       animate: true,
-      duration: 4.0, // Much slower animation for smooth zoom
-      easeLinearity: 0.02, // Very smooth easing (lower = smoother)
+      duration: 0.5, // Fast animation
+      easeLinearity: 0.25, // Standard easing
       padding: [10, 10] // Minimal additional padding
     })
 
-    // Call completion callback after animation
+    // Call completion callback immediately for pop-out
     if (onComplete) {
-      setTimeout(onComplete, 4200) // Match animation duration + buffer
+      setTimeout(onComplete, 100) // Minimal delay
     }
   }
 
@@ -553,21 +553,21 @@ export default function FarmGISLayout() {
     // Find the bloc in either drawn or saved areas
     const bloc = [...drawnAreas, ...savedAreas].find(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
     if (bloc) {
-      // First: Remove any hover effects immediately
+      // Remove any hover effects immediately
       setHoveredAreaId(null)
 
-      // Second: Ensure bloc is selected (blue border, no fill)
+      // Ensure bloc is selected (blue border, no fill)
       setSelectedAreaId(areaKey)
 
-      // Third: Zoom to the bloc area, then start popup animation when zoom completes
-      zoomToBlocArea(areaKey, () => {
-        // Apply dimming effect for the popup after zoom completes
-        applyMapDimming(true)
+      // Apply dimming effect immediately
+      applyMapDimming(true)
 
-        // Show the data screen immediately after zoom completes
-        setDataScreenBloc(bloc)
-        setShowDataScreen(true)
-      })
+      // Show the data screen immediately - no zoom delay
+      setDataScreenBloc(bloc)
+      setShowDataScreen(true)
+
+      // Optional: Quick zoom in background (non-blocking)
+      zoomToBlocArea(areaKey)
     }
   }
 

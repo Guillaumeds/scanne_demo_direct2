@@ -95,9 +95,9 @@ export function BlocLayout() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar Navigation */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.1 }}
         >
           <BlocSidebar />
         </motion.div>
@@ -112,9 +112,8 @@ export function BlocLayout() {
               animate="animate"
               exit="exit"
               transition={{
-                duration: 0.3,
-                ease: [0.4, 0, 0.2, 1],
-                layout: { duration: 0.2 }
+                duration: 0.1,
+                ease: "easeOut"
               }}
               className="h-full"
               layout

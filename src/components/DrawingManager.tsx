@@ -584,6 +584,27 @@ export default function DrawingManager({
       }
     })
 
+    // Update existing polygons that might have changed status (drawn -> saved)
+    const allAreas = [...savedAreas, ...drawnAreas]
+    allAreas.forEach(area => {
+      const areaKey = DrawnAreaUtils.getEntityKey(area)
+      const existingLayer = layerMapRef.current.get(areaKey)
+
+      if (existingLayer) {
+        // Update the layer styling based on current status
+        const isSaved = savedAreas.some(saved => DrawnAreaUtils.getEntityKey(saved) === areaKey)
+        const color = isSaved ? '#22c55e' : '#3b82f6'  // Green for saved, blue for drawn
+        const fillColor = isSaved ? '#22c55e' : '#3b82f6'
+
+        existingLayer.setStyle({
+          color,
+          fillColor,
+          fillOpacity: 0.3,
+          weight: 2
+        })
+      }
+    })
+
     // Add new polygons
     toAdd.forEach(area => {
       try {
@@ -744,7 +765,7 @@ export default function DrawingManager({
     applyHighlightingRobustly()
 
     // All map operations completed
-  }, [map, savedAreas.length, drawnAreas.length, selectedAreaId, hoveredAreaId])
+  }, [map, savedAreas, drawnAreas, selectedAreaId, hoveredAreaId]) // Use full arrays to detect content changes
 
   // OPTIMIZED: Clear totals and remove text labels when areas are saved (specific dependency)
   useEffect(() => {
@@ -753,29 +774,36 @@ export default function DrawingManager({
       setTotalDrawnArea(0)
       setCurrentCropCycleId('')
 
-      // Remove text labels and vertex markers from newly saved areas (make them clean like other saved blocs)
-      savedAreas.forEach(area => {
-        const areaKey = DrawnAreaUtils.getEntityKey(area)
-        const layer = layerMapRef.current.get(areaKey)
-        if (layer) {
-          // Remove text label
-          if ((layer as any)._areaLabel) {
-            console.log('🧹 Removing text label from saved area:', DrawnAreaUtils.getDisplayName(area))
-            if (map && map.hasLayer((layer as any)._areaLabel)) {
-              map.removeLayer((layer as any)._areaLabel)
-            }
-            ;(layer as any)._areaLabel = null
-          }
+      // Remove text labels and vertex markers from ALL layers that have them
+      // This ensures we clean up labels from newly saved areas
+      console.log('🧹 Cleaning up text labels and vertex markers after save')
 
-          // Remove vertex markers (editing handles)
-          if ((layer as any)._vertexMarkers) {
-            console.log('🧹 Removing vertex markers from saved area:', DrawnAreaUtils.getDisplayName(area))
-            ;(layer as any)._vertexMarkers.forEach((marker: L.CircleMarker) => {
-              if (map && map.hasLayer(marker)) {
-                map.removeLayer(marker)
+      layerMapRef.current.forEach((layer, areaKey) => {
+        // Check if this layer has text labels or vertex markers
+        if ((layer as any)._areaLabel || (layer as any)._vertexMarkers) {
+          // Find if this is a saved area (should be clean)
+          const isSavedArea = savedAreas.some(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
+
+          if (isSavedArea) {
+            // Remove text label from saved areas
+            if ((layer as any)._areaLabel) {
+              console.log('🧹 Removing text label from saved area:', areaKey)
+              if (map && map.hasLayer((layer as any)._areaLabel)) {
+                map.removeLayer((layer as any)._areaLabel)
               }
-            })
-            ;(layer as any)._vertexMarkers = null
+              ;(layer as any)._areaLabel = null
+            }
+
+            // Remove vertex markers (editing handles) from saved areas
+            if ((layer as any)._vertexMarkers) {
+              console.log('🧹 Removing vertex markers from saved area:', areaKey)
+              ;(layer as any)._vertexMarkers.forEach((marker: L.CircleMarker) => {
+                if (map && map.hasLayer(marker)) {
+                  map.removeLayer(marker)
+                }
+              })
+              ;(layer as any)._vertexMarkers = null
+            }
           }
         }
       })

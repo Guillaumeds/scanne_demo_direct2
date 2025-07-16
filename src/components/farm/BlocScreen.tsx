@@ -29,16 +29,14 @@ export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{
-        duration: 0.4,
-        ease: [0.4, 0, 0.2, 1],
-        layout: { duration: 0.3 }
+        duration: 0.1,
+        ease: "easeOut"
       }}
       className="h-full w-full"
-      layout
     >
       <AnimatePresence mode="wait">
         {isLoading ? (
@@ -69,9 +67,9 @@ export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
         ) : (
           <motion.div
             key="content"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.1 }}
             className="h-full w-full"
           >
             <BlocProvider bloc={bloc} onBack={onBack} onDelete={onDelete}>
