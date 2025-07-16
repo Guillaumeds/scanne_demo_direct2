@@ -73,8 +73,10 @@ export default function BlocList({
       try {
         // Loading crop cycle data
 
-        // Get all bloc IDs
-        const blocIds = savedAreas.map(bloc => DrawnAreaUtils.getEntityKey(bloc))
+        // Get all bloc UUIDs (only saved areas have UUIDs, drawn areas don't have crop cycles yet)
+        const blocIds = savedAreas
+          .filter(bloc => bloc.uuid) // Only include areas with UUIDs
+          .map(bloc => bloc.uuid!)
 
         // Use optimized batch method to avoid 406 errors
         const batchData = await CropCycleService.getBlocSummariesBatch(blocIds)
@@ -83,16 +85,17 @@ export default function BlocList({
         // Batch crop cycle data loaded
       } catch (error) {
         console.error('❌ Error loading crop cycle data batch:', error)
-        // Fallback: set all blocs as having no cycles
+        // Fallback: set all saved blocs with UUIDs as having no cycles
         const fallbackMap: typeof cropCycleDataMap = {}
-        savedAreas.forEach(bloc => {
-          const blocKey = DrawnAreaUtils.getEntityKey(bloc)
-          fallbackMap[blocKey] = {
-            blocId: blocKey,
-            blocStatus: 'active',
-            hasActiveCycle: false
-          }
-        })
+        savedAreas
+          .filter(bloc => bloc.uuid) // Only include areas with UUIDs
+          .forEach(bloc => {
+            fallbackMap[bloc.uuid!] = {
+              blocId: bloc.uuid!,
+              blocStatus: 'active',
+              hasActiveCycle: false
+            }
+          })
         setCropCycleDataMap(fallbackMap)
       }
     }
@@ -365,7 +368,8 @@ export default function BlocList({
                       <span>Cycle:</span>
                       <span className="capitalize text-xs">
                         {(() => {
-                          const cycleData = cropCycleDataMap[blocKey]
+                          // Use UUID for crop cycle data lookup (only saved areas have crop cycles)
+                          const cycleData = bloc.uuid ? cropCycleDataMap[bloc.uuid] : null
                           if (!cycleData) return <span className="text-gray-500">No Cycle</span>
                           if (cycleData.hasActiveCycle) {
                             return (
@@ -382,7 +386,8 @@ export default function BlocList({
                       <span>Variety:</span>
                       <span className="text-xs">
                         {(() => {
-                          const cycleData = cropCycleDataMap[blocKey]
+                          // Use UUID for crop cycle data lookup (only saved areas have crop cycles)
+                          const cycleData = bloc.uuid ? cropCycleDataMap[bloc.uuid] : null
                           if (cycleData?.varietyName) {
                             return <span className="text-blue-600 font-medium">{cycleData.varietyName}</span>
                           }
