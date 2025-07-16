@@ -68,7 +68,7 @@ export default function FarmGISLayout() {
         zoomToFarmViewInitial(mapInstance)
       }, 300)
     }
-  }, [mapInstance, savedAreas.length])
+  }, [mapInstance]) // Remove savedAreas.length dependency to prevent re-zoom on save
 
   // Auto-refresh cache and initialize
   useEffect(() => {
@@ -280,10 +280,12 @@ export default function FarmGISLayout() {
       setSelectedAreaId(areaId)
       // Zoom to the selected bloc
       zoomToBlocArea(areaId)
-      // Trigger scroll to the corresponding bloc card
-      setScrollToBlocId(areaId)
-      // Clear the scroll trigger after a short delay (but keep selectedAreaId)
-      setTimeout(() => setScrollToBlocId(null), 100)
+      // Trigger scroll to the corresponding bloc card with longer delay
+      setTimeout(() => {
+        setScrollToBlocId(areaId)
+        // Clear the scroll trigger after scroll completes
+        setTimeout(() => setScrollToBlocId(null), 500)
+      }, 200) // Delay to ensure selection state is set first
     }
     // Don't open modal automatically - only highlight
   }
@@ -510,8 +512,24 @@ export default function FarmGISLayout() {
       const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas, defaultFarmId)
       console.log('✅ Blocs saved successfully:', savedBlocs)
 
-      // Move to saved areas in local state
-      setSavedAreas(prev => [...prev, ...drawnAreas])
+      // Transform saved blocs to DrawnArea format with UUIDs from database
+      const savedDrawnAreas: DrawnArea[] = drawnAreas.map((drawnArea, index) => {
+        const correspondingBloc = savedBlocs[index]
+        if (correspondingBloc) {
+          return {
+            ...drawnArea,
+            uuid: correspondingBloc.id, // Set UUID from database
+            isSaved: true,
+            isDirty: false,
+            createdAt: correspondingBloc.created_at || new Date().toISOString(),
+            updatedAt: correspondingBloc.updated_at || new Date().toISOString()
+          }
+        }
+        return drawnArea
+      })
+
+      // Move to saved areas in local state with proper UUIDs
+      setSavedAreas(prev => [...prev, ...savedDrawnAreas])
       setDrawnAreas([])
       setSelectedPolygon(null)
       setSelectedAreaId(null)

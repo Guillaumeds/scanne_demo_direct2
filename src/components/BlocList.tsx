@@ -112,28 +112,42 @@ export default function BlocList({
     const container = listContainerRef.current
 
     if (cardElement && container) {
-      console.log('📜 Scrolling to card element:', cardElement)
+      console.log('📜 Scrolling to card element:', areaId)
 
-      // Calculate positions relative to the container
-      const containerRect = container.getBoundingClientRect()
-      const cardRect = cardElement.getBoundingClientRect()
-
-      // Calculate the scroll position needed to center the card in the container
-      const containerScrollTop = container.scrollTop
-      const cardOffsetTop = cardRect.top - containerRect.top + containerScrollTop
-      const containerHeight = container.clientHeight
-      const cardHeight = cardRect.height
-
-      // Center the card in the container
-      const targetScrollTop = cardOffsetTop - (containerHeight / 2) + (cardHeight / 2)
-
-      // Smooth scroll within the container only
-      container.scrollTo({
-        top: Math.max(0, targetScrollTop),
-        behavior: 'smooth'
+      // Use scrollIntoView for more reliable scrolling
+      cardElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center', // Center the card in the viewport
+        inline: 'nearest'
       })
 
-      // Card will be highlighted through selection state, no need for temporary animation
+      // Alternative method if scrollIntoView doesn't work well
+      setTimeout(() => {
+        // Double-check with manual calculation as fallback
+        const containerRect = container.getBoundingClientRect()
+        const cardRect = cardElement.getBoundingClientRect()
+
+        // Only adjust if card is not fully visible
+        const isCardFullyVisible =
+          cardRect.top >= containerRect.top &&
+          cardRect.bottom <= containerRect.bottom
+
+        if (!isCardFullyVisible) {
+          const containerScrollTop = container.scrollTop
+          const cardOffsetTop = cardElement.offsetTop
+          const containerHeight = container.clientHeight
+          const cardHeight = cardElement.offsetHeight
+
+          // Center the card in the container
+          const targetScrollTop = cardOffsetTop - (containerHeight / 2) + (cardHeight / 2)
+
+          container.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: 'smooth'
+          })
+        }
+      }, 100) // Small delay to let scrollIntoView complete
+
     } else if (process.env.NODE_ENV === 'development') {
       console.warn('⚠️ Could not find card element for scroll:', areaId)
     }
