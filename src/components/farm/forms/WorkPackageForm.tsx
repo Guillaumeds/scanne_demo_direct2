@@ -456,7 +456,7 @@ export function WorkPackageForm() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
               >
-                <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-5'} bg-muted/50`}>
+                <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-5'} bg-muted/80 bg-white/95`}>
                   {[
                     { value: 'basic', icon: Clock, label: 'Basic', fullLabel: 'Basic Info' },
                     { value: 'location', icon: MapPin, label: 'Location', fullLabel: 'Location & GPS' },

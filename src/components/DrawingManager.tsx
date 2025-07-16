@@ -693,6 +693,11 @@ export default function DrawingManager({
       isDrawingRef.current = false
       map.getContainer().style.cursor = ''
 
+      // Clear drawing stats and total area when switching away from drawing tool
+      setDrawingStats(null)
+      setTotalDrawnArea(0)
+      setCurrentCropCycleId('')
+
       // Re-enable double-click zoom when not drawing
       map.doubleClickZoom.enable()
 
@@ -1283,6 +1288,10 @@ export default function DrawingManager({
     // Reset snap state
     setCurrentSnapPoint(null)
     setIsCurrentlySnapped(false)
+
+    // Clear total area display when cancelling
+    setTotalDrawnArea(0)
+    setCurrentCropCycleId('')
 
     onDrawingEnd()
   }

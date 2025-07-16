@@ -327,7 +327,7 @@ export function OperationForm() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.2 }}
                 >
-                  <TabsList className="grid w-full grid-cols-4 bg-muted/50">
+                  <TabsList className="grid w-full grid-cols-4 bg-muted/80 bg-white/95">
                     {[
                       { value: 'basic', icon: Settings, label: 'Basic Info' },
                       { value: 'resources', icon: Users, label: 'Resources' },

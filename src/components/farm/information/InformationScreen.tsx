@@ -45,7 +45,7 @@ export function InformationScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <Card className="bg-gradient-to-r from-primary/20 to-primary/30 border-primary/40 bg-white/90">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>

@@ -230,17 +230,19 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
       ...baseColumns,
       columnHelper.accessor('estimatedCost', {
         header: 'Estimated Cost',
-        cell: ({ getValue }) => `$${getValue().toLocaleString()}`
+        cell: ({ getValue }) => `$${(getValue() || 0).toLocaleString()}`
       }),
       columnHelper.accessor('actualCost', {
         header: 'Actual Cost',
-        cell: ({ getValue }) => `$${getValue().toLocaleString()}`
+        cell: ({ getValue }) => `$${(getValue() || 0).toLocaleString()}`
       }),
       columnHelper.display({
         id: 'variance',
         header: 'Variance',
         cell: ({ row }) => {
-          const variance = row.original.actualCost - row.original.estimatedCost
+          const actualCost = row.original.actualCost || 0
+          const estimatedCost = row.original.estimatedCost || 0
+          const variance = actualCost - estimatedCost
           const isOver = variance > 0
           return (
             <div className={`text-sm ${isOver ? 'text-red-600' : 'text-green-600'}`}>

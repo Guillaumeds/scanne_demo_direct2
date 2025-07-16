@@ -22,13 +22,9 @@ export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
     throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
   }
 
-  // Simulate loading for demonstration (in real app, this would be data fetching)
+  // Remove loading delay - open immediately after pan/zoom completes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 800)
-
-    return () => clearTimeout(timer)
+    setIsLoading(false)
   }, [])
 
   return (
