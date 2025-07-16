@@ -23,16 +23,10 @@ export function OperationsScreen() {
   const [perspective, setPerspective] = useState<Perspective>('operations')
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Start with no loading
   const [isTransitioning, setIsTransitioning] = useState(false)
 
-  // Simulate data loading
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [])
+  // No artificial loading delay - show content immediately
 
   // Handle view/perspective changes with transition
   const handleViewChange = (newView: ViewMode) => {
@@ -179,6 +173,29 @@ export function OperationsScreen() {
     }
   }
 
+  // Render skeleton based on current view mode
+  const renderSkeleton = () => {
+    if (viewMode === 'rows') {
+      return (
+        <div className="space-y-4 p-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-card rounded-lg border p-4 animate-pulse">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-5 bg-muted rounded w-32" />
+                <div className="h-6 bg-muted rounded-full w-20" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-4 bg-muted rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return <SkeletonTable />
+  }
+
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
@@ -201,8 +218,8 @@ export function OperationsScreen() {
             </div>
           </div>
         </motion.div>
-        <div className="flex-1 p-6">
-          <SkeletonTable />
+        <div className="flex-1 overflow-hidden">
+          {renderSkeleton()}
         </div>
       </div>
     )
@@ -310,40 +327,24 @@ export function OperationsScreen() {
         <AnimatePresence mode="wait">
           <motion.div
             key={`${viewMode}-${perspective}`}
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 1.02 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1],
-              layout: { duration: 0.2 }
+              duration: 0.15,
+              ease: "easeOut"
             }}
             className="h-full"
-            layout
           >
-            <AnimatePresence mode="wait">
-              {isTransitioning ? (
-                <motion.div
-                  key="transitioning"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full flex items-center justify-center"
-                >
-                  <LoadingSpinner size="md" message="Switching view..." />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="content"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-full"
-                >
-                  {renderView()}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {isTransitioning ? (
+              <div className="h-full flex items-center justify-center">
+                <LoadingSpinner size="md" message="Switching view..." />
+              </div>
+            ) : (
+              <div className="h-full">
+                {renderView()}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
