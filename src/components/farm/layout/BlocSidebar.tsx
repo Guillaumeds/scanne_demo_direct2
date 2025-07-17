@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'motion/react'
-import { Info, Sprout, ArrowLeft, Trash2 } from 'lucide-react'
+import { Info, Sprout, Leaf, ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useBlocContext } from '../contexts/BlocContext'
@@ -16,6 +16,12 @@ export function BlocSidebar() {
       label: 'Information',
       icon: Info,
       screen: 'information' as const
+    },
+    {
+      id: 'crop-cycle-management',
+      label: 'Crop Cycle Management',
+      icon: Leaf,
+      screen: 'crop-cycle-management' as const
     },
     {
       id: 'operations',

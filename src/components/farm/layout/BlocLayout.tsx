@@ -9,9 +9,10 @@ import { InformationScreen } from '../information/InformationScreen'
 import { OperationsScreen } from '../operations/OperationsScreen'
 import { OperationForm } from '../forms/OperationForm'
 import { WorkPackageForm } from '../forms/WorkPackageForm'
+import CropCycleManagementScreen from '../CropCycleManagementScreen'
 
 export function BlocLayout() {
-  const { currentScreen } = useBlocContext()
+  const { currentScreen, bloc } = useBlocContext()
 
   const renderContent = () => {
     switch (currentScreen) {
@@ -19,6 +20,14 @@ export function BlocLayout() {
         return <InformationScreen />
       case 'operations':
         return <OperationsScreen />
+      case 'crop-cycle-management':
+        return (
+          <CropCycleManagementScreen
+            blocId={bloc.uuid!}
+            blocName={bloc.name || `Bloc ${bloc.localId}`}
+            blocArea={bloc.area}
+          />
+        )
       case 'operation-form':
         return <OperationForm />
       case 'work-package-form':
@@ -42,6 +51,12 @@ export function BlocLayout() {
           initial: { opacity: 0, scale: 0.95 },
           animate: { opacity: 1, scale: 1 },
           exit: { opacity: 0, scale: 1.05 }
+        }
+      case 'crop-cycle-management':
+        return {
+          initial: { opacity: 0, y: 30 },
+          animate: { opacity: 1, y: 0 },
+          exit: { opacity: 0, y: -30 }
         }
       case 'operation-form':
       case 'work-package-form':

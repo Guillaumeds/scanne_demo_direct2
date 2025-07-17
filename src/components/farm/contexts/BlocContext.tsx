@@ -2,8 +2,10 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { DrawnArea } from '@/types/drawnArea'
+import { useBlocData, useCropCycles, useFieldOperations, useWorkPackages } from '@/hooks/useBlocData'
+import { BlocData } from '@/services/blocDataService'
 
-type BlocScreen = 'information' | 'operations' | 'operation-form' | 'work-package-form'
+type BlocScreen = 'information' | 'operations' | 'crop-cycle-management' | 'operation-form' | 'work-package-form'
 
 interface BlocContextType {
   bloc: DrawnArea
@@ -17,6 +19,14 @@ interface BlocContextType {
   onDelete?: () => void
   farmName: string
   breadcrumbs: BreadcrumbItem[]
+  // Comprehensive bloc data from TanStack Query
+  blocData: BlocData | undefined
+  isLoadingBlocData: boolean
+  blocDataError: Error | null
+  // Derived data hooks
+  cropCycles: ReturnType<typeof useCropCycles>
+  fieldOperations: ReturnType<typeof useFieldOperations>
+  workPackages: ReturnType<typeof useWorkPackages>
 }
 
 interface BreadcrumbItem {
@@ -42,6 +52,18 @@ export function BlocProvider({ bloc, onBack, onDelete, children }: BlocProviderP
   // Get farm name from bloc or default
   const farmName = "Sugarcane Farm" // TODO: Get from bloc data or context
 
+  // Load comprehensive bloc data using TanStack Query
+  const {
+    data: blocData,
+    isLoading: isLoadingBlocData,
+    error: blocDataError
+  } = useBlocData(bloc.uuid!)
+
+  // Derived data hooks for easy access
+  const cropCycles = useCropCycles(bloc.uuid!)
+  const fieldOperations = useFieldOperations(bloc.uuid!)
+  const workPackages = useWorkPackages(bloc.uuid!)
+
   // Generate breadcrumbs based on current screen
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const base = [
@@ -55,7 +77,10 @@ export function BlocProvider({ bloc, onBack, onDelete, children }: BlocProviderP
       
       case 'operations':
         return [...base, { label: 'Field Operations', isActive: true }]
-      
+
+      case 'crop-cycle-management':
+        return [...base, { label: 'Crop Cycle Management', isActive: true }]
+
       case 'operation-form':
         const operationName = currentOperationId ? 'Fertilization' : 'New Operation' // TODO: Get actual operation name
         return [
@@ -90,7 +115,15 @@ export function BlocProvider({ bloc, onBack, onDelete, children }: BlocProviderP
     onBack,
     onDelete,
     farmName,
-    breadcrumbs: generateBreadcrumbs()
+    breadcrumbs: generateBreadcrumbs(),
+    // Comprehensive bloc data
+    blocData,
+    isLoadingBlocData,
+    blocDataError,
+    // Derived data hooks
+    cropCycles,
+    fieldOperations,
+    workPackages
   }
 
   return (
