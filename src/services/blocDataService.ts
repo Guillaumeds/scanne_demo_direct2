@@ -249,7 +249,7 @@ export class BlocDataService {
 
     } catch (error) {
       console.error('❌ Error fetching comprehensive bloc data:', error)
-      throw new Error(`Failed to fetch bloc data: ${error.message}`)
+      throw new Error(`Failed to fetch bloc data: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -265,8 +265,6 @@ export class BlocDataService {
       status: data.status,
       sugarcaneVarietyId: data.sugarcane_variety_id,
       sugarcaneVarietyName: data.sugarcane_varieties?.name || '',
-      intercropVarietyId: data.intercrop_variety_id,
-      intercropVarietyName: data.intercrop_varieties?.name,
       sugarcaneePlantingDate: data.sugarcane_planting_date,
       sugarcaneePlannedHarvestDate: data.sugarcane_planned_harvest_date,
       sugarcaneActualHarvestDate: data.sugarcane_actual_harvest_date,
@@ -275,7 +273,6 @@ export class BlocDataService {
       estimatedTotalCost: data.estimated_total_cost || 0,
       actualTotalCost: data.actual_total_cost || 0,
       sugarcaneeRevenue: data.sugarcane_revenue || 0,
-      intercropRevenue: data.intercrop_revenue || 0,
       totalRevenue: data.total_revenue || 0,
       netProfit: data.net_profit || 0,
       profitPerHectare: data.profit_per_hectare || 0,
@@ -284,7 +281,6 @@ export class BlocDataService {
       growthStageUpdatedAt: data.growth_stage_updated_at,
       daysSincePlanting: data.days_since_planting || 0,
       closureValidated: data.closure_validated || false,
-      parentCycleId: data.parent_cycle_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     }

@@ -214,7 +214,7 @@ export default function CropCycleManagementScreen({
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       {/* Enhanced Error Display with Animation */}
-                      {createCycleMutation.error && (
+                      {createCropCycleMutation.error && (
                         <motion.div
                           initial={{ opacity: 0, y: -10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -231,7 +231,7 @@ export default function CropCycleManagementScreen({
                           </motion.div>
                           <div>
                             <h3 className="font-medium text-red-800">Failed to create crop cycle</h3>
-                            <p className="text-sm text-red-600 mt-1">{createCycleMutation.error.message}</p>
+                            <p className="text-sm text-red-600 mt-1">{createCropCycleMutation.error.message}</p>
                           </div>
                         </motion.div>
                       )}

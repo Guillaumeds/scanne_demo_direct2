@@ -101,7 +101,6 @@ export class CropCycleManagementService {
 
         // Variety information
         sugarcane_variety_id: request.sugarcaneVarietyId,
-        intercrop_variety_id: request.intercropVarietyId,
 
         // Dates
         sugarcane_planting_date: request.plantingDate,
@@ -117,7 +116,6 @@ export class CropCycleManagementService {
         estimated_total_cost: 0,
         actual_total_cost: 0,
         sugarcane_revenue: 0,
-        intercrop_revenue: 0,
         total_revenue: 0,
         net_profit: 0,
         profit_per_hectare: 0,
@@ -141,8 +139,7 @@ export class CropCycleManagementService {
         .insert(newCycle)
         .select(`
           *,
-          sugarcane_varieties!inner(name),
-          intercrop_varieties(name)
+          sugarcane_varieties!inner(name)
         `)
         .single()
 
@@ -236,8 +233,7 @@ export class CropCycleManagementService {
         .eq('id', request.cycleId)
         .select(`
           *,
-          sugarcane_varieties!inner(name),
-          intercrop_varieties(name)
+          sugarcane_varieties!inner(name)
         `)
         .single()
 
@@ -264,8 +260,6 @@ export class CropCycleManagementService {
       status: data.status,
       sugarcaneVarietyId: data.sugarcane_variety_id,
       sugarcaneVarietyName: data.sugarcane_varieties?.name || '',
-      intercropVarietyId: data.intercrop_variety_id,
-      intercropVarietyName: data.intercrop_varieties?.name,
       sugarcaneePlantingDate: data.sugarcane_planting_date,
       sugarcaneePlannedHarvestDate: data.sugarcane_planned_harvest_date,
       sugarcaneActualHarvestDate: data.sugarcane_actual_harvest_date,
@@ -274,7 +268,6 @@ export class CropCycleManagementService {
       estimatedTotalCost: data.estimated_total_cost || 0,
       actualTotalCost: data.actual_total_cost || 0,
       sugarcaneeRevenue: data.sugarcane_revenue || 0,
-      intercropRevenue: data.intercrop_revenue || 0,
       totalRevenue: data.total_revenue || 0,
       netProfit: data.net_profit || 0,
       profitPerHectare: data.profit_per_hectare || 0,
@@ -283,7 +276,6 @@ export class CropCycleManagementService {
       growthStageUpdatedAt: data.growth_stage_updated_at,
       daysSincePlanting: data.days_since_planting || 0,
       closureValidated: data.closure_validated || false,
-      parentCycleId: data.parent_cycle_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     }
