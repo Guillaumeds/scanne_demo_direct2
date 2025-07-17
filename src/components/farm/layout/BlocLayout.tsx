@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useBlocContext } from '../contexts/BlocContext'
 import { BlocBreadcrumbs } from './BlocBreadcrumbs'
 import { BlocSidebar } from './BlocSidebar'
-import { BlocHeader } from './BlocHeader'
 import { InformationScreen } from '../information/InformationScreen'
 import { OperationsScreen } from '../operations/OperationsScreen'
 import { OperationForm } from '../forms/OperationForm'
@@ -81,13 +80,6 @@ export function BlocLayout() {
           transition={{ duration: 0.3, delay: 0.2 }}
         >
           <BlocBreadcrumbs />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-        >
-          <BlocHeader />
         </motion.div>
       </motion.div>
 

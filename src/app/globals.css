@@ -97,6 +97,8 @@
   }
 }
 
+/* Custom modal scrolling now handled by ShadCN UI ScrollArea component */
+
 /* Import custom animations */
 @import '../styles/animations.css';
 

@@ -41,33 +41,47 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { useBlocContext } from '../contexts/BlocContext'
+import ProductSelectionManager from '@/components/selectors/ProductSelectionManager'
+import EquipmentSelectionManager from '@/components/selectors/EquipmentSelectionManager'
+import { SelectedProduct } from '@/components/selectors/ModernProductSelector'
+import { SelectedEquipment } from '@/components/selectors/ModernEquipmentSelector'
+import { useProducts, useResources } from '@/hooks/useConfigurationData'
 
-// Product schema for agricultural inputs
-const productSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, 'Product name is required'),
-  category: z.enum(['fertilizer', 'pesticide', 'herbicide', 'seed', 'other']),
+// Product schema using SelectedProduct type
+const selectedProductSchema = z.object({
+  product: z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string(), // Allow any string for category
+    unit: z.string(),
+    cost: z.number().optional(),
+    defaultRate: z.number().optional(),
+    description: z.string().optional()
+  }),
   quantity: z.number().min(0, 'Quantity must be positive'),
-  unit: z.string().min(1, 'Unit is required'),
   rate: z.number().min(0, 'Rate must be positive'),
   estimatedCost: z.number().min(0, 'Cost must be positive'),
-  actualCost: z.number().min(0, 'Cost must be positive').optional(),
-  supplier: z.string().optional(),
-  notes: z.string().optional()
-})
+  actualCost: z.number().min(0, 'Cost must be positive').optional()
+}) as z.ZodType<SelectedProduct>
 
-// Equipment schema
-const equipmentSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, 'Equipment name is required'),
-  type: z.enum(['tractor', 'implement', 'sprayer', 'harvester', 'irrigation', 'other']),
+// Equipment schema using SelectedEquipment type
+const selectedEquipmentSchema = z.object({
+  equipment: z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    unit: z.string(), // Add required unit field
+    hourlyRate: z.number().optional(),
+    description: z.string().optional()
+  }),
+  estimatedDuration: z.number().min(0, 'Duration must be positive').optional(),
+  actualDuration: z.number().min(0, 'Duration must be positive').optional(),
+  costPerHour: z.number().min(0, 'Cost per hour must be positive').optional(),
+  totalEstimatedCost: z.number().min(0, 'Cost must be positive').optional(),
+  totalActualCost: z.number().min(0, 'Cost must be positive').optional(),
   operator: z.string().optional(),
-  estimatedHours: z.number().min(0, 'Hours must be positive'),
-  actualHours: z.number().min(0, 'Hours must be positive').optional(),
-  costPerHour: z.number().min(0, 'Cost per hour must be positive'),
-  fuelConsumption: z.number().min(0).optional(),
   notes: z.string().optional()
-})
+}) as z.ZodType<SelectedEquipment>
 
 // Resource schema for labor
 const resourceSchema = z.object({
@@ -120,8 +134,8 @@ const operationSchema = z.object({
   actualQuantity: z.number().min(0).optional(),
 
   // Products, Equipment, Resources
-  products: z.array(productSchema).default([]),
-  equipment: z.array(equipmentSchema).default([]),
+  products: z.array(selectedProductSchema).default([]),
+  equipment: z.array(selectedEquipmentSchema).default([]),
   resources: z.array(resourceSchema).default([]),
 
   // Financial
@@ -194,6 +208,10 @@ export function OperationForm() {
     }
   })
 
+  // Fetch configuration data for error handling
+  const { isLoading: productsLoading, error: productsError } = useProducts()
+  const { isLoading: resourcesLoading, error: resourcesError } = useResources()
+
   // Watch operation type for conditional rendering
   const operationType = form.watch('operationType')
   const isHarvestOperation = operationType === 'harvesting'
@@ -234,45 +252,23 @@ export function OperationForm() {
     setCurrentScreen('operations')
   }
 
-  const addProduct = () => {
-    const newProduct = {
-      id: `product-${Date.now()}`,
-      name: '',
-      category: 'fertilizer' as const,
-      quantity: 0,
-      unit: 'kg',
-      rate: 0,
-      estimatedCost: 0,
-      supplier: '',
-      notes: ''
-    }
-    const currentProducts = form.getValues('products') || []
-    form.setValue('products', [...currentProducts, newProduct])
+  // Handlers for modern selectors
+  const handleProductsChange = (products: SelectedProduct[]) => {
+    form.setValue('products', products as any)
+    // Update estimated total cost
+    const totalProductCost = products.reduce((sum, p) => sum + p.estimatedCost, 0)
+    const equipmentData = form.getValues('equipment') as SelectedEquipment[] || []
+    const equipmentCost = equipmentData.reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0)
+    form.setValue('estimatedTotalCost', totalProductCost + equipmentCost)
   }
 
-  const removeProduct = (index: number) => {
-    const products = form.getValues('products') || []
-    form.setValue('products', products.filter((_, i) => i !== index))
-  }
-
-  const addEquipment = () => {
-    const newEquipment = {
-      id: `equipment-${Date.now()}`,
-      name: '',
-      type: 'tractor' as const,
-      operator: '',
-      estimatedHours: 0,
-      costPerHour: 0,
-      fuelConsumption: 0,
-      notes: ''
-    }
-    const currentEquipment = form.getValues('equipment') || []
-    form.setValue('equipment', [...currentEquipment, newEquipment])
-  }
-
-  const removeEquipment = (index: number) => {
-    const equipment = form.getValues('equipment') || []
-    form.setValue('equipment', equipment.filter((_, i) => i !== index))
+  const handleEquipmentChange = (equipment: SelectedEquipment[]) => {
+    form.setValue('equipment', equipment as any)
+    // Update estimated total cost
+    const totalEquipmentCost = equipment.reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0)
+    const productData = form.getValues('products') as SelectedProduct[] || []
+    const productCost = productData.reduce((sum, p) => sum + p.estimatedCost, 0)
+    form.setValue('estimatedTotalCost', totalEquipmentCost + productCost)
   }
 
   const addResource = () => {
@@ -631,207 +627,25 @@ export function OperationForm() {
                 {/* Resources Tab */}
                 <TabsContent value="resources" className="space-y-6 mt-6">
                   {/* Products Section */}
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                          <Package className="h-5 w-5 text-primary" />
-                          Products & Materials
-                        </CardTitle>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={addProduct}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Product
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {(form.watch('products') || []).length === 0 ? (
-                        <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
-                          <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">No products added yet</p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={addProduct}
-                            className="mt-2"
-                          >
-                            Add your first product
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {(form.watch('products') || []).map((product, index) => (
-                            <motion.div
-                              key={product.id}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -20 }}
-                              className="p-4 border border-border rounded-lg bg-muted/30"
-                            >
-                              <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-medium">Product {index + 1}</h4>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeProduct(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                  <ProductSelectionManager
+                    selectedProducts={(form.watch('products') as SelectedProduct[]) || []}
+                    onProductsChange={handleProductsChange}
+                    blocArea={bloc.area}
+                    title="Products & Materials"
+                    subtitle="Select products for this operation"
+                    isLoading={productsLoading}
+                    error={productsError?.message || null}
+                  />
 
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.name`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Product Name</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="e.g., NPK 15-15-15" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.category`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Category</FormLabel>
-                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          <SelectItem value="fertilizer">Fertilizer</SelectItem>
-                                          <SelectItem value="pesticide">Pesticide</SelectItem>
-                                          <SelectItem value="herbicide">Herbicide</SelectItem>
-                                          <SelectItem value="seed">Seed</SelectItem>
-                                          <SelectItem value="other">Other</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.unit`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Unit</FormLabel>
-                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                                          <SelectItem value="l">Liters (l)</SelectItem>
-                                          <SelectItem value="bags">Bags</SelectItem>
-                                          <SelectItem value="units">Units</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.quantity`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Quantity</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          step="0.1"
-                                          min="0"
-                                          {...field}
-                                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.rate`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Rate per ha</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          step="0.1"
-                                          min="0"
-                                          {...field}
-                                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.estimatedCost`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Cost ($)</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          {...field}
-                                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`products.${index}.supplier`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Supplier</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="Supplier name" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {/* Equipment Section */}
+                  <EquipmentSelectionManager
+                    selectedEquipment={(form.watch('equipment') as SelectedEquipment[]) || []}
+                    onEquipmentChange={handleEquipmentChange}
+                    title="Equipment & Machinery"
+                    subtitle="Select equipment for this operation"
+                    isLoading={resourcesLoading}
+                    error={resourcesError?.message || null}
+                  />
                 </TabsContent>
 
                 {/* Financial Tab */}

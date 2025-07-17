@@ -18,6 +18,9 @@ export interface SugarcaneVariety {
     diseaseResistance?: string
     soilSuitability?: string
   }
+  yieldPotential?: number // Yield potential in t/ha
+  sugarContentPercent?: number // Sugar content percentage
+  informationLeafletUrl?: string // URL to information leaflet
 }
 
 export interface InterCropPlant {

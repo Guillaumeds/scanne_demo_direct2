@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import VarietySelectionManager from '@/components/selectors/VarietySelectionManager'
+import { SelectedVariety } from '@/components/selectors/ModernVarietySelector'
 
 interface CropCycle {
   id: string
@@ -24,6 +26,7 @@ interface CropCycle {
   growthStage: string
   daysSincePlanting: number
   progress: number
+  cycleType?: 'plantation' | 'ratoon'
 }
 
 interface CropCycleSelectorProps {
@@ -32,6 +35,8 @@ interface CropCycleSelectorProps {
 
 export function CropCycleSelector({ currentCycle }: CropCycleSelectorProps) {
   const [selectedCycleId, setSelectedCycleId] = useState(currentCycle.id)
+  const [selectedVariety, setSelectedVariety] = useState<SelectedVariety | null>(null)
+  const [showVarietyManager, setShowVarietyManager] = useState(false)
 
   // Mock data for available cycles
   const availableCycles = [
@@ -176,6 +181,18 @@ export function CropCycleSelector({ currentCycle }: CropCycleSelectorProps) {
             </div>
           </div>
         </motion.div>
+
+        {/* Variety Management Section */}
+        <div className="mt-6">
+          <VarietySelectionManager
+            selectedVariety={selectedVariety}
+            onVarietyChange={setSelectedVariety}
+            cycleType={currentCycle.cycleType || 'plantation'}
+            cycleNumber={currentCycle.cycleNumber}
+            title="Variety Management"
+            subtitle="Manage sugarcane variety for this crop cycle"
+          />
+        </div>
       </CardContent>
     </Card>
   )

@@ -1,0 +1,346 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion } from 'motion/react'
+import { ArrowLeft, X, Search, Tractor, Wrench, Clock, DollarSign, User } from 'lucide-react'
+import { useResources } from '@/hooks/useConfigurationData'
+import { Resource } from '@/types/resources'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { fuzzySearch } from '@/utils/fuzzySearch'
+import ModernCardSelector from '@/components/selectors/ModernCardSelector'
+
+export interface SelectedEquipment {
+  equipment: Resource
+  estimatedDuration?: number
+  actualDuration?: number
+  costPerHour?: number
+  totalEstimatedCost?: number
+  totalActualCost?: number
+  operator?: string
+  notes?: string
+}
+
+interface ModernEquipmentSelectorProps {
+  onSelect: (selectedEquipment: SelectedEquipment) => void
+  onClose: () => void
+  existingEquipment?: SelectedEquipment
+  title?: string
+  subtitle?: string
+}
+
+
+
+export default function ModernEquipmentSelector({
+  onSelect,
+  onClose,
+  existingEquipment,
+  title = "Select Equipment",
+  subtitle = "Choose equipment for this operation"
+}: ModernEquipmentSelectorProps) {
+  const [selectedEquipment, setSelectedEquipment] = useState<Resource | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
+  const [costPerHour, setCostPerHour] = useState<number>(0)
+  const [operator, setOperator] = useState<string>('')
+  const [notes, setNotes] = useState<string>('')
+
+  // Fetch resources (equipment) using TanStack Query
+  const { data: resources, isLoading, error } = useResources()
+
+  // Filter for equipment-type resources only
+  const equipment = (resources || []).filter(resource =>
+    resource.category === 'equipment' ||
+    resource.name.toLowerCase().includes('tractor') ||
+    resource.name.toLowerCase().includes('harvester') ||
+    resource.name.toLowerCase().includes('sprayer') ||
+    resource.name.toLowerCase().includes('truck')
+  )
+
+  // Pre-populate fields when editing existing equipment
+  useEffect(() => {
+    if (existingEquipment && resources && resources.length > 0) {
+      const equipment = resources.find(r => r.id === existingEquipment.equipment.id)
+      if (equipment) {
+        setSelectedEquipment(equipment)
+        setEstimatedDuration(existingEquipment.estimatedDuration || 0)
+        setCostPerHour(existingEquipment.costPerHour || equipment.hourlyRate || 0)
+        setOperator(existingEquipment.operator || '')
+        setNotes(existingEquipment.notes || '')
+      }
+    }
+  }, [existingEquipment, resources])
+
+  // Filter equipment with fuzzy search
+  const filteredEquipment = searchTerm
+    ? fuzzySearch(equipment, searchTerm, {
+        keys: ['name', 'description', 'category', 'skillLevel'],
+        threshold: 0.2
+      })
+    : equipment
+
+
+
+  const handleEquipmentSelect = (value: string | string[]) => {
+    const equipmentId = Array.isArray(value) ? value[0] : value
+    if (!equipmentId) return
+    const equipment = (resources || []).find(e => e.id === equipmentId)
+    if (equipment) {
+      setSelectedEquipment(equipment)
+      setCostPerHour(equipment.hourlyRate || 0)
+      setEstimatedDuration(1) // Default to 1 hour
+    }
+  }
+
+  const handleConfirm = () => {
+    if (selectedEquipment && estimatedDuration > 0) {
+      const totalEstimatedCost = estimatedDuration * costPerHour
+      onSelect({
+        equipment: selectedEquipment,
+        estimatedDuration,
+        costPerHour,
+        totalEstimatedCost,
+        operator: operator || undefined,
+        notes: notes || undefined
+      })
+      onClose()
+    }
+  }
+
+  const handleBack = () => {
+    setSelectedEquipment(null)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
+          <div className="flex items-center gap-3">
+            {selectedEquipment && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="p-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            )}
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+              <p className="text-slate-600 mt-1">{subtitle}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="p-2"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading equipment...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center max-w-md">
+                <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Failed to Load Equipment</h3>
+                <p className="text-slate-600 mb-4">{typeof error === 'string' ? error : 'Unknown error'}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Reload Page
+                </Button>
+              </div>
+            </div>
+          ) : selectedEquipment ? (
+            // Equipment calculation form
+            <ScrollArea className="flex-1 p-6">
+              <div className="max-w-2xl mx-auto space-y-6">
+                {/* Selected Equipment Info */}
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Tractor className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <h3 className="font-semibold text-lg">{selectedEquipment.name}</h3>
+                        <p className="text-sm text-muted-foreground">{selectedEquipment.description}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Calculation Form */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Equipment Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="duration">Estimated Duration (hours)</Label>
+                        <Input
+                          id="duration"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={estimatedDuration}
+                          onChange={(e) => setEstimatedDuration(parseFloat(e.target.value) || 0)}
+                          placeholder="e.g., 8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="costPerHour">Cost per Hour (Rs)</Label>
+                        <Input
+                          id="costPerHour"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={costPerHour}
+                          onChange={(e) => setCostPerHour(parseFloat(e.target.value) || 0)}
+                          placeholder="e.g., 500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="operator">Operator (optional)</Label>
+                      <Input
+                        id="operator"
+                        value={operator}
+                        onChange={(e) => setOperator(e.target.value)}
+                        placeholder="e.g., John Doe"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes">Notes (optional)</Label>
+                      <Input
+                        id="notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Additional notes..."
+                      />
+                    </div>
+
+                    <Separator />
+
+                    {/* Cost Summary */}
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium">Total Estimated Cost</span>
+                        </div>
+                        <span className="text-xl font-bold text-blue-600">
+                          Rs {(estimatedDuration * costPerHour).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-blue-600 mt-1">
+                        {estimatedDuration} hours × Rs {costPerHour}/hour
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          ) : (
+            // Equipment selection
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="p-6 pb-4">
+                <div className="flex items-center gap-3">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <Input
+                    placeholder="Search equipment..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <ScrollArea className="h-[400px] px-6">
+                <div className="pb-6">
+                  <ModernCardSelector
+                    options={filteredEquipment.map((equipment) => ({
+                      id: equipment.id,
+                      name: equipment.name,
+                      description: equipment.description || 'Farm equipment',
+                      badge: equipment.category,
+                      color: 'bg-blue-50',
+                      icon: Tractor,
+                      cost: equipment.hourlyRate,
+                      unit: 'hour',
+                      skillLevel: equipment.skillLevel
+                    }))}
+                    value=""
+                    onChange={handleEquipmentSelect}
+                    layout="grid"
+                    columns={2}
+                  />
+                </div>
+                {filteredEquipment.length === 0 && (
+                  <div className="text-center py-8">
+                    <Tractor className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Equipment Found</h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm
+                        ? 'Try adjusting your search term.'
+                        : 'No equipment available in the database.'
+                      }
+                    </p>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {selectedEquipment && (
+          <div className="border-t border-slate-200 p-6 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                Total: Rs {(estimatedDuration * costPerHour).toFixed(2)}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!selectedEquipment || estimatedDuration <= 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Confirm Equipment
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  )
+}

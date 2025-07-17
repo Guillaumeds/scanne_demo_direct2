@@ -6,6 +6,7 @@ export interface Resource {
   unit: string
   defaultRate?: number
   costPerUnit?: number
+  hourlyRate?: number
   skillLevel?: string
   overtimeMultiplier?: number
 }

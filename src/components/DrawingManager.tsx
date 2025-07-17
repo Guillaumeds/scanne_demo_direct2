@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import L from 'leaflet'
 // @ts-ignore - Turf.js types issue with package.json exports
 import * as turf from '@turf/turf'
@@ -254,7 +254,7 @@ export default function DrawingManager({
   // MOVED: Robust helper functions moved after event handlers to fix hoisting
 
   // ROBUST LAYER MANAGEMENT: Smart polygon update logic
-  const updatePolygonsRobustly = () => {
+  const updatePolygonsRobustly = useCallback(() => {
     const existingKeys = new Set(Array.from(layerMapRef.current.keys()))
     const currentKeys = new Set([
       ...savedAreas.map(area => DrawnAreaUtils.getEntityKey(area)),
@@ -281,19 +281,19 @@ export default function DrawingManager({
       // Edge cases: validate and decide
       validateAndDecideRobustly(existingKeys, currentKeys)
     }
-  }
+  }, [savedAreas, drawnAreas])
 
   // ROBUST CLICK HANDLERS: Set up click events efficiently
-  const setupClickHandlersRobustly = () => {
+  const setupClickHandlersRobustly = useCallback(() => {
     const totalAreas = drawnAreas.length + savedAreas.length
     if (totalAreas > 0) {
       // Setting up click handlers
       // Click handlers are set up during polygon creation
     }
-  }
+  }, [drawnAreas.length, savedAreas.length])
 
   // ROBUST HIGHLIGHTING: Apply selection/hover states efficiently
-  const applyHighlightingRobustly = () => {
+  const applyHighlightingRobustly = useCallback(() => {
     let highlightedCount = 0
     layerMapRef.current.forEach((layer, areaId) => {
       const isSelected = selectedAreaId === areaId
@@ -320,7 +320,7 @@ export default function DrawingManager({
     if (highlightedCount > 0) {
       // Applied highlighting
     }
-  }
+  }, [selectedAreaId, hoveredAreaId, savedAreas, drawnAreas, getPolygonColor])
 
   // EVENT HANDLERS: All map interaction handlers (moved before useEffects to fix hoisting)
 
@@ -793,7 +793,7 @@ export default function DrawingManager({
     applyHighlightingRobustly()
 
     // All map operations completed
-  }, [map, savedAreas, drawnAreas, selectedAreaId, hoveredAreaId]) // Use full arrays to detect content changes
+  }, [map, updatePolygonsRobustly, setupClickHandlersRobustly, applyHighlightingRobustly])
 
   // OPTIMIZED: Clear totals when areas are saved (text labels now removed in save handler)
   useEffect(() => {

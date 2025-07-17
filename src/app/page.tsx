@@ -34,7 +34,7 @@ export default function Home() {
   return (
     <main className="h-screen-dynamic flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-green-800 via-green-700 to-green-600 text-white shadow-lg">
+      <header className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 text-white shadow-lg">
         <div className="w-full px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Far Left - App Title with Scanne Logo */}
@@ -57,7 +57,7 @@ export default function Home() {
                 <h1 className="app-title text-3xl font-bold text-white leading-tight tracking-wide">
                   Scanne
                 </h1>
-                <p className="text-green-100 text-sm font-medium flex items-center space-x-2">
+                <p className="text-slate-100 text-sm font-medium flex items-center space-x-2">
                   <span className="flex items-center space-x-1">
                     <span>🇲🇺</span>
                     <span>Mauritius</span>
@@ -73,7 +73,7 @@ export default function Home() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="bg-white bg-opacity-10 text-green-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
+                    className="bg-white bg-opacity-10 text-slate-100 hover:bg-white hover:bg-opacity-20 hover:text-white transition-all duration-200"
                   >
                     <Menu className="w-5 h-5" />
                     <span className="sr-only">Open menu</span>

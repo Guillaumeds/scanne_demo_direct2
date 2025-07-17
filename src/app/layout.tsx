@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import '@/utils/debugUtils' // Initialize debug utilities
+import QueryProvider from '@/components/providers/QueryProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,9 +28,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full`}>
-        <div className="h-full bg-gray-50">
-          {children}
-        </div>
+        <QueryProvider>
+          <div className="h-full bg-gray-50">
+            {children}
+          </div>
+        </QueryProvider>
         <script dangerouslySetInnerHTML={{
           __html: `
             // Auto-refresh cache on page load
