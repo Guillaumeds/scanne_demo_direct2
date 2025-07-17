@@ -119,8 +119,9 @@ export class ObservationService {
       try {
         console.log('🧮 Starting atomic totals calculation and update...')
 
-        // Get all activities and observations for this crop cycle
-        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(observation.cropCycleId))
+        // Get all field operations and observations for this crop cycle
+        // TODO: Replace with proper field operations service when available
+        const activities: any[] = [] // Temporarily empty until field operations service is implemented
         const observations = await this.getObservationsForCycle(observation.cropCycleId)
 
         // Calculate totals using frontend service
@@ -231,8 +232,9 @@ export class ObservationService {
       try {
         console.log('🧮 Starting atomic totals calculation and update...')
 
-        // Get all activities and observations for this crop cycle
-        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(mergedObservation.cropCycleId))
+        // Get all field operations and observations for this crop cycle
+        // TODO: Replace with proper field operations service when available
+        const activities: any[] = [] // Temporarily empty until field operations service is implemented
         const observations = await this.getObservationsForCycle(mergedObservation.cropCycleId)
 
         // Calculate totals using frontend service
@@ -300,8 +302,9 @@ export class ObservationService {
       try {
         console.log('🧮 Starting atomic totals calculation and update...')
 
-        // Get remaining activities and observations for this crop cycle (excluding the deleted one)
-        const activities = await import('./activityService').then(m => m.ActivityService.getActivitiesForCycle(cropCycleId))
+        // Get remaining field operations and observations for this crop cycle (excluding the deleted one)
+        // TODO: Replace with proper field operations service when available
+        const activities: any[] = [] // Temporarily empty until field operations service is implemented
         const observations = await this.getObservationsForCycle(cropCycleId)
 
         // Calculate totals using frontend service

@@ -217,14 +217,14 @@ export function OperationForm() {
     label: type.operation_type,
     icon: type.icon || '📋',
     color: type.color_class || 'bg-slate-100 text-slate-800',
-    description: type.description
+    description: type.description || undefined
   }))
 
   // Transform database operation methods for dropdown
   const methods = dbOperationMethods.map(method => ({
     value: method.method,
     label: method.method,
-    description: method.description
+    description: method.description || undefined
   }))
 
   const toggleSection = (section: string) => {
@@ -283,7 +283,7 @@ export function OperationForm() {
 
   return (
     <div className="h-full overflow-auto bg-background">
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6 relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -371,7 +371,7 @@ export function OperationForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Operation Type</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select operation type" />
@@ -399,7 +399,7 @@ export function OperationForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Method</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select method" />
@@ -430,7 +430,7 @@ export function OperationForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Priority</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue />

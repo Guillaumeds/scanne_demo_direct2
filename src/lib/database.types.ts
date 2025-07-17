@@ -7,250 +7,13 @@
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
   }
   public: {
     Tables: {
-      activities: {
-        Row: {
-          activity_date: string | null
-          actual_total_cost: number | null
-          created_at: string | null
-          crop_cycle_id: string | null
-          description: string | null
-          duration: number | null
-          end_date: string | null
-          estimated_total_cost: number | null
-          id: string
-          name: string
-          notes: string | null
-          phase: string | null
-          start_date: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          activity_date?: string | null
-          actual_total_cost?: number | null
-          created_at?: string | null
-          crop_cycle_id?: string | null
-          description?: string | null
-          duration?: number | null
-          end_date?: string | null
-          estimated_total_cost?: number | null
-          id?: string
-          name: string
-          notes?: string | null
-          phase?: string | null
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          activity_date?: string | null
-          actual_total_cost?: number | null
-          created_at?: string | null
-          crop_cycle_id?: string | null
-          description?: string | null
-          duration?: number | null
-          end_date?: string | null
-          estimated_total_cost?: number | null
-          id?: string
-          name?: string
-          notes?: string | null
-          phase?: string | null
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activities_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      activity_products: {
-        Row: {
-          activity_id: string | null
-          actual_cost: number | null
-          created_at: string | null
-          estimated_cost: number | null
-          id: string
-          product_id: string | null
-          product_name: string
-          quantity: number
-          rate: number
-          unit: string
-          updated_at: string | null
-        }
-        Insert: {
-          activity_id?: string | null
-          actual_cost?: number | null
-          created_at?: string | null
-          estimated_cost?: number | null
-          id?: string
-          product_id?: string | null
-          product_name: string
-          quantity: number
-          rate: number
-          unit: string
-          updated_at?: string | null
-        }
-        Update: {
-          activity_id?: string | null
-          actual_cost?: number | null
-          created_at?: string | null
-          estimated_cost?: number | null
-          id?: string
-          product_id?: string | null
-          product_name?: string
-          quantity?: number
-          rate?: number
-          unit?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_products_activity_id_fkey"
-            columns: ["activity_id"]
-            isOneToOne: false
-            referencedRelation: "activities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      activity_resources: {
-        Row: {
-          activity_id: string | null
-          actual_cost: number | null
-          cost_per_hour: number
-          created_at: string | null
-          estimated_cost: number | null
-          hours: number
-          id: string
-          resource_id: string | null
-          resource_name: string
-          updated_at: string | null
-        }
-        Insert: {
-          activity_id?: string | null
-          actual_cost?: number | null
-          cost_per_hour: number
-          created_at?: string | null
-          estimated_cost?: number | null
-          hours: number
-          id?: string
-          resource_id?: string | null
-          resource_name: string
-          updated_at?: string | null
-        }
-        Update: {
-          activity_id?: string | null
-          actual_cost?: number | null
-          cost_per_hour?: number
-          created_at?: string | null
-          estimated_cost?: number | null
-          hours?: number
-          id?: string
-          resource_id?: string | null
-          resource_name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_resources_activity_id_fkey"
-            columns: ["activity_id"]
-            isOneToOne: false
-            referencedRelation: "activities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_resources_resource_id_fkey"
-            columns: ["resource_id"]
-            isOneToOne: false
-            referencedRelation: "resources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      attachments: {
-        Row: {
-          created_at: string | null
-          crop_cycle_id: string | null
-          description: string | null
-          file_size: number | null
-          file_type: string | null
-          file_url: string
-          id: string
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          crop_cycle_id?: string | null
-          description?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url: string
-          id?: string
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          crop_cycle_id?: string | null
-          description?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string
-          id?: string
-          name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attachments_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       blocs: {
         Row: {
           area_hectares: number | null
@@ -291,6 +54,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      climatic_data: {
+        Row: {
+          co2_concentration_ppm: number | null
+          evapotranspiration_mm: number | null
+          julian_day: number
+          observation_day: number | null
+          observation_month: number | null
+          observation_year: number
+          precipitation_mm: string | null
+          solar_radiation_mj_per_m2: number | null
+          station_id: string
+          temperature_max_celsius: number | null
+          temperature_min_celsius: number | null
+          vapor_pressure_hpa: number | null
+          wind_speed_m_per_s: number | null
+        }
+        Insert: {
+          co2_concentration_ppm?: number | null
+          evapotranspiration_mm?: number | null
+          julian_day: number
+          observation_day?: number | null
+          observation_month?: number | null
+          observation_year: number
+          precipitation_mm?: string | null
+          solar_radiation_mj_per_m2?: number | null
+          station_id: string
+          temperature_max_celsius?: number | null
+          temperature_min_celsius?: number | null
+          vapor_pressure_hpa?: number | null
+          wind_speed_m_per_s?: number | null
+        }
+        Update: {
+          co2_concentration_ppm?: number | null
+          evapotranspiration_mm?: number | null
+          julian_day?: number
+          observation_day?: number | null
+          observation_month?: number | null
+          observation_year?: number
+          precipitation_mm?: string | null
+          solar_radiation_mj_per_m2?: number | null
+          station_id?: string
+          temperature_max_celsius?: number | null
+          temperature_min_celsius?: number | null
+          vapor_pressure_hpa?: number | null
+          wind_speed_m_per_s?: number | null
+        }
+        Relationships: []
       }
       companies: {
         Row: {
@@ -335,6 +146,7 @@ export type Database = {
           status: string | null
           sugarcane_actual_harvest_date: string | null
           sugarcane_actual_yield_tons_ha: number | null
+          sugarcane_expected_yield_tons_ha: number | null
           sugarcane_planned_harvest_date: string | null
           sugarcane_planting_date: string | null
           sugarcane_revenue: number | null
@@ -364,6 +176,7 @@ export type Database = {
           status?: string | null
           sugarcane_actual_harvest_date?: string | null
           sugarcane_actual_yield_tons_ha?: number | null
+          sugarcane_expected_yield_tons_ha?: number | null
           sugarcane_planned_harvest_date?: string | null
           sugarcane_planting_date?: string | null
           sugarcane_revenue?: number | null
@@ -393,6 +206,7 @@ export type Database = {
           status?: string | null
           sugarcane_actual_harvest_date?: string | null
           sugarcane_actual_yield_tons_ha?: number | null
+          sugarcane_expected_yield_tons_ha?: number | null
           sugarcane_planned_harvest_date?: string | null
           sugarcane_planting_date?: string | null
           sugarcane_revenue?: number | null
@@ -432,6 +246,191 @@ export type Database = {
           },
         ]
       }
+      daily_work_packages: {
+        Row: {
+          actual_area_hectares: number | null
+          actual_quantity: number | null
+          completion_percentage: number | null
+          corrective_actions: string | null
+          created_at: string | null
+          created_by: string | null
+          daily_area_completed: number | null
+          daily_yield_tons: number | null
+          duration_hours: number | null
+          effectiveness_rating: number | null
+          end_time: string | null
+          equipment_cost: number | null
+          field_operation_uuid: string | null
+          fuel_cost: number | null
+          humidity_percent: number | null
+          issues_encountered: string | null
+          labor_cost: number | null
+          material_cost: number | null
+          notes: string | null
+          number_of_workers: number | null
+          observations: string | null
+          other_costs: number | null
+          package_name: string | null
+          planned_area_hectares: number | null
+          planned_quantity: number | null
+          quality_rating: number | null
+          safety_incidents: string | null
+          shift: string | null
+          start_time: string | null
+          status: string | null
+          supervisor: string | null
+          team_leader: string | null
+          temperature_celsius: number | null
+          total_cost: number | null
+          updated_at: string | null
+          uuid: string
+          weather_conditions: string | null
+          wind_speed_kmh: number | null
+          work_date: string
+          worker_names: string[] | null
+        }
+        Insert: {
+          actual_area_hectares?: number | null
+          actual_quantity?: number | null
+          completion_percentage?: number | null
+          corrective_actions?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_area_completed?: number | null
+          daily_yield_tons?: number | null
+          duration_hours?: number | null
+          effectiveness_rating?: number | null
+          end_time?: string | null
+          equipment_cost?: number | null
+          field_operation_uuid?: string | null
+          fuel_cost?: number | null
+          humidity_percent?: number | null
+          issues_encountered?: string | null
+          labor_cost?: number | null
+          material_cost?: number | null
+          notes?: string | null
+          number_of_workers?: number | null
+          observations?: string | null
+          other_costs?: number | null
+          package_name?: string | null
+          planned_area_hectares?: number | null
+          planned_quantity?: number | null
+          quality_rating?: number | null
+          safety_incidents?: string | null
+          shift?: string | null
+          start_time?: string | null
+          status?: string | null
+          supervisor?: string | null
+          team_leader?: string | null
+          temperature_celsius?: number | null
+          total_cost?: number | null
+          updated_at?: string | null
+          uuid?: string
+          weather_conditions?: string | null
+          wind_speed_kmh?: number | null
+          work_date: string
+          worker_names?: string[] | null
+        }
+        Update: {
+          actual_area_hectares?: number | null
+          actual_quantity?: number | null
+          completion_percentage?: number | null
+          corrective_actions?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_area_completed?: number | null
+          daily_yield_tons?: number | null
+          duration_hours?: number | null
+          effectiveness_rating?: number | null
+          end_time?: string | null
+          equipment_cost?: number | null
+          field_operation_uuid?: string | null
+          fuel_cost?: number | null
+          humidity_percent?: number | null
+          issues_encountered?: string | null
+          labor_cost?: number | null
+          material_cost?: number | null
+          notes?: string | null
+          number_of_workers?: number | null
+          observations?: string | null
+          other_costs?: number | null
+          package_name?: string | null
+          planned_area_hectares?: number | null
+          planned_quantity?: number | null
+          quality_rating?: number | null
+          safety_incidents?: string | null
+          shift?: string | null
+          start_time?: string | null
+          status?: string | null
+          supervisor?: string | null
+          team_leader?: string | null
+          temperature_celsius?: number | null
+          total_cost?: number | null
+          updated_at?: string | null
+          uuid?: string
+          weather_conditions?: string | null
+          wind_speed_kmh?: number | null
+          work_date?: string
+          worker_names?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_work_packages_field_operation_uuid_fkey"
+            columns: ["field_operation_uuid"]
+            isOneToOne: false
+            referencedRelation: "field_operations"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      equipment: {
+        Row: {
+          active: boolean | null
+          capacity: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          equipment_id: string
+          fuel_consumption_per_hour: number | null
+          model: string | null
+          name: string
+          operating_cost_per_hour: number
+          status: string | null
+          updated_at: string | null
+          uuid: string
+        }
+        Insert: {
+          active?: boolean | null
+          capacity?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          equipment_id: string
+          fuel_consumption_per_hour?: number | null
+          model?: string | null
+          name: string
+          operating_cost_per_hour: number
+          status?: string | null
+          updated_at?: string | null
+          uuid?: string
+        }
+        Update: {
+          active?: boolean | null
+          capacity?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          equipment_id?: string
+          fuel_consumption_per_hour?: number | null
+          model?: string | null
+          name?: string
+          operating_cost_per_hour?: number
+          status?: string | null
+          updated_at?: string | null
+          uuid?: string
+        }
+        Relationships: []
+      }
       farms: {
         Row: {
           border_coordinates: unknown | null
@@ -469,6 +468,131 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_operations: {
+        Row: {
+          actual_area_hectares: number | null
+          actual_end_date: string | null
+          actual_quantity: number | null
+          actual_revenue: number | null
+          actual_start_date: string | null
+          actual_total_cost: number | null
+          brix_percentage: number | null
+          completion_percentage: number | null
+          created_at: string | null
+          created_by: string | null
+          crop_cycle_uuid: string | null
+          description: string | null
+          effectiveness_rating: number | null
+          estimated_revenue: number | null
+          estimated_total_cost: number | null
+          method: string | null
+          notes: string | null
+          operation_name: string
+          operation_type: string
+          optimal_weather_conditions: string | null
+          planned_area_hectares: number | null
+          planned_end_date: string
+          planned_quantity: number | null
+          planned_start_date: string
+          price_per_tonne: number | null
+          priority: string | null
+          quality_rating: number | null
+          revenue_per_hectare: number | null
+          status: string | null
+          sugar_content_percentage: number | null
+          total_sugarcane_revenue: number | null
+          total_yield_tons: number | null
+          updated_at: string | null
+          uuid: string
+          weather_dependency: boolean | null
+          yield_per_hectare: number | null
+        }
+        Insert: {
+          actual_area_hectares?: number | null
+          actual_end_date?: string | null
+          actual_quantity?: number | null
+          actual_revenue?: number | null
+          actual_start_date?: string | null
+          actual_total_cost?: number | null
+          brix_percentage?: number | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_cycle_uuid?: string | null
+          description?: string | null
+          effectiveness_rating?: number | null
+          estimated_revenue?: number | null
+          estimated_total_cost?: number | null
+          method?: string | null
+          notes?: string | null
+          operation_name: string
+          operation_type: string
+          optimal_weather_conditions?: string | null
+          planned_area_hectares?: number | null
+          planned_end_date: string
+          planned_quantity?: number | null
+          planned_start_date: string
+          price_per_tonne?: number | null
+          priority?: string | null
+          quality_rating?: number | null
+          revenue_per_hectare?: number | null
+          status?: string | null
+          sugar_content_percentage?: number | null
+          total_sugarcane_revenue?: number | null
+          total_yield_tons?: number | null
+          updated_at?: string | null
+          uuid?: string
+          weather_dependency?: boolean | null
+          yield_per_hectare?: number | null
+        }
+        Update: {
+          actual_area_hectares?: number | null
+          actual_end_date?: string | null
+          actual_quantity?: number | null
+          actual_revenue?: number | null
+          actual_start_date?: string | null
+          actual_total_cost?: number | null
+          brix_percentage?: number | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_cycle_uuid?: string | null
+          description?: string | null
+          effectiveness_rating?: number | null
+          estimated_revenue?: number | null
+          estimated_total_cost?: number | null
+          method?: string | null
+          notes?: string | null
+          operation_name?: string
+          operation_type?: string
+          optimal_weather_conditions?: string | null
+          planned_area_hectares?: number | null
+          planned_end_date?: string
+          planned_quantity?: number | null
+          planned_start_date?: string
+          price_per_tonne?: number | null
+          priority?: string | null
+          quality_rating?: number | null
+          revenue_per_hectare?: number | null
+          status?: string | null
+          sugar_content_percentage?: number | null
+          total_sugarcane_revenue?: number | null
+          total_yield_tons?: number | null
+          updated_at?: string | null
+          uuid?: string
+          weather_dependency?: boolean | null
+          yield_per_hectare?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_operations_crop_cycle_uuid_fkey"
+            columns: ["crop_cycle_uuid"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
             referencedColumns: ["id"]
           },
         ]
@@ -597,6 +721,240 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      operation_equipment: {
+        Row: {
+          actual_hours: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          equipment_uuid: string | null
+          estimated_total_cost: number
+          field_operation_uuid: string | null
+          hourly_rate: number
+          notes: string | null
+          operator_name: string | null
+          planned_hours: number
+          status: string | null
+          uuid: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          equipment_uuid?: string | null
+          estimated_total_cost: number
+          field_operation_uuid?: string | null
+          hourly_rate: number
+          notes?: string | null
+          operator_name?: string | null
+          planned_hours: number
+          status?: string | null
+          uuid?: string
+        }
+        Update: {
+          actual_hours?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          equipment_uuid?: string | null
+          estimated_total_cost?: number
+          field_operation_uuid?: string | null
+          hourly_rate?: number
+          notes?: string | null
+          operator_name?: string | null
+          planned_hours?: number
+          status?: string | null
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_equipment_equipment_uuid_fkey"
+            columns: ["equipment_uuid"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "operation_equipment_field_operation_uuid_fkey"
+            columns: ["field_operation_uuid"]
+            isOneToOne: false
+            referencedRelation: "field_operations"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      operation_products: {
+        Row: {
+          actual_quantity: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          estimated_total_cost: number
+          field_operation_uuid: string | null
+          notes: string | null
+          planned_quantity: number
+          product_uuid: string | null
+          status: string | null
+          unit_cost: number
+          uuid: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          estimated_total_cost: number
+          field_operation_uuid?: string | null
+          notes?: string | null
+          planned_quantity: number
+          product_uuid?: string | null
+          status?: string | null
+          unit_cost: number
+          uuid?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          estimated_total_cost?: number
+          field_operation_uuid?: string | null
+          notes?: string | null
+          planned_quantity?: number
+          product_uuid?: string | null
+          status?: string | null
+          unit_cost?: number
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_products_field_operation_uuid_fkey"
+            columns: ["field_operation_uuid"]
+            isOneToOne: false
+            referencedRelation: "field_operations"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "operation_products_product_uuid_fkey"
+            columns: ["product_uuid"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_resources: {
+        Row: {
+          actual_quantity: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          estimated_total_cost: number
+          field_operation_uuid: string | null
+          notes: string | null
+          planned_quantity: number
+          resource_uuid: string | null
+          status: string | null
+          unit_cost: number
+          uuid: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          estimated_total_cost: number
+          field_operation_uuid?: string | null
+          notes?: string | null
+          planned_quantity: number
+          resource_uuid?: string | null
+          status?: string | null
+          unit_cost: number
+          uuid?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          estimated_total_cost?: number
+          field_operation_uuid?: string | null
+          notes?: string | null
+          planned_quantity?: number
+          resource_uuid?: string | null
+          status?: string | null
+          unit_cost?: number
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_resources_field_operation_uuid_fkey"
+            columns: ["field_operation_uuid"]
+            isOneToOne: false
+            referencedRelation: "field_operations"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "operation_resources_resource_uuid_fkey"
+            columns: ["resource_uuid"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_type_config: {
+        Row: {
+          color_class: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          operation_type: string
+          ordr: number
+          updated_at: string | null
+        }
+        Insert: {
+          color_class?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          operation_type: string
+          ordr: number
+          updated_at?: string | null
+        }
+        Update: {
+          color_class?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          operation_type?: string
+          ordr?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      operations_method: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          method: string
+          ordr: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          method: string
+          ordr: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          method?: string
+          ordr?: number
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -772,6 +1130,192 @@ export type Database = {
         }
         Relationships: []
       }
+      work_package_equipment: {
+        Row: {
+          actual_hours: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          daily_work_package_uuid: string | null
+          equipment_uuid: string | null
+          estimated_total_cost: number
+          hourly_rate: number
+          maintenance_required: boolean | null
+          notes: string | null
+          operator_name: string | null
+          planned_hours: number
+          post_operation_check: boolean | null
+          pre_operation_check: boolean | null
+          status: string | null
+          uuid: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          equipment_uuid?: string | null
+          estimated_total_cost: number
+          hourly_rate: number
+          maintenance_required?: boolean | null
+          notes?: string | null
+          operator_name?: string | null
+          planned_hours: number
+          post_operation_check?: boolean | null
+          pre_operation_check?: boolean | null
+          status?: string | null
+          uuid?: string
+        }
+        Update: {
+          actual_hours?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          equipment_uuid?: string | null
+          estimated_total_cost?: number
+          hourly_rate?: number
+          maintenance_required?: boolean | null
+          notes?: string | null
+          operator_name?: string | null
+          planned_hours?: number
+          post_operation_check?: boolean | null
+          pre_operation_check?: boolean | null
+          status?: string | null
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_package_equipment_daily_work_package_uuid_fkey"
+            columns: ["daily_work_package_uuid"]
+            isOneToOne: false
+            referencedRelation: "daily_work_packages"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "work_package_equipment_equipment_uuid_fkey"
+            columns: ["equipment_uuid"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      work_package_products: {
+        Row: {
+          actual_quantity: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          daily_work_package_uuid: string | null
+          estimated_total_cost: number
+          notes: string | null
+          planned_quantity: number
+          product_uuid: string | null
+          quality_check_passed: boolean | null
+          status: string | null
+          unit_cost: number
+          uuid: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          estimated_total_cost: number
+          notes?: string | null
+          planned_quantity: number
+          product_uuid?: string | null
+          quality_check_passed?: boolean | null
+          status?: string | null
+          unit_cost: number
+          uuid?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          estimated_total_cost?: number
+          notes?: string | null
+          planned_quantity?: number
+          product_uuid?: string | null
+          quality_check_passed?: boolean | null
+          status?: string | null
+          unit_cost?: number
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_package_products_daily_work_package_uuid_fkey"
+            columns: ["daily_work_package_uuid"]
+            isOneToOne: false
+            referencedRelation: "daily_work_packages"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "work_package_products_product_uuid_fkey"
+            columns: ["product_uuid"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_package_resources: {
+        Row: {
+          actual_quantity: number | null
+          actual_total_cost: number | null
+          created_at: string | null
+          daily_work_package_uuid: string | null
+          estimated_total_cost: number
+          notes: string | null
+          planned_quantity: number
+          resource_uuid: string | null
+          status: string | null
+          unit_cost: number
+          uuid: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          estimated_total_cost: number
+          notes?: string | null
+          planned_quantity: number
+          resource_uuid?: string | null
+          status?: string | null
+          unit_cost: number
+          uuid?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          actual_total_cost?: number | null
+          created_at?: string | null
+          daily_work_package_uuid?: string | null
+          estimated_total_cost?: number
+          notes?: string | null
+          planned_quantity?: number
+          resource_uuid?: string | null
+          status?: string | null
+          unit_cost?: number
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_package_resources_daily_work_package_uuid_fkey"
+            columns: ["daily_work_package_uuid"]
+            isOneToOne: false
+            referencedRelation: "daily_work_packages"
+            referencedColumns: ["uuid"]
+          },
+          {
+            foreignKeyName: "work_package_resources_resource_uuid_fkey"
+            columns: ["resource_uuid"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       geography_columns: {
@@ -819,11 +1363,11 @@ export type Database = {
     }
     Functions: {
       _postgis_deprecate: {
-        Args: { newname: string; oldname: string; version: string }
+        Args: { oldname: string; newname: string; version: string }
         Returns: undefined
       }
       _postgis_index_extent: {
-        Args: { col: string; tbl: unknown }
+        Args: { tbl: unknown; col: string }
         Returns: unknown
       }
       _postgis_pgsql_version: {
@@ -835,7 +1379,7 @@ export type Database = {
         Returns: string
       }
       _postgis_selectivity: {
-        Args: { geom: unknown; mode?: string; att_name: string; tbl: unknown }
+        Args: { tbl: unknown; att_name: string; geom: unknown; mode?: string }
         Returns: number
       }
       _st_3dintersects: {
@@ -880,7 +1424,7 @@ export type Database = {
         Returns: boolean
       }
       _st_equals: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_intersects: {
@@ -921,15 +1465,15 @@ export type Database = {
       }
       _st_voronoi: {
         Args: {
-          clip?: unknown
-          return_polygons?: boolean
           g1: unknown
+          clip?: unknown
           tolerance?: number
+          return_polygons?: boolean
         }
         Returns: unknown
       }
       _st_within: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       addauth: {
@@ -949,19 +1493,19 @@ export type Database = {
               use_typmod?: boolean
             }
           | {
-              new_srid: number
               schema_name: string
               table_name: string
               column_name: string
+              new_srid: number
               new_type: string
               new_dim: number
               use_typmod?: boolean
             }
           | {
               table_name: string
+              column_name: string
               new_srid: number
               new_type: string
-              column_name: string
               new_dim: number
               use_typmod?: boolean
             }
@@ -1011,17 +1555,6 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
-      delete_observation_with_totals: {
-        Args: { p_observation_id: string }
-        Returns: {
-          success: boolean
-          estimated_total_cost: number
-          actual_total_cost: number
-          total_revenue: number
-          net_profit: number
-          profit_per_hectare: number
-        }[]
-      }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1040,9 +1573,9 @@ export type Database = {
       }
       dropgeometrytable: {
         Args:
+          | { catalog_name: string; schema_name: string; table_name: string }
           | { schema_name: string; table_name: string }
           | { table_name: string }
-          | { table_name: string; catalog_name: string; schema_name: string }
         Returns: string
       }
       enablelongtransactions: {
@@ -1102,7 +1635,7 @@ export type Database = {
         Returns: unknown
       }
       geometry_above: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_analyze: {
@@ -1122,7 +1655,7 @@ export type Database = {
         Returns: boolean
       }
       geometry_contains: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_contains_3d: {
@@ -1134,7 +1667,7 @@ export type Database = {
         Returns: number
       }
       geometry_distance_centroid: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: number
       }
       geometry_eq: {
@@ -1142,7 +1675,7 @@ export type Database = {
         Returns: boolean
       }
       geometry_ge: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_gist_compress_2d: {
@@ -1166,7 +1699,7 @@ export type Database = {
         Returns: undefined
       }
       geometry_gt: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_hash: {
@@ -1194,7 +1727,7 @@ export type Database = {
         Returns: unknown
       }
       geometry_overabove: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_overbelow: {
@@ -1214,7 +1747,7 @@ export type Database = {
         Returns: boolean
       }
       geometry_overright: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometry_recv: {
@@ -1262,7 +1795,7 @@ export type Database = {
         Returns: unknown
       }
       geometry_within: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       geometrytype: {
@@ -1377,7 +1910,7 @@ export type Database = {
         Args:
           | { tbl_oid: unknown; use_typmod?: boolean }
           | { use_typmod?: boolean }
-        Returns: string
+        Returns: number
       }
       postgis_addbbox: {
         Args: { "": unknown }
@@ -1511,6 +2044,19 @@ export type Database = {
         Args: { p_activity_data: Json; p_products?: Json; p_resources?: Json }
         Returns: string
       }
+      save_bloc_with_smart_name: {
+        Args: {
+          p_farm_id: string
+          p_coordinates_wkt: string
+          p_area_hectares: number
+        }
+        Returns: {
+          id: string
+          name: string
+          area_hectares: number
+          created_at: string
+        }[]
+      }
       save_observation_simple: {
         Args: { p_observation_data: Json }
         Returns: string
@@ -1532,7 +2078,7 @@ export type Database = {
         Returns: number
       }
       st_3dintersects: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_3dlength: {
@@ -1599,8 +2145,8 @@ export type Database = {
       st_asgeojson: {
         Args:
           | { "": string }
+          | { geog: unknown; maxdecimaldigits?: number; options?: number }
           | { geom: unknown; maxdecimaldigits?: number; options?: number }
-          | { options?: number; geog: unknown; maxdecimaldigits?: number }
           | {
               r: Record<string, unknown>
               geom_column?: string
@@ -1681,18 +2227,18 @@ export type Database = {
       st_astwkb: {
         Args:
           | {
+              geom: unknown[]
               ids: number[]
               prec?: number
               prec_z?: number
-              geom: unknown[]
               prec_m?: number
               with_sizes?: boolean
               with_boxes?: boolean
             }
           | {
-              prec_z?: number
               geom: unknown
               prec?: number
+              prec_z?: number
               prec_m?: number
               with_sizes?: boolean
               with_boxes?: boolean
@@ -1714,13 +2260,13 @@ export type Database = {
         Returns: unknown
       }
       st_boundingdiagonal: {
-        Args: { fits?: boolean; geom: unknown }
+        Args: { geom: unknown; fits?: boolean }
         Returns: unknown
       }
       st_buffer: {
         Args:
           | { geom: unknown; radius: number; options?: string }
-          | { radius: number; geom: unknown; quadsegs: number }
+          | { geom: unknown; radius: number; quadsegs: number }
         Returns: unknown
       }
       st_buildarea: {
@@ -1768,7 +2314,7 @@ export type Database = {
         Returns: unknown
       }
       st_contains: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_containsproperly: {
@@ -1804,7 +2350,7 @@ export type Database = {
         Returns: unknown
       }
       st_delaunaytriangles: {
-        Args: { tolerance?: number; flags?: number; g1: unknown }
+        Args: { g1: unknown; tolerance?: number; flags?: number }
         Returns: unknown
       }
       st_difference: {
@@ -1875,8 +2421,8 @@ export type Database = {
       st_expand: {
         Args:
           | { box: unknown; dx: number; dy: number }
-          | { dm?: number; geom: unknown; dx: number; dy: number; dz?: number }
-          | { dy: number; box: unknown; dx: number; dz?: number }
+          | { box: unknown; dx: number; dy: number; dz?: number }
+          | { geom: unknown; dx: number; dy: number; dz?: number; dm?: number }
         Returns: unknown
       }
       st_exteriorring: {
@@ -1904,7 +2450,7 @@ export type Database = {
         Returns: unknown
       }
       st_force4d: {
-        Args: { mvalue?: number; geom: unknown; zvalue?: number }
+        Args: { geom: unknown; zvalue?: number; mvalue?: number }
         Returns: unknown
       }
       st_forcecollection: {
@@ -1933,8 +2479,8 @@ export type Database = {
       }
       st_generatepoints: {
         Args:
-          | { npoints: number; area: unknown }
-          | { npoints: number; area: unknown; seed: number }
+          | { area: unknown; npoints: number }
+          | { area: unknown; npoints: number; seed: number }
         Returns: unknown
       }
       st_geogfromtext: {
@@ -1965,9 +2511,9 @@ export type Database = {
       }
       st_geometricmedian: {
         Args: {
-          max_iter?: number
           g: unknown
           tolerance?: number
+          max_iter?: number
           fail_if_not_converged?: boolean
         }
         Returns: unknown
@@ -2183,7 +2729,7 @@ export type Database = {
         Returns: unknown
       }
       st_makevalid: {
-        Args: { "": unknown } | { params: string; geom: unknown }
+        Args: { "": unknown } | { geom: unknown; params: string }
         Returns: unknown
       }
       st_maxdistance: {
@@ -2199,7 +2745,7 @@ export type Database = {
         Returns: number
       }
       st_minimumboundingcircle: {
-        Args: { segs_per_quarter?: number; inputgeom: unknown }
+        Args: { inputgeom: unknown; segs_per_quarter?: number }
         Returns: unknown
       }
       st_minimumboundingradius: {
@@ -2307,7 +2853,7 @@ export type Database = {
         Returns: number
       }
       st_offsetcurve: {
-        Args: { params?: string; distance: number; line: unknown }
+        Args: { line: unknown; distance: number; params?: string }
         Returns: unknown
       }
       st_orderingequals: {
@@ -2409,7 +2955,7 @@ export type Database = {
         Returns: unknown
       }
       st_reduceprecision: {
-        Args: { gridsize: number; geom: unknown }
+        Args: { geom: unknown; gridsize: number }
         Returns: unknown
       }
       st_relate: {
@@ -2417,7 +2963,7 @@ export type Database = {
         Returns: string
       }
       st_removerepeatedpoints: {
-        Args: { tolerance?: number; geom: unknown }
+        Args: { geom: unknown; tolerance?: number }
         Returns: unknown
       }
       st_reverse: {
@@ -2449,7 +2995,7 @@ export type Database = {
         Returns: unknown
       }
       st_split: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
       }
       st_square: {
@@ -2469,7 +3015,7 @@ export type Database = {
         Returns: unknown
       }
       st_subdivide: {
-        Args: { maxvertices?: number; geom: unknown; gridsize?: number }
+        Args: { geom: unknown; maxvertices?: number; gridsize?: number }
         Returns: unknown[]
       }
       st_summary: {
@@ -2477,11 +3023,11 @@ export type Database = {
         Returns: string
       }
       st_swapordinates: {
-        Args: { ords: unknown; geom: unknown }
+        Args: { geom: unknown; ords: unknown }
         Returns: unknown
       }
       st_symdifference: {
-        Args: { geom2: unknown; geom1: unknown; gridsize?: number }
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
         Returns: unknown
       }
       st_symmetricdifference: {
@@ -2499,14 +3045,14 @@ export type Database = {
         Returns: unknown
       }
       st_touches: {
-        Args: { geom2: unknown; geom1: unknown }
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_transform: {
         Args:
-          | { geom: unknown; to_srid: number; from_proj: string }
-          | { to_proj: string; geom: unknown }
-          | { to_proj: string; geom: unknown; from_proj: string }
+          | { geom: unknown; from_proj: string; to_proj: string }
+          | { geom: unknown; from_proj: string; to_srid: number }
+          | { geom: unknown; to_proj: string }
         Returns: unknown
       }
       st_triangulatepolygon: {
@@ -2517,15 +3063,15 @@ export type Database = {
         Args:
           | { "": unknown[] }
           | { geom1: unknown; geom2: unknown }
-          | { geom2: unknown; geom1: unknown; gridsize: number }
+          | { geom1: unknown; geom2: unknown; gridsize: number }
         Returns: unknown
       }
       st_voronoilines: {
-        Args: { g1: unknown; extend_to?: unknown; tolerance?: number }
+        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
         Returns: unknown
       }
       st_voronoipolygons: {
-        Args: { g1: unknown; extend_to?: unknown; tolerance?: number }
+        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
         Returns: unknown
       }
       st_within: {
@@ -2541,7 +3087,7 @@ export type Database = {
         Returns: unknown
       }
       st_wrapx: {
-        Args: { move: number; geom: unknown; wrap: number }
+        Args: { geom: unknown; wrap: number; move: number }
         Returns: unknown
       }
       st_x: {
@@ -2602,18 +3148,18 @@ export type Database = {
           p_intercrop_revenue: number
           p_net_profit: number
           p_profit_per_hectare: number
-          p_sugarcane_actual_yield_tons_ha: number
           p_profit_margin_percent: number
+          p_sugarcane_actual_yield_tons_ha: number
         }
         Returns: boolean
       }
       updategeometrysrid: {
         Args: {
+          catalogn_name: string
           schema_name: string
+          table_name: string
           column_name: string
           new_srid_in: number
-          catalogn_name: string
-          table_name: string
         }
         Returns: string
       }
@@ -2635,21 +3181,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -2667,14 +3217,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -2690,14 +3242,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -2713,14 +3267,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -2728,24 +3284,22 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

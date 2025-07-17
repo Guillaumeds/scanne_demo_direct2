@@ -1,0 +1,9 @@
+resolve:
+  http:
+    headers:
+      - matches: https://wwzhqancvoiqekcsbecq.supabase.co/**
+        name: Authorization
+        envVariable: SUPABASE_AUTH_HEADER
+      - matches: https://wwzhqancvoiqekcsbecq.supabase.co/**
+        name: apikey
+        envVariable: SUPABASE_ANON_KEY

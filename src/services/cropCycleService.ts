@@ -14,14 +14,12 @@ import {
   formatCycleDisplayName,
   GrowthStage
 } from '@/types/cropCycles'
-import { BlocActivity } from '@/types/activities'
 import { BlocObservation } from '@/types/observations'
-// ❌ REMOVED: Hardcoded varieties import - now using ConfigurationService
 import { BlocAttachment } from '@/types/attachments'
 import { CropCycleValidationService } from './cropCycleValidationService'
 import { CropCycleCalculationService } from './cropCycleCalculationService'
 import { LocalStorageService } from './localStorageService'
-import { supabase } from '@/lib/supabase'
+import { supabase, type FieldOperation, type DailyWorkPackage } from '@/lib/supabase'
 
 export class CropCycleService {
 
@@ -220,12 +218,36 @@ export class CropCycleService {
     }
 
     // Get related data from database
-    const activities = await this.getActivitiesForCycle(cycleId)
+    const fieldOperations = await this.getFieldOperationsForCycle(cycleId)
     const observations = await this.getObservationsForCycle(cycleId)
+
+    // Convert field operations to the format expected by validation service
+    // TODO: Update CropCycleValidationService to work with FieldOperation directly
+    const adaptedActivities = fieldOperations.map(op => ({
+      id: op.uuid,
+      name: op.operation_name,
+      description: op.description || '',
+      phase: 'maintenance' as const, // Map to appropriate phase - using valid ActivityPhase
+      status: op.status as any,
+      cropCycleId: op.crop_cycle_uuid || '',
+      cropCycleType: 'plantation' as const,
+      startDate: op.planned_start_date || '',
+      endDate: op.planned_end_date || '',
+      actualDate: op.actual_start_date || undefined,
+      duration: 0, // Calculate from dates if needed
+      products: [], // Will be loaded separately if needed
+      resources: [], // Will be loaded separately if needed
+      totalEstimatedCost: Number(op.estimated_total_cost) || 0,
+      totalActualCost: Number(op.actual_total_cost) || undefined,
+      notes: op.notes || undefined,
+      createdAt: op.created_at || new Date().toISOString(),
+      updatedAt: op.updated_at || new Date().toISOString(),
+      createdBy: op.created_by || 'system'
+    }))
 
     return CropCycleValidationService.validateCycleForClosure(
       cycle,
-      activities,
+      adaptedActivities,
       observations,
       blocArea
     )
@@ -805,41 +827,44 @@ export class CropCycleService {
   }
 
   /**
-   * Get activities for a crop cycle (helper method)
+   * Get field operations for a crop cycle (updated to use new schema)
    */
-  private static async getActivitiesForCycle(cycleId: string): Promise<BlocActivity[]> {
+  private static async getFieldOperationsForCycle(cycleId: string): Promise<FieldOperation[]> {
     try {
       const { data, error } = await supabase
-        .from('activities')
-        .select('*')
-        .eq('crop_cycle_id', cycleId)
+        .from('field_operations')
+        .select(`
+          *,
+          daily_work_packages (*)
+        `)
+        .eq('crop_cycle_uuid', cycleId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      return (data || []).map(activity => ({
-        id: activity.id,
-        name: activity.name,
-        description: activity.description || '',
-        phase: (activity.phase as any) || 'preparation', // Default to preparation if null
-        status: (activity.status as any) || 'planned', // Default to planned if null
-        cropCycleId: activity.crop_cycle_id || '',
-        cropCycleType: 'plantation' as 'plantation' | 'ratoon', // Default, could be enhanced based on cycle data
-        startDate: activity.start_date || '',
-        endDate: activity.end_date || '',
-        actualDate: activity.activity_date || undefined, // Correct database column name
-        duration: activity.duration || 0, // Correct property name
-        products: [], // Will be loaded separately if needed
-        resources: [], // Will be loaded separately if needed
-        totalEstimatedCost: activity.estimated_total_cost || 0, // Correct property name
-        totalActualCost: (activity.actual_total_cost && activity.actual_total_cost > 0) ? activity.actual_total_cost : undefined,
-        notes: activity.notes || undefined,
-        createdAt: activity.created_at || new Date().toISOString(),
-        updatedAt: activity.updated_at || new Date().toISOString(),
-        createdBy: 'system' // Default value since created_by doesn't exist in database
-      }))
+      return data || []
     } catch (error) {
-      console.error('Error loading activities for cycle:', error)
+      console.error('Error loading field operations for cycle:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get daily work packages for a field operation
+   */
+  private static async getDailyWorkPackagesForOperation(operationId: string): Promise<DailyWorkPackage[]> {
+    try {
+      const { data, error } = await supabase
+        .from('daily_work_packages')
+        .select('*')
+        .eq('field_operation_uuid', operationId)
+        .order('work_date', { ascending: false })
+
+      if (error) throw error
+
+      return data || []
+    } catch (error) {
+      console.error('Error loading daily work packages for operation:', error)
       return []
     }
   }

@@ -52,18 +52,29 @@ export type Tables<T extends keyof Database['public']['Tables']> = Database['pub
 export type Inserts<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
 export type Updates<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
 
-// Specific table types for easy import (operational tables only)
+// Specific table types for easy import - all generated from actual database schema
 export type Company = Tables<'companies'>
 export type Farm = Tables<'farms'>
-// Field functionality removed - blocs are the primary entities
 export type Bloc = Tables<'blocs'>
 export type CropCycle = Tables<'crop_cycles'>
-export type Activity = Tables<'activities'>
+export type FieldOperation = Tables<'field_operations'>
 export type Observation = Tables<'observations'>
-export type Attachment = Tables<'attachments'>
+export type Equipment = Tables<'equipment'>
+export type Product = Tables<'products'>
+export type Resource = Tables<'resources'>
+export type SugarcaneVariety = Tables<'sugarcane_varieties'>
+export type IntercropVariety = Tables<'intercrop_varieties'>
+export type DailyWorkPackage = Tables<'daily_work_packages'>
+export type OperationEquipment = Tables<'operation_equipment'>
+export type OperationProduct = Tables<'operation_products'>
+export type OperationResource = Tables<'operation_resources'>
+export type WorkPackageEquipment = Tables<'work_package_equipment'>
+export type WorkPackageProduct = Tables<'work_package_products'>
+export type WorkPackageResource = Tables<'work_package_resources'>
+export type OperationTypeConfig = Tables<'operation_type_config'>
+export type OperationMethodConfig = Tables<'operations_method'>
+export type ClimaticData = Tables<'climatic_data'>
 
-// Note: Configuration table types (varieties, products, resources, categories, system_config)
-// have been removed as the app now uses hardcoded arrays for configuration data
-// and the admin panel has been removed from the demo version
+// Note: All types are now generated from the actual database schema via Supabase CLI
 
 

@@ -5,16 +5,16 @@ export interface OperationType {
   id: string
   ordr: number
   operation_type: string
-  description?: string
-  icon?: string
-  color_class?: string
+  description: string | null
+  icon: string | null
+  color_class: string | null
 }
 
 export interface OperationMethod {
   id: string
   ordr: number
   method: string
-  description?: string
+  description: string | null
 }
 
 // Hook to fetch operation types
