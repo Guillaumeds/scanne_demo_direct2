@@ -46,6 +46,7 @@ import EquipmentSelectionManager from '@/components/selectors/EquipmentSelection
 import { SelectedProduct } from '@/components/selectors/ModernProductSelector'
 import { SelectedEquipment } from '@/components/selectors/ModernEquipmentSelector'
 import { useProducts, useResources } from '@/hooks/useConfigurationData'
+import { useOperationConfig } from '@/hooks/useOperationConfig'
 
 // Product schema using SelectedProduct type
 const selectedProductSchema = z.object({
@@ -114,11 +115,10 @@ const qualitySchema = z.object({
 // Comprehensive operation schema
 const operationSchema = z.object({
   // Basic Information
-  operationName: z.string().min(1, 'Operation name is required'),
-  operationType: z.enum(['field-preparation', 'planting', 'fertilization', 'irrigation', 'pest-control', 'weed-control', 'harvesting', 'post-harvest']),
-  method: z.enum(['manual', 'mechanical', 'chemical', 'biological', 'integrated']),
+  operationType: z.string().min(1, 'Operation type is required'),
+  method: z.string().min(1, 'Method is required'),
   description: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  priority: z.enum(['normal', 'high', 'critical']).default('normal'),
   status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).default('planned'),
 
   // Timing
@@ -127,11 +127,7 @@ const operationSchema = z.object({
   actualStartDate: z.string().optional(),
   actualEndDate: z.string().optional(),
 
-  // Area and Quantities
-  plannedArea: z.number().min(0.1, 'Area must be at least 0.1 hectares'),
-  actualArea: z.number().min(0).optional(),
-  plannedQuantity: z.number().min(0).optional(),
-  actualQuantity: z.number().min(0).optional(),
+
 
   // Products, Equipment, Resources
   products: z.array(selectedProductSchema).default([]),
@@ -181,18 +177,14 @@ export function OperationForm() {
   const form = useForm({
     resolver: zodResolver(operationSchema),
     defaultValues: {
-      operationName: '',
-      operationType: 'fertilization' as const,
-      method: 'mechanical' as const,
+      operationType: '',
+      method: '',
       description: '',
-      priority: 'medium' as const,
+      priority: 'normal' as const,
       status: 'planned' as const,
       plannedStartDate: '',
       plannedEndDate: '',
-      plannedArea: bloc.area,
-      actualArea: undefined,
-      plannedQuantity: undefined,
-      actualQuantity: undefined,
+
       products: [],
       equipment: [],
       resources: [],
@@ -212,28 +204,28 @@ export function OperationForm() {
   const { isLoading: productsLoading, error: productsError } = useProducts()
   const { isLoading: resourcesLoading, error: resourcesError } = useResources()
 
+  // Fetch operation configuration from database
+  const { operationTypes: dbOperationTypes, operationMethods: dbOperationMethods, isLoading: configLoading } = useOperationConfig()
+
   // Watch operation type for conditional rendering
   const operationType = form.watch('operationType')
-  const isHarvestOperation = operationType === 'harvesting'
+  const isHarvestOperation = operationType === 'Harvest'
 
-  const operationTypes = [
-    { value: 'field-preparation', label: 'Field Preparation', icon: '🚜', color: 'bg-orange-100 text-orange-800' },
-    { value: 'planting', label: 'Planting', icon: '🌱', color: 'bg-green-100 text-green-800' },
-    { value: 'fertilization', label: 'Fertilization', icon: '🧪', color: 'bg-blue-100 text-blue-800' },
-    { value: 'irrigation', label: 'Irrigation', icon: '💧', color: 'bg-cyan-100 text-cyan-800' },
-    { value: 'pest-control', label: 'Pest Control', icon: '🐛', color: 'bg-red-100 text-red-800' },
-    { value: 'weed-control', label: 'Weed Control', icon: '🌿', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'harvesting', label: 'Harvesting', icon: '🌾', color: 'bg-amber-100 text-amber-800' },
-    { value: 'post-harvest', label: 'Post-Harvest', icon: '📦', color: 'bg-purple-100 text-purple-800' }
-  ]
+  // Transform database operation types for dropdown
+  const operationTypes = dbOperationTypes.map(type => ({
+    value: type.operation_type,
+    label: type.operation_type,
+    icon: type.icon || '📋',
+    color: type.color_class || 'bg-slate-100 text-slate-800',
+    description: type.description
+  }))
 
-  const methods = [
-    { value: 'manual', label: 'Manual', description: 'Hand labor operations' },
-    { value: 'mechanical', label: 'Mechanical', description: 'Machine-based operations' },
-    { value: 'chemical', label: 'Chemical', description: 'Chemical applications' },
-    { value: 'biological', label: 'Biological', description: 'Biological control methods' },
-    { value: 'integrated', label: 'Integrated', description: 'Combined approach' }
-  ]
+  // Transform database operation methods for dropdown
+  const methods = dbOperationMethods.map(method => ({
+    value: method.method,
+    label: method.method,
+    description: method.description
+  }))
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
@@ -299,19 +291,14 @@ export function OperationForm() {
         >
           {/* Header */}
           <div className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                  <Sprout className="h-6 w-6 text-primary" />
-                  {currentOperationId ? 'Edit Field Operation' : 'New Field Operation'}
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Plan and manage agricultural operations for {bloc.name || `Bloc ${bloc.localId}`}
-                </p>
-              </div>
-              <Badge variant="outline" className="text-sm">
-                {bloc.area.toFixed(1)} hectares
-              </Badge>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Sprout className="h-6 w-6 text-primary" />
+                {currentOperationId ? 'Edit Field Operation' : 'New Field Operation'}
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Plan and manage agricultural operations for {bloc.name || `Bloc ${bloc.localId}`}
+              </p>
             </div>
           </div>
 
@@ -435,27 +422,8 @@ export function OperationForm() {
                         />
                       </div>
 
-                      {/* Operation Name and Priority */}
+                      {/* Priority */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2">
-                          <FormField
-                            control={form.control}
-                            name="operationName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Operation Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Spring Fertilization 2024" {...field} />
-                                </FormControl>
-                                <FormDescription>
-                                  Give this operation a descriptive name
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
                         <FormField
                           control={form.control}
                           name="priority"
@@ -469,22 +437,22 @@ export function OperationForm() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="low">
+                                  <SelectItem value="normal">
                                     <div className="flex items-center gap-2">
                                       <div className="w-2 h-2 rounded-full bg-green-500" />
-                                      Low
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="medium">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                                      Medium
+                                      Normal
                                     </div>
                                   </SelectItem>
                                   <SelectItem value="high">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                                      <div className="w-2 h-2 rounded-full bg-orange-500" />
                                       High
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="critical">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                                      Critical
                                     </div>
                                   </SelectItem>
                                 </SelectContent>
@@ -562,66 +530,7 @@ export function OperationForm() {
                     </CardContent>
                   </Card>
 
-                  {/* Area & Quantities Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        Area & Quantities
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="plannedArea"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Planned Area (hectares)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  min="0.1"
-                                  max={bloc.area}
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Maximum: {bloc.area.toFixed(1)} ha (total bloc area)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
 
-                        <FormField
-                          control={form.control}
-                          name="plannedQuantity"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Planned Quantity (optional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  min="0"
-                                  placeholder="e.g., 1000 kg"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Total quantity for this operation
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
                 </TabsContent>
 
                 {/* Resources Tab */}
@@ -811,7 +720,7 @@ export function OperationForm() {
                   <Save className="h-4 w-4 mr-2" />
                   Save Operation
                 </Button>
-                <Button type="button" variant="outline" onClick={handleCancel} size="lg">
+                <Button type="button" variant="outline" onClick={handleCancel} size="lg" className="bg-background/90 hover:bg-background">
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
