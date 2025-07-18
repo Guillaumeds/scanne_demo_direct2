@@ -6,6 +6,8 @@ import { DrawnArea } from '@/types/drawnArea'
 import { BlocProvider } from './contexts/BlocContext'
 import { BlocLayout } from './layout/BlocLayout'
 import { LoadingSpinner } from './shared/LoadingSpinner'
+import { useBlocData } from '@/hooks/useModernFarmData'
+import { useGlobalLoading } from '@/hooks/useGlobalState'
 
 interface BlocScreenProps {
   bloc: DrawnArea
@@ -14,7 +16,6 @@ interface BlocScreenProps {
 }
 
 export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Validate that bloc is saved and has UUID
@@ -22,10 +23,26 @@ export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
     throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
   }
 
-  // Remove loading delay - open immediately after pan/zoom completes
+  // Use modern data hooks
+  const {
+    data: blocData,
+    isLoading: blocDataLoading,
+    error: blocDataError
+  } = useBlocData(bloc.uuid)
+
+  const { isLoading: globalLoading } = useGlobalLoading()
+
+  const isLoading = blocDataLoading || globalLoading
+
+  // Handle bloc data errors
   useEffect(() => {
-    setIsLoading(false)
-  }, [])
+    if (blocDataError) {
+      console.error('❌ Bloc data error:', blocDataError)
+      setError(`Failed to load bloc data: ${blocDataError.message}`)
+    } else {
+      setError(null)
+    }
+  }, [blocDataError])
 
   return (
     <motion.div

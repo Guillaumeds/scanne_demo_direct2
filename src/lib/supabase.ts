@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { Database } from './database.types'
+import { Database } from '../types/supabase'
 
 // Environment variables with runtime validation
 function getSupabaseConfig() {
@@ -60,17 +60,17 @@ export type CropCycle = Tables<'crop_cycles'>
 export type FieldOperation = Tables<'field_operations'>
 export type Observation = Tables<'observations'>
 export type Equipment = Tables<'equipment'>
+export type Labour = Tables<'labour'>
 export type Product = Tables<'products'>
-export type Resource = Tables<'resources'>
 export type SugarcaneVariety = Tables<'sugarcane_varieties'>
 export type IntercropVariety = Tables<'intercrop_varieties'>
 export type DailyWorkPackage = Tables<'daily_work_packages'>
 export type OperationEquipment = Tables<'operation_equipment'>
+export type OperationLabour = Tables<'operation_labour'>
 export type OperationProduct = Tables<'operation_products'>
-export type OperationResource = Tables<'operation_resources'>
 export type WorkPackageEquipment = Tables<'work_package_equipment'>
+export type WorkPackageLabour = Tables<'work_package_labour'>
 export type WorkPackageProduct = Tables<'work_package_products'>
-export type WorkPackageResource = Tables<'work_package_resources'>
 export type OperationTypeConfig = Tables<'operation_type_config'>
 export type OperationMethodConfig = Tables<'operations_method'>
 export type ClimaticData = Tables<'climatic_data'>

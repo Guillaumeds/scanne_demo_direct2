@@ -12,6 +12,10 @@ import { BlocScreen } from './farm/BlocScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { LocalStorageService } from '@/services/localStorageService'
+import { useFarmGISData } from '@/hooks/useModernFarmData'
+import { GlobalLoadingIndicator } from '@/components/global/GlobalLoadingIndicator'
+import { GlobalErrorHandler } from '@/components/global/GlobalErrorHandler'
+import { CacheManagementDashboard } from '@/components/dev/CacheManagementDashboard'
 
 export default function FarmGISLayout() {
   // Field functionality removed - blocs are the primary entities
@@ -32,6 +36,15 @@ export default function FarmGISLayout() {
   const [defaultFarmId, setDefaultFarmId] = useState<string | null>(null)
   const [mapDimmed, setMapDimmed] = useState(false)
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
+  const [farms, setFarms] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+
+  // Use modern farm data hook instead of manual loading
+  const {
+    data: farmData,
+    isLoading: farmDataLoading,
+    error: farmDataError
+  } = useFarmGISData()
 
 
   // Debug savedAreas changes
@@ -128,39 +141,29 @@ export default function FarmGISLayout() {
     initializeApp()
   }, [])
 
-  // Load initial data: blocs, farms, and companies in one atomic operation
+  // Update state when farm data loads
   useEffect(() => {
-    const loadInitialData = async () => {
+    if (farmData) {
       try {
-        const { BlocService } = await import('@/services/blocService')
-
-        // Loading initial data
-
-        // Load all required data in one atomic operation
-        const [blocsData, farmsData, companiesData] = await Promise.all([
-          BlocService.getAllBlocs(),
-          BlocService.getFarms(),
-          BlocService.getCompanies()
-        ])
-
         // Validate data integrity
-        if (!farmsData || farmsData.length === 0) {
+        if (!farmData.farms || farmData.farms.length === 0) {
           throw new Error('No farms found - database setup required')
         }
 
         // Store farm data for bloc creation
-        const defaultFarm = farmsData[0]
-        // Default farm loaded
+        const defaultFarm = farmData.farms[0]
         setDefaultFarmId(defaultFarm.id)
+        setFarms(farmData.farms)
+        setCompanies(farmData.companies)
 
-        if (!blocsData || blocsData.length === 0) {
+        if (!farmData.blocs || farmData.blocs.length === 0) {
           console.log('📍 No blocs found in database')
           setSavedAreas([])
           return
         }
 
         // Transform database objects to DrawnArea format
-        const savedBlocs: DrawnArea[] = blocsData.map(bloc => {
+        const savedBlocs: DrawnArea[] = farmData.blocs.map(bloc => {
           // Parse WKT coordinates using the existing utility function (returns [lng, lat] format)
           const wktCoordinates = DrawnAreaUtils.parseWKTToCoordinates(bloc.coordinates_wkt || '')
           // WKT parsing already returns [lng, lat] format - use directly
@@ -181,18 +184,34 @@ export default function FarmGISLayout() {
 
         // Set blocs immediately for card display (without waiting for polygon rendering)
         setSavedAreas(savedBlocs)
-        // Initial data loaded successfully
+
+        console.log('✅ Farm data loaded successfully:', {
+          blocs: farmData.blocs.length,
+          farms: farmData.farms.length,
+          companies: farmData.companies.length,
+          activeCropCycles: farmData.activeCropCycles.length,
+        })
 
       } catch (error) {
-        console.error('❌ Failed to load initial data:', error)
+        console.error('❌ Failed to process farm data:', error)
+        setError('Failed to process farm data.')
         // Graceful degradation - don't crash the app
         setSavedAreas([])
         setDefaultFarmId(null)
       }
     }
+  }, [farmData])
 
-    loadInitialData()
-  }, [])
+  // Handle loading and error states
+  useEffect(() => {
+    if (farmDataError) {
+      console.error('❌ Farm data error:', farmDataError)
+      setError('Failed to load farm data. Please check your database connection.')
+      setLoading(false)
+    } else if (!farmDataLoading && farmData) {
+      setLoading(false)
+    }
+  }, [farmDataLoading, farmDataError, farmData])
 
   // Field selection handlers removed - parcelles are background only
   // const handleFieldSelect = (fieldId: string) => {
@@ -729,6 +748,11 @@ export default function FarmGISLayout() {
             </div>
           )}
         </div>
+
+        {/* Global Components */}
+        <GlobalLoadingIndicator />
+        <GlobalErrorHandler />
+        <CacheManagementDashboard />
       </div>
     </div>
   )
