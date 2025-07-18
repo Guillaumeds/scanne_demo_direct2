@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { CropCycleService } from '@/services/cropCycleService'
 import { DrawnArea, DrawnAreaUtils, DrawnAreaGuards } from '@/types/drawnArea'
-import SubmitButton, { SaveButton, CancelButton } from '@/components/ui/SubmitButton'
+import { Button } from '@/components/ui/button'
 
 interface BlocCycleData {
   blocId: string
@@ -220,21 +220,22 @@ export default function BlocList({
             </span>
           </div>
           <div className="flex gap-2">
-            <SaveButton
+            <Button
               onClick={onSaveAll}
               className="flex-1"
               size="sm"
-              loadingText="Sauvegarde..."
+              variant="default"
             >
               Sauvegarder
-            </SaveButton>
-            <CancelButton
+            </Button>
+            <Button
               onClick={onCancelAll}
               className="flex-1"
               size="sm"
+              variant="outline"
             >
               Annuler
-            </CancelButton>
+            </Button>
           </div>
         </div>
       )}

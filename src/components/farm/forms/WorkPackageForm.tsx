@@ -661,13 +661,11 @@ export function WorkPackageForm() {
                                     >
                                       <Progress
                                         value={field.value}
-                                        className="h-3"
-                                        animated
-                                        variant={
-                                          (field.value ?? 0) >= 100 ? 'success' :
-                                          (field.value ?? 0) >= 75 ? 'default' :
-                                          (field.value ?? 0) >= 50 ? 'warning' : 'default'
-                                        }
+                                        className={`h-3 ${
+                                          (field.value ?? 0) >= 100 ? '[&>div]:bg-green-500' :
+                                          (field.value ?? 0) >= 75 ? '[&>div]:bg-blue-500' :
+                                          (field.value ?? 0) >= 50 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-blue-500'
+                                        }`}
                                       />
                                     </motion.div>
                                     <motion.p
