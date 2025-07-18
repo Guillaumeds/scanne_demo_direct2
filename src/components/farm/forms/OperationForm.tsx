@@ -52,12 +52,21 @@ import { useOperationConfig } from '@/hooks/useOperationConfig'
 const selectedProductSchema = z.object({
   product: z.object({
     id: z.string(),
+    product_id: z.string(),
     name: z.string(),
-    category: z.string(), // Allow any string for category
-    unit: z.string(),
-    cost: z.number().optional(),
+    category: z.string().nullable(),
+    subcategory: z.string().nullable(),
+    description: z.string().nullable(),
+    unit: z.string().nullable(),
+    cost_per_unit: z.number().nullable(),
+    active: z.boolean().nullable(),
+    created_at: z.string().nullable(),
+    updated_at: z.string().nullable(),
+    // Legacy fields
     defaultRate: z.number().optional(),
-    description: z.string().optional()
+    cost: z.number().optional(),
+    brand: z.string().optional(),
+    composition: z.string().optional()
   }),
   quantity: z.number().min(0, 'Quantity must be positive'),
   rate: z.number().min(0, 'Rate must be positive'),
@@ -68,12 +77,15 @@ const selectedProductSchema = z.object({
 // Equipment schema using SelectedEquipment type
 const selectedEquipmentSchema = z.object({
   equipment: z.object({
+    equipment_id: z.string(),
     id: z.string(),
     name: z.string(),
-    category: z.string(),
-    unit: z.string(), // Add required unit field
-    hourlyRate: z.number().optional(),
-    description: z.string().optional()
+    category: z.string().nullable(),
+    description: z.string().nullable(),
+    hourly_rate: z.number().nullable(),
+    active: z.boolean().nullable(),
+    created_at: z.string().nullable(),
+    updated_at: z.string().nullable()
   }),
   estimatedDuration: z.number().min(0, 'Duration must be positive').optional(),
   actualDuration: z.number().min(0, 'Duration must be positive').optional(),

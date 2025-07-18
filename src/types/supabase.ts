@@ -55,6 +55,54 @@ export type Database = {
           },
         ]
       }
+      climatic_data: {
+        Row: {
+          co2_concentration_ppm: number | null
+          evapotranspiration_mm: number | null
+          julian_day: number
+          observation_day: number | null
+          observation_month: number | null
+          observation_year: number
+          precipitation_mm: number | null
+          solar_radiation_mj_per_m2: number | null
+          station_id: string
+          temperature_max_celsius: number | null
+          temperature_min_celsius: number | null
+          vapor_pressure_hpa: number | null
+          wind_speed_m_per_s: number | null
+        }
+        Insert: {
+          co2_concentration_ppm?: number | null
+          evapotranspiration_mm?: number | null
+          julian_day: number
+          observation_day?: number | null
+          observation_month?: number | null
+          observation_year: number
+          precipitation_mm?: number | null
+          solar_radiation_mj_per_m2?: number | null
+          station_id: string
+          temperature_max_celsius?: number | null
+          temperature_min_celsius?: number | null
+          vapor_pressure_hpa?: number | null
+          wind_speed_m_per_s?: number | null
+        }
+        Update: {
+          co2_concentration_ppm?: number | null
+          evapotranspiration_mm?: number | null
+          julian_day?: number
+          observation_day?: number | null
+          observation_month?: number | null
+          observation_year?: number
+          precipitation_mm?: number | null
+          solar_radiation_mj_per_m2?: number | null
+          station_id?: string
+          temperature_max_celsius?: number | null
+          temperature_min_celsius?: number | null
+          vapor_pressure_hpa?: number | null
+          wind_speed_m_per_s?: number | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           created_at: string | null

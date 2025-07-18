@@ -5,6 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { ConfigurationService } from '@/services/configurationService'
+import { supabase } from '@/lib/supabase'
 import { Product } from '@/types/products'
 import { Resource } from '@/types/resources'
 import { SugarcaneVariety, InterCropPlant, CropVariety } from '@/types/varieties'
@@ -13,13 +14,17 @@ import { SugarcaneVariety, InterCropPlant, CropVariety } from '@/types/varieties
 export const configurationKeys = {
   all: ['configuration'] as const,
   products: () => [...configurationKeys.all, 'products'] as const,
-  resources: () => [...configurationKeys.all, 'resources'] as const,
+  labour: () => [...configurationKeys.all, 'labour'] as const,
+  equipment: () => [...configurationKeys.all, 'equipment'] as const,
+  resources: () => [...configurationKeys.all, 'resources'] as const, // @deprecated
   sugarcaneVarieties: () => [...configurationKeys.all, 'sugarcane-varieties'] as const,
   intercropVarieties: () => [...configurationKeys.all, 'intercrop-varieties'] as const,
   allVarieties: () => [...configurationKeys.all, 'all-varieties'] as const,
   health: () => [...configurationKeys.all, 'health'] as const,
   productById: (id: string) => [...configurationKeys.products(), id] as const,
-  resourceById: (id: string) => [...configurationKeys.resources(), id] as const,
+  labourById: (id: string) => [...configurationKeys.labour(), id] as const,
+  equipmentById: (id: string) => [...configurationKeys.equipment(), id] as const,
+  resourceById: (id: string) => [...configurationKeys.resources(), id] as const, // @deprecated
   varietyById: (id: string) => [...configurationKeys.allVarieties(), id] as const,
 }
 
@@ -38,17 +43,42 @@ export function useProducts() {
 }
 
 /**
- * Hook for fetching all resources
+ * Hook for fetching all labour
  */
-export function useResources() {
+export function useLabour() {
   return useQuery({
-    queryKey: configurationKeys.resources(),
-    queryFn: ConfigurationService.getResources,
+    queryKey: configurationKeys.labour(),
+    queryFn: ConfigurationService.getLabour,
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 24 * 60 * 60 * 1000, // 24 hours
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
+}
+
+/**
+ * Hook for fetching all equipment
+ */
+export function useEquipment() {
+  return useQuery({
+    queryKey: configurationKeys.equipment(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('equipment').select('*').eq('active', true).order('name')
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  })
+}
+
+/**
+ * @deprecated Use useLabour() instead
+ */
+export function useResources() {
+  return useLabour()
 }
 
 /**
@@ -128,7 +158,7 @@ export function useProductById(id: string) {
 export function useResourceById(id: string) {
   return useQuery({
     queryKey: configurationKeys.resourceById(id),
-    queryFn: () => ConfigurationService.getResourceById(id),
+    queryFn: () => ConfigurationService.getLabourById(id),
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 24 * 60 * 60 * 1000, // 24 hours
     enabled: !!id,

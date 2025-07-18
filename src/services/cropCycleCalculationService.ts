@@ -46,7 +46,7 @@ export class CropCycleCalculationService {
       // Get the crop cycle record directly from the database
       const { data, error } = await supabase
         .from('crop_cycles')
-        .select('estimated_total_cost, actual_total_cost, sugarcane_actual_yield_tons_ha, total_revenue, profit_per_hectare')
+        .select('total_planned_cost, total_actual_cost, actual_yield_tons')
         .eq('id', cropCycleId)
         .single()
 
@@ -63,12 +63,12 @@ export class CropCycleCalculationService {
       console.log('✅ Authoritative totals fetched:', data)
 
       return {
-        estimatedTotalCost: Number(data.estimated_total_cost) || 0,
-        actualTotalCost: Number(data.actual_total_cost) || 0,
-        sugarcaneYieldTonnesPerHectare: Number(data.sugarcane_actual_yield_tons_ha) || 0,
+        estimatedTotalCost: Number(data.total_planned_cost) || 0,
+        actualTotalCost: Number(data.total_actual_cost) || 0,
+        sugarcaneYieldTonnesPerHectare: Number(data.actual_yield_tons) || 0,
         intercropYieldTonnesPerHectare: 0, // Intercrop yield not stored in crop_cycles table
-        totalRevenue: Number(data.total_revenue) || 0,
-        profitPerHectare: Number(data.profit_per_hectare) || 0
+        totalRevenue: 0, // Revenue calculation not implemented in DB yet
+        profitPerHectare: 0 // Profit calculation not implemented in DB yet
       }
 
     } catch (error) {

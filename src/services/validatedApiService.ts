@@ -129,71 +129,95 @@ export class ValidatedApiService {
     // Validate input
     const validatedInput = CreateCropCycleSchema.parse(data)
 
-    return validateApiResponse(
-      async () => await supabase.rpc('create_crop_cycle', { p_cycle_data: validatedInput }),
-      CropCycleSchema,
-      'Create Crop Cycle'
-    )
+    // RPC function not available - use regular insert
+    const mappedData = {
+      bloc_id: validatedInput.blocId,
+      type: validatedInput.type,
+      sugarcane_variety_id: validatedInput.sugarcaneVarietyId,
+      intercrop_variety_id: validatedInput.intercropVarietyId,
+      planting_date: validatedInput.plantingDate,
+      expected_harvest_date: validatedInput.expectedHarvestDate,
+      expected_yield_tons: validatedInput.expectedYield,
+      cycle_number: 1,
+      status: 'active'
+    }
+
+    const { data: result, error } = await supabase
+      .from('crop_cycles')
+      .insert(mappedData)
+      .select()
+      .single()
+
+    if (error) throw error
+    return result as any
   }
   
   static async createFieldOperation(data: CreateFieldOperationRequest): Promise<FieldOperation> {
     // Validate input
     const validatedInput = CreateFieldOperationSchema.parse(data)
-    
-    return validateApiResponse(
-      async () => await supabase.rpc('create_field_operation', { p_operation_data: validatedInput }),
-      FieldOperationSchema,
-      'Create Field Operation'
-    )
+
+    // RPC function not available - use regular insert with field mapping
+    const mappedData = {
+      crop_cycle_uuid: validatedInput.cropCycleUuid,
+      operation_name: validatedInput.operationName,
+      operation_type: validatedInput.operationType,
+      method: validatedInput.method,
+      priority: validatedInput.priority,
+      planned_start_date: validatedInput.plannedStartDate,
+      planned_end_date: validatedInput.plannedEndDate,
+      planned_area_hectares: validatedInput.plannedAreaHectares,
+      planned_quantity: validatedInput.plannedQuantity,
+      estimated_total_cost: validatedInput.estimatedTotalCost,
+      status: 'planned'
+    }
+
+    const { data: result, error } = await supabase
+      .from('field_operations')
+      .insert(mappedData)
+      .select()
+      .single()
+
+    if (error) throw error
+    return result as any
   }
   
   static async createWorkPackage(data: CreateWorkPackageRequest): Promise<WorkPackage> {
-    // Validate input
-    const validatedInput = CreateWorkPackageSchema.parse(data)
-    
-    return validateApiResponse(
-      async () => await supabase.rpc('create_work_package', { p_package_data: validatedInput }),
-      WorkPackageSchema,
-      'Create Work Package'
-    )
+    // Work packages table not available - return mock data
+    throw new Error('Work packages not implemented yet')
   }
-  
+
   static async updateFieldOperation(uuid: string, data: Partial<CreateFieldOperationRequest>): Promise<FieldOperation> {
-    return validateApiResponse(
-      async () => await supabase.rpc('update_field_operation', {
-        p_operation_uuid: uuid,
-        p_operation_data: data
-      }),
-      FieldOperationSchema,
-      'Update Field Operation'
-    )
+    // RPC function not available - use regular update
+    const { data: result, error } = await supabase
+      .from('field_operations')
+      .update(data)
+      .eq('uuid', uuid)
+      .select()
+      .single()
+
+    if (error) throw error
+    return result as any
   }
-  
+
   static async updateWorkPackage(uuid: string, data: Partial<CreateWorkPackageRequest>): Promise<WorkPackage> {
-    return validateApiResponse(
-      async () => await supabase.rpc('update_work_package', {
-        p_package_uuid: uuid,
-        p_package_data: data
-      }),
-      WorkPackageSchema,
-      'Update Work Package'
-    )
+    // Work packages not implemented
+    throw new Error('Work packages not implemented yet')
   }
-  
+
   static async deleteFieldOperation(uuid: string): Promise<void> {
-    const response = await supabase.rpc('delete_field_operation', { p_operation_uuid: uuid })
-    
-    if (response.error) {
-      throw new Error(`Delete Field Operation failed: ${response.error.message}`)
+    const { error } = await supabase
+      .from('field_operations')
+      .delete()
+      .eq('uuid', uuid)
+
+    if (error) {
+      throw new Error(`Delete Field Operation failed: ${error.message}`)
     }
   }
-  
+
   static async deleteWorkPackage(uuid: string): Promise<void> {
-    const response = await supabase.rpc('delete_work_package', { p_package_uuid: uuid })
-    
-    if (response.error) {
-      throw new Error(`Delete Work Package failed: ${response.error.message}`)
-    }
+    // Work packages not implemented
+    throw new Error('Work packages not implemented yet')
   }
   
   /**

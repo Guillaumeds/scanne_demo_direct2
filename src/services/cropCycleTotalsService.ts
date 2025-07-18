@@ -16,18 +16,16 @@ export class CropCycleTotalsService {
     try {
       console.log('💾 Updating crop cycle totals in database:', cycleUuid, totals)
 
-      const { data, error } = await supabase.rpc('update_crop_cycle_totals', {
-        p_cycle_id: cycleUuid,
-        p_estimated_total_cost: totals.estimatedTotalCost,
-        p_actual_total_cost: totals.actualTotalCost,
-        p_total_revenue: totals.totalRevenue,
-        p_sugarcane_revenue: totals.sugarcaneRevenue,
-        p_intercrop_revenue: totals.intercropRevenue,
-        p_net_profit: totals.netProfit,
-        p_profit_per_hectare: totals.profitPerHectare,
-        p_profit_margin_percent: totals.profitMarginPercent,
-        p_sugarcane_actual_yield_tons_ha: totals.sugarcaneActualYieldTonsHa
-      })
+      // Update crop cycle totals using regular update (RPC function not available)
+      const { data, error } = await supabase
+        .from('crop_cycles')
+        .update({
+          total_planned_cost: totals.estimatedTotalCost,
+          total_actual_cost: totals.actualTotalCost,
+          updated_at: new Date().toISOString()
+          // Note: Revenue fields not implemented in DB yet
+        })
+        .eq('id', cycleUuid)
 
       if (error) {
         console.error('❌ Error updating crop cycle totals:', error)

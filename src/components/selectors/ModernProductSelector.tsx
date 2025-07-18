@@ -382,7 +382,7 @@ export default function ModernProductSelector({
                         id: product.id,
                         name: product.name,
                         description: product.description || `Default rate: ${product.defaultRate || 0} ${product.unit}/ha`,
-                        badge: category?.name.split(' ')[0] || product.category,
+                        badge: category?.name.split(' ')[0] || product.category || undefined,
                         color: category?.color?.replace('text-', 'bg-').replace('-700', '-100') || 'bg-slate-100',
                         icon: typeof category?.icon === 'function' ? category.icon : Package,
                         cost: product.cost,

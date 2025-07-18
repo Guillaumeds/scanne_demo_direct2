@@ -1,9 +1,17 @@
+// Product type matching actual database schema
 export interface Product {
   id: string
+  product_id: string
   name: string
-  category: ProductCategory
-  description?: string
-  unit: string
+  category: string | null
+  subcategory: string | null
+  description: string | null
+  unit: string | null
+  cost_per_unit: number | null
+  active: boolean | null
+  created_at: string | null
+  updated_at: string | null
+  // Legacy fields for backward compatibility
   defaultRate?: number
   cost?: number
   brand?: string

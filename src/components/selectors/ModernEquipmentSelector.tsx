@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { ArrowLeft, X, Search, Tractor, Wrench, Clock, DollarSign, User } from 'lucide-react'
-import { useResources } from '@/hooks/useConfigurationData'
-import { Resource } from '@/types/resources'
+import { useEquipment } from '@/hooks/useConfigurationData'
+import { Equipment } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,7 @@ import { fuzzySearch } from '@/utils/fuzzySearch'
 import ModernCardSelector from '@/components/selectors/ModernCardSelector'
 
 export interface SelectedEquipment {
-  equipment: Resource
+  equipment: Equipment
   estimatedDuration?: number
   actualDuration?: number
   costPerHour?: number
@@ -43,7 +43,7 @@ export default function ModernEquipmentSelector({
   title = "Select Equipment",
   subtitle = "Choose equipment for this operation"
 }: ModernEquipmentSelectorProps) {
-  const [selectedEquipment, setSelectedEquipment] = useState<Resource | null>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
   const [costPerHour, setCostPerHour] = useState<number>(0)
@@ -51,48 +51,41 @@ export default function ModernEquipmentSelector({
   const [notes, setNotes] = useState<string>('')
 
   // Fetch resources (equipment) using TanStack Query
-  const { data: resources, isLoading, error } = useResources()
+  const { data: equipment, isLoading, error } = useEquipment()
 
-  // Filter for equipment-type resources only
-  const equipment = (resources || []).filter(resource =>
-    resource.category === 'equipment' ||
-    resource.name.toLowerCase().includes('tractor') ||
-    resource.name.toLowerCase().includes('harvester') ||
-    resource.name.toLowerCase().includes('sprayer') ||
-    resource.name.toLowerCase().includes('truck')
-  )
+
 
   // Pre-populate fields when editing existing equipment
   useEffect(() => {
-    if (existingEquipment && resources && resources.length > 0) {
-      const equipment = resources.find(r => r.id === existingEquipment.equipment.id)
-      if (equipment) {
-        setSelectedEquipment(equipment)
+    if (existingEquipment && equipment && equipment.length > 0) {
+      const equipmentItem = equipment.find(e => e.equipment_id === existingEquipment.equipment.id)
+      if (equipmentItem) {
+        setSelectedEquipment(equipmentItem)
         setEstimatedDuration(existingEquipment.estimatedDuration || 0)
-        setCostPerHour(existingEquipment.costPerHour || equipment.hourlyRate || 0)
+        setCostPerHour(existingEquipment.costPerHour || equipmentItem.hourly_rate || 0)
         setOperator(existingEquipment.operator || '')
         setNotes(existingEquipment.notes || '')
       }
     }
-  }, [existingEquipment, resources])
+  }, [existingEquipment, equipment])
 
   // Filter equipment with fuzzy search
-  const filteredEquipment = searchTerm
+  const filteredEquipment = searchTerm && equipment
     ? fuzzySearch(equipment, searchTerm, {
-        keys: ['name', 'description', 'category', 'skillLevel'],
+        keys: ['name', 'description', 'category'],
         threshold: 0.2
       })
-    : equipment
+    : equipment || []
 
 
 
   const handleEquipmentSelect = (value: string | string[]) => {
     const equipmentId = Array.isArray(value) ? value[0] : value
     if (!equipmentId) return
-    const equipment = (resources || []).find(e => e.id === equipmentId)
-    if (equipment) {
-      setSelectedEquipment(equipment)
-      setCostPerHour(equipment.hourlyRate || 0)
+    const equipmentItem = (equipment || []).find(e => e.equipment_id === equipmentId)
+    if (equipmentItem) {
+      setSelectedEquipment(equipmentItem)
+      setCostPerHour(equipmentItem.hourly_rate || 0)
       setEstimatedDuration(1) // Default to 1 hour
     }
   }
@@ -284,16 +277,16 @@ export default function ModernEquipmentSelector({
               <ScrollArea className="h-[400px] px-6">
                 <div className="pb-6">
                   <ModernCardSelector
-                    options={filteredEquipment.map((equipment) => ({
-                      id: equipment.id,
-                      name: equipment.name,
-                      description: equipment.description || 'Farm equipment',
-                      badge: equipment.category,
+                    options={filteredEquipment.map((equipmentItem) => ({
+                      id: equipmentItem.equipment_id,
+                      name: equipmentItem.name,
+                      description: equipmentItem.description || 'Farm equipment',
+                      badge: equipmentItem.category || undefined,
                       color: 'bg-blue-50',
                       icon: Tractor,
-                      cost: equipment.hourlyRate,
+                      cost: equipmentItem.hourly_rate,
                       unit: 'hour',
-                      skillLevel: equipment.skillLevel
+                      skillLevel: 'Basic' // Equipment doesn't have skillLevel in DB
                     }))}
                     value=""
                     onChange={handleEquipmentSelect}

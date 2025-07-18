@@ -11,7 +11,7 @@ export interface BlocData {
   workPackages: WorkPackage[]
   products: ProductJoin[]
   equipment: EquipmentJoin[]
-  resources: ResourceJoin[]
+  labour: LabourJoin[]
   lastUpdated: string
 }
 
@@ -112,6 +112,20 @@ export interface EquipmentJoin {
   maintenanceNotes?: string
 }
 
+export interface LabourJoin {
+  id: string
+  operationUuid?: string
+  workPackageUuid?: string
+  labourId: string
+  labourName: string
+  plannedQuantity: number
+  actualQuantity?: number
+  plannedCost: number
+  actualCost?: number
+  unit: string
+}
+
+// @deprecated - Use LabourJoin instead
 export interface ResourceJoin {
   id: string
   operationUuid?: string
@@ -160,7 +174,7 @@ export class BlocDataService {
           workPackages: [],
           products: [],
           equipment: [],
-          resources: [],
+          labour: [],
           lastUpdated: new Date().toISOString()
         }
       }
@@ -191,17 +205,17 @@ export class BlocDataService {
       const [
         { data: operationProducts },
         { data: operationEquipment },
-        { data: operationResources },
+        { data: operationLabour },
         { data: workPackageProducts },
         { data: workPackageEquipment },
-        { data: workPackageResources }
+        { data: workPackageLabour }
       ] = await Promise.all([
         supabase.from('operation_products').select('*, products(name)').in('field_operation_uuid', operationUuids),
         supabase.from('operation_equipment').select('*, equipment(name)').in('field_operation_uuid', operationUuids),
-        supabase.from('operation_resources').select('*, resources(name)').in('field_operation_uuid', operationUuids),
+        supabase.from('operation_labour').select('*, labour(name)').in('field_operation_uuid', operationUuids),
         supabase.from('work_package_products').select('*, products(name)').in('daily_work_package_uuid', workPackages?.map(wp => wp.uuid) || []),
         supabase.from('work_package_equipment').select('*, equipment(name)').in('daily_work_package_uuid', workPackages?.map(wp => wp.uuid) || []),
-        supabase.from('work_package_resources').select('*, resources(name)').in('daily_work_package_uuid', workPackages?.map(wp => wp.uuid) || [])
+        supabase.from('work_package_labour').select('*, labour(name)').in('daily_work_package_uuid', workPackages?.map(wp => wp.uuid) || [])
       ])
 
       // Transform and combine all data
@@ -220,9 +234,9 @@ export class BlocDataService {
         ...(workPackageEquipment?.map(e => this.transformDbToEquipmentJoin(e, 'workPackage')) || [])
       ]
       
-      const allResources = [
-        ...(operationResources?.map(r => this.transformDbToResourceJoin(r, 'operation')) || []),
-        ...(workPackageResources?.map(r => this.transformDbToResourceJoin(r, 'workPackage')) || [])
+      const allLabour = [
+        ...(operationLabour?.map(r => this.transformDbToLabourJoin(r, 'operation')) || []),
+        ...(workPackageLabour?.map(r => this.transformDbToLabourJoin(r, 'workPackage')) || [])
       ]
 
       const result: BlocData = {
@@ -232,7 +246,7 @@ export class BlocDataService {
         workPackages: transformedWorkPackages,
         products: allProducts,
         equipment: allEquipment,
-        resources: allResources,
+        labour: allLabour,
         lastUpdated: new Date().toISOString()
       }
 
@@ -242,7 +256,7 @@ export class BlocDataService {
         workPackages: result.workPackages.length,
         products: result.products.length,
         equipment: result.equipment.length,
-        resources: result.resources.length
+        labour: result.labour.length
       })
 
       return result
@@ -397,6 +411,22 @@ export class BlocDataService {
     }
   }
 
+  private static transformDbToLabourJoin(data: any, type: 'operation' | 'workPackage'): LabourJoin {
+    return {
+      id: data.uuid,
+      operationUuid: type === 'operation' ? data.field_operation_uuid : undefined,
+      workPackageUuid: type === 'workPackage' ? data.daily_work_package_uuid : undefined,
+      labourId: data.labour_uuid,
+      labourName: data.labour?.name || 'Unknown Labour',
+      plannedQuantity: data.planned_quantity || 0,
+      actualQuantity: data.actual_quantity,
+      plannedCost: data.planned_cost || 0,
+      actualCost: data.actual_cost,
+      unit: data.unit || 'hours'
+    }
+  }
+
+  // @deprecated - Use transformDbToLabourJoin instead
   private static transformDbToResourceJoin(data: any, type: 'operation' | 'workPackage'): ResourceJoin {
     return {
       id: data.uuid,

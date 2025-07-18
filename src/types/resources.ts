@@ -1,9 +1,16 @@
+// Resource type matching actual database schema
 export interface Resource {
   id: string
+  labour_id: string
   name: string
-  category: ResourceCategory
-  description?: string
-  unit: string
+  category: string | null
+  description: string | null
+  unit: string | null
+  cost_per_unit: number | null
+  active: boolean | null
+  created_at: string | null
+  updated_at: string | null
+  // Legacy fields for backward compatibility
   defaultRate?: number
   costPerUnit?: number
   hourlyRate?: number

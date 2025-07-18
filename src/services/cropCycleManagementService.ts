@@ -174,7 +174,7 @@ export class CropCycleManagementService {
       // Check if costs are entered (basic validation)
       const { data: cycle, error: cycleError } = await supabase
         .from('crop_cycles')
-        .select('actual_total_cost, sugarcane_actual_harvest_date')
+        .select('total_actual_cost, actual_harvest_date')
         .eq('id', cycleId)
         .single()
 
@@ -182,8 +182,8 @@ export class CropCycleManagementService {
         throw new Error(`Failed to fetch cycle: ${cycleError.message}`)
       }
 
-      const costsEntered = (cycle.actual_total_cost || 0) > 0
-      const harvestCompleted = !!cycle.sugarcane_actual_harvest_date
+      const costsEntered = (cycle.total_actual_cost || 0) > 0
+      const harvestCompleted = !!cycle.actual_harvest_date
 
       const validationErrors: string[] = []
       if (!operationsCompleted) validationErrors.push('Not all field operations are completed')

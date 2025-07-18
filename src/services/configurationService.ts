@@ -11,11 +11,8 @@ import {
   CropVariety 
 } from '@/types/varieties'
 import { Product } from '@/types/products'
-import { Resource } from '@/types/resources'
-import { 
-  transformAndValidate,
-  transformDbVarieties 
-} from './dataAdapters'
+import { Labour } from '@/lib/supabase'
+// Removed transform functions - using database data directly
 
 /**
  * Configuration Service Class
@@ -44,7 +41,8 @@ export class ConfigurationService {
         return []
       }
 
-      return transformAndValidate.sugarcaneVarieties(data)
+      // Return data directly from database
+      return data
     } catch (error) {
       console.error('ConfigurationService.getSugarcaneVarieties error:', error)
       throw error
@@ -72,7 +70,8 @@ export class ConfigurationService {
         return []
       }
 
-      return transformAndValidate.intercropVarieties(data)
+      // Return data directly from database
+      return data
     } catch (error) {
       console.error('ConfigurationService.getIntercropVarieties error:', error)
       throw error
@@ -114,7 +113,8 @@ export class ConfigurationService {
         throw new Error('No varieties found in database')
       }
 
-      return transformDbVarieties(sugarcaneData, intercropData)
+      // Combine both variety types
+      return [...sugarcaneData, ...intercropData] as CropVariety[]
     } catch (error) {
       console.error('ConfigurationService.getAllVarieties error:', error)
       throw error
@@ -142,7 +142,8 @@ export class ConfigurationService {
         return []
       }
 
-      return transformAndValidate.products(data)
+      // Return data directly from database
+      return data
     } catch (error) {
       console.error('ConfigurationService.getProducts error:', error)
       throw error
@@ -150,29 +151,29 @@ export class ConfigurationService {
   }
 
   /**
-   * Fetch all resources from database
+   * Fetch all labour from database
    * @throws Error if database query fails or data is invalid
    */
-  static async getResources(): Promise<Resource[]> {
+  static async getLabour(): Promise<Labour[]> {
     try {
       const { data, error } = await supabase
-        .from('resources')
+        .from('labour')
         .select('*')
         .eq('active', true)
         .order('name')
 
       if (error) {
-        throw new Error(`Failed to fetch resources: ${error.message}`)
+        throw new Error(`Failed to fetch labour: ${error.message}`)
       }
 
       if (!data || data.length === 0) {
-        console.warn('No resources found in database - returning empty array')
+        console.warn('No labour found in database - returning empty array')
         return []
       }
 
-      return transformAndValidate.resources(data)
+      return data
     } catch (error) {
-      console.error('ConfigurationService.getResources error:', error)
+      console.error('ConfigurationService.getLabour error:', error)
       throw error
     }
   }
@@ -193,7 +194,7 @@ export class ConfigurationService {
         .single()
 
       if (!sugarcaneError && sugarcaneData) {
-        return transformAndValidate.sugarcaneVarieties([sugarcaneData])[0]
+        return sugarcaneData
       }
 
       // Try intercrop
@@ -205,7 +206,7 @@ export class ConfigurationService {
         .single()
 
       if (!intercropError && intercropData) {
-        return transformAndValidate.intercropVarieties([intercropData])[0]
+        return intercropData
       }
 
       throw new Error(`Variety with ID '${id}' not found in database`)
@@ -237,7 +238,7 @@ export class ConfigurationService {
         throw new Error(`Product with ID '${id}' not found in database`)
       }
 
-      return transformAndValidate.products([data])[0]
+      return data
     } catch (error) {
       console.error('ConfigurationService.getProductById error:', error)
       throw error
@@ -245,30 +246,30 @@ export class ConfigurationService {
   }
 
   /**
-   * Get resource by ID
-   * @param id Resource ID to search for
-   * @throws Error if database query fails or resource not found
+   * Get labour by ID
+   * @param id Labour ID to search for
+   * @throws Error if database query fails or labour not found
    */
-  static async getResourceById(id: string): Promise<Resource> {
+  static async getLabourById(id: string): Promise<Labour> {
     try {
       const { data, error } = await supabase
-        .from('resources')
+        .from('labour')
         .select('*')
-        .eq('resource_id', id)
+        .eq('labour_id', id)
         .eq('active', true)
         .single()
 
       if (error) {
-        throw new Error(`Failed to fetch resource '${id}': ${error.message}`)
+        throw new Error(`Failed to fetch labour '${id}': ${error.message}`)
       }
 
       if (!data) {
-        throw new Error(`Resource with ID '${id}' not found in database`)
+        throw new Error(`Labour with ID '${id}' not found in database`)
       }
 
-      return transformAndValidate.resources([data])[0]
+      return data
     } catch (error) {
-      console.error('ConfigurationService.getResourceById error:', error)
+      console.error('ConfigurationService.getLabourById error:', error)
       throw error
     }
   }
@@ -279,26 +280,26 @@ export class ConfigurationService {
    */
   static async healthCheck(): Promise<{ status: 'healthy' | 'error', message: string }> {
     try {
-      const [varieties, products, resources] = await Promise.all([
+      const [varieties, products, labour] = await Promise.all([
         this.getAllVarieties(),
         this.getProducts(),
-        this.getResources()
+        this.getLabour()
       ])
 
       const varietyCount = varieties.length
       const productCount = products.length
-      const resourceCount = resources.length
+      const labourCount = labour.length
 
-      if (varietyCount === 0 || productCount === 0 || resourceCount === 0) {
+      if (varietyCount === 0 || productCount === 0 || labourCount === 0) {
         return {
           status: 'error',
-          message: `Missing configuration data: ${varietyCount} varieties, ${productCount} products, ${resourceCount} resources`
+          message: `Missing configuration data: ${varietyCount} varieties, ${productCount} products, ${labourCount} labour`
         }
       }
 
       return {
         status: 'healthy',
-        message: `Configuration data loaded: ${varietyCount} varieties, ${productCount} products, ${resourceCount} resources`
+        message: `Configuration data loaded: ${varietyCount} varieties, ${productCount} products, ${labourCount} labour`
       }
     } catch (error) {
       return {

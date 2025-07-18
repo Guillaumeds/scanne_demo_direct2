@@ -33,6 +33,8 @@ DROP TABLE IF EXISTS equipment CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS operations_method CASCADE;
 DROP TABLE IF EXISTS operation_type_config CASCADE;
+DROP TABLE IF EXISTS climatic_data CASCADE;
+DROP TABLE IF EXISTS observations CASCADE;
 
 -- =====================================================
 -- CORE TABLES
@@ -308,6 +310,47 @@ CREATE TABLE work_package_labour (
 );
 
 -- =====================================================
+-- DATA COLLECTION TABLES
+-- =====================================================
+
+-- Climatic Data
+CREATE TABLE climatic_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    station_id VARCHAR(100) NOT NULL,
+    observation_date DATE NOT NULL,
+    observation_year INTEGER NOT NULL,
+    observation_month INTEGER NOT NULL,
+    observation_day INTEGER NOT NULL,
+    julian_day INTEGER NOT NULL,
+    temperature_min_celsius DECIMAL(5,2),
+    temperature_max_celsius DECIMAL(5,2),
+    solar_radiation_mj_per_m2 DECIMAL(7,2),
+    evapotranspiration_mm DECIMAL(6,2),
+    precipitation_mm DECIMAL(6,2),
+    wind_speed_m_per_s DECIMAL(5,2),
+    vapor_pressure_hpa DECIMAL(6,2),
+    co2_concentration_ppm DECIMAL(7,2),
+    relative_humidity_percent INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(station_id, observation_date)
+);
+
+-- Observations (placeholder for future implementation)
+CREATE TABLE observations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    bloc_id UUID REFERENCES blocs(id) ON DELETE CASCADE,
+    crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE CASCADE,
+    observation_date DATE NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    data JSONB NOT NULL,
+    notes TEXT,
+    created_by VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 CREATE INDEX idx_blocs_status ON blocs(status);
@@ -319,6 +362,11 @@ CREATE INDEX idx_work_packages_operation ON daily_work_packages(field_operation_
 CREATE INDEX idx_products_active ON products(active);
 CREATE INDEX idx_equipment_active ON equipment(active);
 CREATE INDEX idx_labour_active ON labour(active);
+CREATE INDEX idx_climatic_data_station_date ON climatic_data(station_id, observation_date);
+CREATE INDEX idx_climatic_data_date ON climatic_data(observation_date);
+CREATE INDEX idx_observations_bloc_id ON observations(bloc_id);
+CREATE INDEX idx_observations_crop_cycle_id ON observations(crop_cycle_id);
+CREATE INDEX idx_observations_date ON observations(observation_date);
 
 -- =====================================================
 -- TRIGGERS FOR UPDATED_AT
@@ -338,6 +386,8 @@ CREATE TRIGGER update_blocs_updated_at BEFORE UPDATE ON blocs FOR EACH ROW EXECU
 CREATE TRIGGER update_crop_cycles_updated_at BEFORE UPDATE ON crop_cycles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_field_operations_updated_at BEFORE UPDATE ON field_operations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_work_packages_updated_at BEFORE UPDATE ON daily_work_packages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_climatic_data_updated_at BEFORE UPDATE ON climatic_data FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_observations_updated_at BEFORE UPDATE ON observations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- OPTIMIZED RPC FUNCTIONS

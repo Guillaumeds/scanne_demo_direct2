@@ -124,17 +124,16 @@ export class BlocService {
     try {
       // Fetching blocs from database
 
-      // Use RPC function to get blocs with complete data including WKT coordinates
-      const { data, error } = await supabase.rpc('get_blocs_with_wkt')
-
-      // RPC blocs query completed
+      // Fetch blocs with regular query (RPC function not available)
+      const { data, error } = await supabase
+        .from('blocs')
+        .select('*')
+        .order('name')
 
       if (error) throw error
 
-      // Transform database records to DrawnArea format with new naming convention
       // Return raw database objects - transformation happens in calling code
-
-      return data
+      return data || []
     } catch (error) {
       console.error('Failed to fetch blocs:', error)
       return []

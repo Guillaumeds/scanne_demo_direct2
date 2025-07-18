@@ -1,20 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
+// Types matching actual database schema
 export interface OperationType {
   id: string
-  ordr: number
+  ordr: number | null
   operation_type: string
+  display_name: string
   description: string | null
-  icon: string | null
-  color_class: string | null
+  active: boolean | null
+  created_at: string | null
+  updated_at: string | null
+  // Legacy fields for backward compatibility
+  icon?: string | null
+  color_class?: string | null
 }
 
 export interface OperationMethod {
   id: string
-  ordr: number
+  ordr: number | null
   method: string
+  display_name: string
   description: string | null
+  active: boolean | null
+  created_at: string | null
+  updated_at: string | null
 }
 
 // Hook to fetch operation types

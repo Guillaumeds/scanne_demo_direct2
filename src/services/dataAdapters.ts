@@ -4,7 +4,7 @@
  * Handles field mapping, type conversion, and data transformation
  */
 
-import { Database } from '@/lib/database.types'
+import { Database } from '@/types/supabase'
 import { 
   SugarcaneVariety, 
   InterCropPlant, 
@@ -18,25 +18,28 @@ import { Resource, ResourceCategory } from '@/types/resources'
 type DbSugarcaneVariety = Database['public']['Tables']['sugarcane_varieties']['Row']
 type DbIntercropVariety = Database['public']['Tables']['intercrop_varieties']['Row']
 type DbProduct = Database['public']['Tables']['products']['Row']
-type DbResource = Database['public']['Tables']['resources']['Row']
+type DbResource = Database['public']['Tables']['labour']['Row']
 
 /**
  * Transform database sugarcane variety to frontend interface
  */
 export const transformDbSugarcaneVariety = (dbVariety: DbSugarcaneVariety): SugarcaneVariety => {
   return {
-    id: dbVariety.variety_id, // Keep variety_id as the main identifier for UI
-    uuid: dbVariety.id, // Add UUID for database operations
+    id: dbVariety.id, // Use database ID
     name: dbVariety.name,
+    description: dbVariety.description,
+    created_at: dbVariety.created_at,
+    updated_at: dbVariety.updated_at,
+    // Legacy fields for backward compatibility
+    uuid: dbVariety.id, // Add UUID for database operations
     category: 'sugarcane' as const,
-    harvestStart: dbVariety.harvest_start_month || '',
-    harvestEnd: dbVariety.harvest_end_month || '',
-    seasons: (dbVariety.seasons || []) as Season[],
-    soilTypes: dbVariety.soil_types || [],
-    description: dbVariety.description || undefined,
-    image: dbVariety.image_url || undefined,
-    pdfUrl: dbVariety.information_leaflet_url || undefined,
-    characteristics: dbVariety.characteristics as any || undefined
+    harvestStart: '',
+    harvestEnd: '',
+    seasons: [] as Season[],
+    soilTypes: [],
+    image: undefined,
+    pdfUrl: undefined,
+    characteristics: undefined
   }
 }
 
@@ -45,16 +48,19 @@ export const transformDbSugarcaneVariety = (dbVariety: DbSugarcaneVariety): Suga
  */
 export const transformDbIntercropVariety = (dbVariety: DbIntercropVariety): InterCropPlant => {
   return {
-    id: dbVariety.variety_id, // Keep variety_id as the main identifier for UI
-    uuid: dbVariety.id, // Add UUID for database operations
+    id: dbVariety.id, // Use database ID
     name: dbVariety.name,
-    scientificName: dbVariety.scientific_name || undefined,
+    description: dbVariety.description,
+    created_at: dbVariety.created_at,
+    updated_at: dbVariety.updated_at,
+    // Legacy fields for backward compatibility
+    uuid: dbVariety.id, // Add UUID for database operations
+    scientificName: undefined,
     category: 'intercrop' as const,
-    benefits: dbVariety.benefits || [],
-    plantingTime: dbVariety.planting_time || undefined,
-    harvestTime: dbVariety.harvest_time || undefined,
-    image: dbVariety.image_url || undefined,
-    description: dbVariety.description || undefined
+    benefits: [],
+    plantingTime: undefined,
+    harvestTime: undefined,
+    image: undefined
   }
 }
 
@@ -63,11 +69,18 @@ export const transformDbIntercropVariety = (dbVariety: DbIntercropVariety): Inte
  */
 export const transformDbProduct = (dbProduct: DbProduct): Product => {
   return {
-    id: dbProduct.product_id,
+    id: dbProduct.id,
+    product_id: dbProduct.product_id,
     name: dbProduct.name,
-    category: dbProduct.category as ProductCategory,
-    description: dbProduct.description || undefined,
-    unit: dbProduct.unit || '',
+    category: dbProduct.category,
+    subcategory: dbProduct.subcategory,
+    description: dbProduct.description,
+    unit: dbProduct.unit,
+    cost_per_unit: dbProduct.cost_per_unit,
+    active: dbProduct.active,
+    created_at: dbProduct.created_at,
+    updated_at: dbProduct.updated_at,
+    // Legacy fields for backward compatibility
     defaultRate: (dbProduct as any).recommended_rate_per_ha || undefined,
     cost: dbProduct.cost_per_unit || undefined,
     brand: (dbProduct as any).brand || undefined,
@@ -83,11 +96,17 @@ export const transformDbResource = (dbResource: DbResource): Resource => {
   const costPerUnit = dbResource.cost_per_unit || (dbResource as any).cost_per_hour || undefined
 
   return {
-    id: dbResource.resource_id,
+    id: dbResource.id,
+    labour_id: dbResource.labour_id,
     name: dbResource.name,
-    category: dbResource.category as ResourceCategory,
-    description: dbResource.description || undefined,
-    unit: dbResource.unit || '',
+    category: dbResource.category,
+    description: dbResource.description,
+    unit: dbResource.unit,
+    cost_per_unit: dbResource.cost_per_unit,
+    active: dbResource.active,
+    created_at: dbResource.created_at,
+    updated_at: dbResource.updated_at,
+    // Legacy fields for backward compatibility
     defaultRate: 1, // Default rate for resources (hours/units typically)
     costPerUnit,
     skillLevel: (dbResource as any).skill_level || undefined,

@@ -1,39 +1,47 @@
 
 
+// Simple variety type matching actual database schema
 export interface SugarcaneVariety {
-  id: string // variety_id for UI display (e.g., "m-1176-77")
-  uuid: string // Database UUID for foreign key relationships
+  id: string // Database ID
   name: string
-  category: VarietyCategory
-  harvestStart: string // Month abbreviation (Jun, Jul, Aug, etc.)
-  harvestEnd: string // Month abbreviation
-  seasons: Season[]
-  description?: string
+  description: string | null
+  created_at: string | null
+  updated_at: string | null
+  // Legacy fields for backward compatibility
+  uuid?: string
+  category?: VarietyCategory
+  harvestStart?: string
+  harvestEnd?: string
+  seasons?: Season[]
   image?: string
-  pdfUrl?: string // Link to variety leaflet/pamphlet
-  soilTypes?: string[] // Recommended soil types (B1, B2, F1, F2, H1, H2, L1, L2, P1, P2, P3)
+  pdfUrl?: string
+  soilTypes?: string[]
   characteristics?: {
     yield?: string
     sugarContent?: string
     diseaseResistance?: string
     soilSuitability?: string
   }
-  yieldPotential?: number // Yield potential in t/ha
-  sugarContentPercent?: number // Sugar content percentage
-  informationLeafletUrl?: string // URL to information leaflet
+  yieldPotential?: number
+  sugarContentPercent?: number
+  informationLeafletUrl?: string
 }
 
+// Simple intercrop type matching actual database schema
 export interface InterCropPlant {
-  id: string // variety_id for UI display (e.g., "cowpea")
-  uuid: string // Database UUID for foreign key relationships
+  id: string // Database ID
   name: string
+  description: string | null
+  created_at: string | null
+  updated_at: string | null
+  // Legacy fields for backward compatibility
+  uuid?: string
   scientificName?: string
-  category: 'intercrop'
-  benefits: string[]
+  category?: 'intercrop'
+  benefits?: string[]
   plantingTime?: string
   harvestTime?: string
   image?: string
-  description?: string
 }
 
 export type VarietyCategory = 'sugarcane' | 'intercrop'

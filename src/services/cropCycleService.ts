@@ -226,7 +226,7 @@ export class CropCycleService {
     const adaptedActivities = fieldOperations.map(op => ({
       id: op.uuid,
       name: op.operation_name,
-      description: op.description || '',
+      description: op.notes || '', // Use notes as description
       phase: 'maintenance' as const, // Map to appropriate phase - using valid ActivityPhase
       status: op.status as any,
       cropCycleId: op.crop_cycle_uuid || '',
@@ -242,7 +242,7 @@ export class CropCycleService {
       notes: op.notes || undefined,
       createdAt: op.created_at || new Date().toISOString(),
       updatedAt: op.updated_at || new Date().toISOString(),
-      createdBy: op.created_by || 'system'
+      createdBy: 'system' // Default since created_by doesn't exist in DB
     }))
 
     return CropCycleValidationService.validateCycleForClosure(
@@ -565,44 +565,39 @@ export class CropCycleService {
     try {
       const { data: activeCycles, error } = await supabase
         .from('crop_cycles')
-        .select('id, sugarcane_planting_date, sugarcane_actual_harvest_date, growth_stage, status, cycle_number')
+        .select('id, planting_date, actual_harvest_date, status, cycle_number')
         .eq('status', 'active') // Only active cycles get growth stage updates
 
       if (error) throw error
 
       for (const cycle of activeCycles || []) {
-        // 🛡️ PROTECTION 1: Skip if already harvested
-        if (cycle.growth_stage === 'harvested') {
+        // 🛡️ PROTECTION 1: Skip if already harvested (check status instead of growth_stage)
+        if (cycle.status === 'harvested') {
           continue
         }
 
         // 🛡️ PROTECTION 2: Skip if actual harvest date is in the past
-        if (cycle.sugarcane_actual_harvest_date) {
-          const harvestDate = new Date(cycle.sugarcane_actual_harvest_date)
+        if (cycle.actual_harvest_date) {
+          const harvestDate = new Date(cycle.actual_harvest_date)
           if (harvestDate <= new Date()) {
             continue
           }
         }
 
-        if (cycle.sugarcane_planting_date) {
-          const plantingDate = new Date(cycle.sugarcane_planting_date)
+        if (cycle.planting_date) {
+          const plantingDate = new Date(cycle.planting_date)
           const daysSincePlanting = Math.floor((new Date().getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24))
           const newGrowthStage = this.calculateGrowthStage(daysSincePlanting)
 
-          if (cycle.growth_stage !== newGrowthStage) {
-            await supabase
-              .from('crop_cycles')
-              .update({
-                growth_stage: newGrowthStage,
-                growth_stage_updated_at: new Date().toISOString(),
-                days_since_planting: daysSincePlanting,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', cycle.id)
-              .neq('growth_stage', 'harvested') // 🛡️ Extra protection at DB level
-
-
-          }
+          // Update days since planting (growth_stage not implemented in DB yet)
+          await supabase
+            .from('crop_cycles')
+            .update({
+              days_since_planting: daysSincePlanting,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', cycle.id)
+            .neq('status', 'harvested') // 🛡️ Extra protection at DB level
         }
       }
     } catch (error) {
@@ -731,7 +726,7 @@ export class CropCycleService {
       if (dbRecord.sugarcane_variety_id) {
         const { data: sugarcaneVariety } = await supabase
           .from('sugarcane_varieties')
-          .select('name, variety_id')
+          .select('name')
           .eq('id', dbRecord.sugarcane_variety_id)
           .single()
 
@@ -744,7 +739,7 @@ export class CropCycleService {
       if (dbRecord.intercrop_variety_id) {
         const { data: intercropVariety } = await supabase
           .from('intercrop_varieties')
-          .select('name, variety_id')
+          .select('name')
           .eq('id', dbRecord.intercrop_variety_id)
           .single()
 

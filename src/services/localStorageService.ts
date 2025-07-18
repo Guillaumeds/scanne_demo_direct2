@@ -177,7 +177,7 @@ export class LocalStorageService {
   static async getResources(): Promise<Resource[]> {
     return this.getOrFetch(
       this.KEYS.RESOURCES,
-      () => ConfigurationService.getResources()
+      () => ConfigurationService.getLabour()
     )
   }
 

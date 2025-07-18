@@ -11,6 +11,8 @@ import { useBlocContext } from '../contexts/BlocContext'
 import { CropCycleSelector } from './CropCycleSelector'
 import { BlocMetrics } from './BlocMetrics'
 import { GrowthStageChart } from './GrowthStageChart'
+import { SolarRadiationChart } from './SolarRadiationChart'
+import { PrecipitationChart } from './PrecipitationChart'
 
 export function InformationScreen() {
   const { bloc } = useBlocContext()
@@ -197,6 +199,39 @@ export function InformationScreen() {
             transition={{ duration: 0.3, delay: 0.4 }}
           >
             <BlocMetrics />
+          </motion.div>
+        </div>
+
+        {/* Climate Data Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+          >
+            <SolarRadiationChart
+              cropCycle={{
+                plantingDate: cropCycleData.currentCycle.plantingDate,
+                plannedHarvestDate: cropCycleData.currentCycle.expectedHarvestDate,
+                type: 'plantation'
+              }}
+              stationId="default"
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.6 }}
+          >
+            <PrecipitationChart
+              cropCycle={{
+                plantingDate: cropCycleData.currentCycle.plantingDate,
+                plannedHarvestDate: cropCycleData.currentCycle.expectedHarvestDate,
+                type: 'plantation'
+              }}
+              stationId="default"
+            />
           </motion.div>
         </div>
       </div>
