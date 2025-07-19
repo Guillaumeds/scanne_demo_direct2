@@ -6,8 +6,6 @@ import { DrawnArea } from '@/types/drawnArea'
 import { BlocProvider } from './contexts/BlocContext'
 import { BlocLayout } from './layout/BlocLayout'
 import { LoadingSpinner } from './shared/LoadingSpinner'
-import { useBlocData } from '@/hooks/useDemoData'
-import { useGlobalLoading } from '@/hooks/useGlobalState'
 
 interface BlocScreenProps {
   bloc: DrawnArea
@@ -16,66 +14,18 @@ interface BlocScreenProps {
 }
 
 export function BlocScreen({ bloc, onBack, onDelete }: BlocScreenProps) {
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Validate that bloc is saved and has UUID
   if (!bloc.uuid) {
-    console.error('❌ BlocScreen: Bloc missing UUID', {
-      bloc,
-      localId: bloc.localId,
-      isSaved: bloc.isSaved,
-      hasUuid: !!bloc.uuid
-    })
-
-    // Instead of throwing an error, show an error state and navigate back immediately
-    useEffect(() => {
-      setError(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
-      // Auto-navigate back immediately
-      console.log('🔄 Auto-navigating back due to missing UUID')
-      onBack()
-    }, [bloc.localId, onBack])
-
-    // Show error state instead of throwing
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="h-full w-full flex items-center justify-center bg-background"
-      >
-        <div className="text-center">
-          <div className="text-destructive text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-foreground mb-2">Cannot Open Bloc</h2>
-          <p className="text-muted-foreground mb-4">
-            Bloc "{bloc.localId}" must be saved to database first
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Returning to map view...
-          </p>
-        </div>
-      </motion.div>
-    )
+    throw new Error(`Cannot open bloc details: Bloc "${bloc.localId}" must be saved to database first`)
   }
 
-  // Use modern data hooks
-  const {
-    data: blocData,
-    isLoading: blocDataLoading,
-    error: blocDataError
-  } = useBlocData(bloc.uuid)
-
-  const { isLoading: globalLoading } = useGlobalLoading()
-
-  const isLoading = blocDataLoading || globalLoading
-
-  // Handle bloc data errors
+  // Remove loading delay - open immediately after pan/zoom completes
   useEffect(() => {
-    if (blocDataError) {
-      console.error('❌ Bloc data error:', blocDataError)
-      setError(`Failed to load bloc data: ${blocDataError.message}`)
-    } else {
-      setError(null)
-    }
-  }, [blocDataError])
+    setIsLoading(false)
+  }, [])
 
   return (
     <motion.div
