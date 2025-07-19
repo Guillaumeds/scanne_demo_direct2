@@ -253,10 +253,10 @@ export default function MapComponent({
 
     for (let i = 0; i < coordinates.length; i++) {
       const j = (i + 1) % coordinates.length
-      const xi = coordinates[i][1] // lat
-      const yi = coordinates[i][0] // lng
-      const xj = coordinates[j][1] // lat
-      const yj = coordinates[j][0] // lng
+      const xi = coordinates[i][1] // lat (second element in [lng, lat])
+      const yi = coordinates[i][0] // lng (first element in [lng, lat])
+      const xj = coordinates[j][1] // lat (second element in [lng, lat])
+      const yj = coordinates[j][0] // lng (first element in [lng, lat])
 
       const a = xi * yj - xj * yi
       area += a

@@ -162,7 +162,7 @@ export default function FarmGISLayout() {
 
         // Transform demo bloc objects to DrawnArea format
         const savedBlocs: DrawnArea[] = farmData.blocs.map(bloc => {
-          // Demo blocs already have coordinates as [lat, lng] pairs, convert to [lng, lat] for map
+          // Demo blocs have coordinates as [lat, lng] pairs, convert to [lng, lat] for DrawnArea format
           const coordinates: [number, number][] = bloc.coordinates.map(([lat, lng]) => [lng, lat])
 
           // Ensure UUID is properly set - use bloc.uuid if available, fallback to bloc.id
@@ -172,7 +172,9 @@ export default function FarmGISLayout() {
             blocId: bloc.id,
             blocUuid: bloc.uuid,
             finalUuid: blocUuid,
-            blocName: bloc.name
+            blocName: bloc.name,
+            originalCoords: bloc.coordinates.slice(0, 2), // First 2 coords
+            convertedCoords: coordinates.slice(0, 2) // First 2 converted coords
           })
 
           return {
@@ -431,7 +433,7 @@ export default function FarmGISLayout() {
 
       // Collect all coordinates from all blocs with validation
       const allCoordinates: [number, number][] = []
-      allBlocs.forEach(bloc => {
+      allBlocs.forEach((bloc, index) => {
         if (bloc.coordinates && Array.isArray(bloc.coordinates)) {
           // Validate each coordinate pair
           const validCoords = bloc.coordinates.filter(coord =>
@@ -442,6 +444,12 @@ export default function FarmGISLayout() {
             !isNaN(coord[0]) &&
             !isNaN(coord[1])
           )
+
+          console.log(`🔍 Bloc ${index} (${bloc.localId}) coordinates:`, {
+            first2Coords: validCoords.slice(0, 2),
+            totalCoords: validCoords.length
+          })
+
           allCoordinates.push(...validCoords)
         }
       })
@@ -451,10 +459,16 @@ export default function FarmGISLayout() {
         return
       }
 
-      // Our coordinates are always in [lng, lat] format (GeoJSON standard)
+      // Our coordinates are in [lng, lat] format (DrawnArea standard)
       // Extract lat/lng consistently
-      const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
       const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
+      const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
+
+      console.log('🔍 Sample coordinates for bounds calculation:', {
+        sampleCoords: allCoordinates.slice(0, 3),
+        sampleLngs: lngs.slice(0, 3),
+        sampleLats: lats.slice(0, 3)
+      })
 
       // Validate that we have valid numbers
       const validLats = lats.filter(lat => !isNaN(lat) && isFinite(lat))
