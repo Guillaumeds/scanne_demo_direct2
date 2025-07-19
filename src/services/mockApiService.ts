@@ -69,16 +69,13 @@ export class MockApiService {
   private static simulateDelay = 0 // No delays for demo mode
 
   /**
-   * Simulate API response with realistic structure
+   * Simulate API response with realistic structure - NO DELAYS
    */
   private static async simulateResponse<T>(
     data: T,
-    delay: number = this.simulateDelay
+    delay: number = 0 // Always 0 delay
   ): Promise<ApiResponse<T>> {
-    if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay))
-    }
-
+    // No delays - return immediately
     return {
       data,
       success: true,
@@ -193,12 +190,20 @@ export class MockApiService {
   static async getBlocById(blocId: string): Promise<ApiResponse<Bloc>> {
     await this.initializeData()
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
+
+    console.log('🔍 MockApiService: Searching for bloc:', {
+      blocId,
+      availableBlocs: blocs.map(b => ({ id: b.id, uuid: b.uuid, name: b.name }))
+    })
+
     const bloc = blocs.find(b => b.id === blocId || b.uuid === blocId)
 
     if (!bloc) {
+      console.error('❌ MockApiService: Bloc not found:', blocId)
       throw new Error(`Bloc ${blocId} not found`)
     }
 
+    console.log('✅ MockApiService: Bloc found:', { id: bloc.id, uuid: bloc.uuid, name: bloc.name })
     return this.simulateResponse(bloc)
   }
 
@@ -213,6 +218,7 @@ export class MockApiService {
    * Get comprehensive bloc data (for BlocScreen)
    */
   static async getComprehensiveBlocData(blocId: string): Promise<ApiResponse<BlocData>> {
+    console.log('🔍 MockApiService: Loading comprehensive bloc data for:', blocId)
     await this.initializeData()
 
     const [
@@ -226,6 +232,14 @@ export class MockApiService {
       DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || [],
       DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
     ])
+
+    console.log('📊 Bloc data loaded:', {
+      blocId,
+      blocFound: !!blocResponse.data,
+      cropCyclesCount: cropCycles.length,
+      fieldOperationsCount: fieldOperations.length,
+      workPackagesCount: workPackages.length
+    })
 
     const blocCropCycles = cropCycles.filter(c => c.blocId === blocId)
     const activeCropCycle = blocCropCycles.find(c => c.status === 'active') || null

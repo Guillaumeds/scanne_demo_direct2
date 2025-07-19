@@ -363,19 +363,17 @@ export default function MapComponent({
 
         mapInstanceRef.current = map
 
-        // Force map to invalidate size and set ready state
-        setTimeout(() => {
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.invalidateSize()
-            setMapReady(true)
-            initializingRef.current = false
+        // Force map to invalidate size and set ready state immediately
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize()
+          setMapReady(true)
+          initializingRef.current = false
 
-            // Notify parent component that map is ready
-            if (onMapReady) {
-              onMapReady(mapInstanceRef.current)
-            }
+          // Notify parent component that map is ready
+          if (onMapReady) {
+            onMapReady(mapInstanceRef.current)
           }
-        }, 200)
+        }
 
       } catch (error) {
         console.error('❌ Error initializing map:', error)
@@ -390,27 +388,21 @@ export default function MapComponent({
         }
         initializingRef.current = false
 
-        // Force recreation of the map container after a delay
-        setTimeout(() => {
-          setMapKey(prev => prev + 1)
-        }, 1000)
+        // Force recreation of the map container immediately
+        setMapKey(prev => prev + 1)
       }
     }
 
-    // Use multiple timing strategies to ensure DOM is ready
-    const timeoutId = setTimeout(() => {
+    // Initialize map immediately when DOM is ready
+    if (mapRef.current && !mapInstanceRef.current) {
+      initMap()
+    }
+
+    // Also try with requestAnimationFrame as fallback
+    requestAnimationFrame(() => {
       if (mapRef.current && !mapInstanceRef.current) {
         initMap()
       }
-    }, 100)
-
-    // Also try with requestAnimationFrame
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        if (mapRef.current && !mapInstanceRef.current) {
-          initMap()
-        }
-      }, 50)
     })
 
     // Cleanup function

@@ -78,9 +78,7 @@ export default function FarmGISLayout() {
     if (mapInstance && savedAreas.length > 0 && !showDataScreen) {
       // Only zoom if not in data screen mode
       console.log('🔍 Initial zoom to farm view with', savedAreas.length, 'blocs')
-      setTimeout(() => {
-        zoomToFarmViewInitial(mapInstance)
-      }, 200) // Shorter delay
+      zoomToFarmViewInitial(mapInstance)
     }
   }, [mapInstance, savedAreas.length, showDataScreen]) // Include showDataScreen to prevent zoom during bloc info
 
@@ -167,8 +165,18 @@ export default function FarmGISLayout() {
           // Demo blocs already have coordinates as [lat, lng] pairs, convert to [lng, lat] for map
           const coordinates: [number, number][] = bloc.coordinates.map(([lat, lng]) => [lng, lat])
 
+          // Ensure UUID is properly set - use bloc.uuid if available, fallback to bloc.id
+          const blocUuid = bloc.uuid || bloc.id
+
+          console.log('🔧 Converting demo bloc to DrawnArea:', {
+            blocId: bloc.id,
+            blocUuid: bloc.uuid,
+            finalUuid: blocUuid,
+            blocName: bloc.name
+          })
+
           return {
-            uuid: bloc.id,
+            uuid: blocUuid,
             localId: bloc.name,
             type: 'polygon' as const,
             coordinates,
@@ -281,12 +289,10 @@ export default function FarmGISLayout() {
       setSelectedAreaId(areaId)
       // Zoom to the selected bloc
       zoomToBlocArea(areaId)
-      // Trigger scroll to the corresponding bloc card with longer delay
-      setTimeout(() => {
-        setScrollToBlocId(areaId)
-        // Clear the scroll trigger after scroll completes
-        setTimeout(() => setScrollToBlocId(null), 500)
-      }, 200) // Delay to ensure selection state is set first
+      // Trigger scroll to the corresponding bloc card immediately
+      setScrollToBlocId(areaId)
+      // Clear the scroll trigger immediately after setting
+      setScrollToBlocId(null)
     }
     // Don't open modal automatically - only highlight
   }
@@ -340,17 +346,15 @@ export default function FarmGISLayout() {
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
     const paddedBounds = bounds.pad(0.05) // Minimal padding (5%)
 
-    // Fast zoom for immediate response
+    // Instant zoom for immediate response
     mapInstance.fitBounds(paddedBounds, {
-      animate: true,
-      duration: 0.5, // Fast animation
-      easeLinearity: 0.25, // Standard easing
+      animate: false, // No animation for instant response
       padding: [10, 10] // Minimal additional padding
     })
 
     // Call completion callback immediately for pop-out
     if (onComplete) {
-      setTimeout(onComplete, 100) // Minimal delay
+      onComplete() // No delay
     }
   }
 
@@ -584,17 +588,15 @@ export default function FarmGISLayout() {
       // Move to saved areas in local state with proper UUIDs
       setSavedAreas(prev => [...prev, ...savedDrawnAreas])
 
-      // Clear drawn areas AFTER setting saved areas to ensure proper layer updates
-      setTimeout(() => {
-        setDrawnAreas([])
-        setSelectedPolygon(null)
-        setSelectedAreaId(null)
+      // Clear drawn areas immediately after setting saved areas
+      setDrawnAreas([])
+      setSelectedPolygon(null)
+      setSelectedAreaId(null)
 
-        // Force map refresh to ensure polygons are visible
-        if (mapInstance) {
-          mapInstance.invalidateSize()
-        }
-      }, 100) // Small delay to ensure state updates are processed
+      // Force map refresh to ensure polygons are visible
+      if (mapInstance) {
+        mapInstance.invalidateSize()
+      }
 
       // Show success message
       alert(`Successfully saved ${savedBlocs.length} bloc(s) to database!`)
@@ -615,6 +617,21 @@ export default function FarmGISLayout() {
     // Find the bloc in either drawn or saved areas
     const bloc = [...drawnAreas, ...savedAreas].find(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
     if (bloc) {
+      console.log('🔍 Opening bloc data screen for:', {
+        areaKey,
+        localId: bloc.localId,
+        uuid: bloc.uuid,
+        isSaved: bloc.isSaved,
+        hasUuid: !!bloc.uuid
+      })
+
+      // Validate bloc has UUID before opening
+      if (!bloc.uuid) {
+        console.error('❌ Cannot open bloc: Missing UUID', bloc)
+        alert(`Cannot open bloc "${bloc.localId}": Bloc must be saved to database first`)
+        return
+      }
+
       // Remove any hover effects immediately
       setHoveredAreaId(null)
 
@@ -630,6 +647,10 @@ export default function FarmGISLayout() {
 
       // Optional: Quick zoom in background (non-blocking)
       zoomToBlocArea(areaKey)
+
+      console.log('✅ Bloc data screen opened successfully')
+    } else {
+      console.error('❌ Bloc not found for pop-out:', areaKey)
     }
   }
 

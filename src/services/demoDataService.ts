@@ -565,7 +565,7 @@ export class DemoDataService {
       }]
     }
 
-    return this.simulateApiCall(result, 20)
+    return this.simulateApiCall(result, 0)
   }
 
   /**
@@ -596,7 +596,7 @@ export class DemoDataService {
       lastUpdated: new Date().toISOString()
     }
 
-    return this.simulateApiCall(result, 30)
+    return this.simulateApiCall(result, 0)
   }
 
   /**
@@ -604,26 +604,26 @@ export class DemoDataService {
    */
   static async fetchProducts() {
     const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.products.filter(p => p.active), 150)
+    return this.simulateApiCall(demoData.products.filter(p => p.active), 0)
   }
 
   static async fetchLabour() {
     const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.labour.filter(l => l.active), 150)
+    return this.simulateApiCall(demoData.labour.filter(l => l.active), 0)
   }
 
   static async fetchEquipment() {
     const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.equipment.filter(e => e.active), 150)
+    return this.simulateApiCall(demoData.equipment.filter(e => e.active), 0)
   }
 
   static async fetchSugarcaneVarieties() {
     const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.sugarcaneVarieties, 150)
+    return this.simulateApiCall(demoData.sugarcaneVarieties, 0)
   }
 
   static async fetchIntercropVarieties() {
     const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.intercropVarieties, 150)
+    return this.simulateApiCall(demoData.intercropVarieties, 0)
   }
 }

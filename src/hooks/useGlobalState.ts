@@ -145,18 +145,15 @@ export function useGlobalLoading() {
 export function useGlobalErrors() {
   const { hasErrors, errors, dismissError, clearAllErrors, retryFailedQueries } = useGlobalState()
   
-  // Auto-dismiss validation errors after 10 seconds
+  // Auto-dismiss validation errors immediately (no delay)
   useEffect(() => {
     const validationErrors = errors.filter(
       error => error.error instanceof z.ZodError && !error.dismissed
     )
-    
+
     if (validationErrors.length > 0) {
-      const timer = setTimeout(() => {
-        validationErrors.forEach(error => dismissError(error.id))
-      }, 10000)
-      
-      return () => clearTimeout(timer)
+      // Dismiss immediately for better demo performance
+      validationErrors.forEach(error => dismissError(error.id))
     }
   }, [errors, dismissError])
   
@@ -269,9 +266,9 @@ export function useDevTools() {
       })
     },
     
-    simulateNetworkDelay: (ms: number = 2000) => {
-      console.log(`🐌 Simulating ${ms}ms network delay`)
-      return new Promise(resolve => setTimeout(resolve, ms))
+    simulateNetworkDelay: (ms: number = 0) => {
+      console.log(`⚡ No network delay (demo mode)`)
+      return Promise.resolve() // No delay
     },
   }
 }

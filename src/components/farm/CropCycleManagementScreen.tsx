@@ -100,8 +100,8 @@ export default function CropCycleManagementScreen({
       setIsCreating(false)
       setShowSuccess(true)
 
-      // Hide success message after 3 seconds
-      setTimeout(() => setShowSuccess(false), 3000)
+      // Hide success message immediately (no delay)
+      setShowSuccess(false)
     } catch (error) {
       console.error('Error creating crop cycle:', error)
       setIsCreating(false)

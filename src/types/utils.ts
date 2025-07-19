@@ -213,27 +213,25 @@ export const isBoolean = (value: unknown): value is boolean => typeof value === 
 export const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null
 export const isArray = (value: unknown): value is unknown[] => Array.isArray(value)
 
-// Async utilities
-export const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
+// Async utilities - NO DELAYS for demo mode
+export const delay = (ms: number): Promise<void> => Promise.resolve() // No delay
 
 export const retry = async <T>(
   fn: () => Promise<T>,
   maxAttempts: number = 3,
-  delayMs: number = 1000
+  delayMs: number = 0 // No delay for demo mode
 ): Promise<T> => {
   let lastError: Error
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn()
     } catch (error) {
       lastError = error as Error
-      if (attempt < maxAttempts) {
-        await delay(delayMs * attempt)
-      }
+      // No delay between retries for demo mode
     }
   }
-  
+
   throw lastError!
 }
 
