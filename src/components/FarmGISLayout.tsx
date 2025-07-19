@@ -483,10 +483,10 @@ export default function FarmGISLayout() {
         console.warn('⚠️ Coordinates appear to be in [lat, lng] format, swapping...')
         const swappedLngs = allCoordinates.map(coord => coord[1])
         const swappedLats = allCoordinates.map(coord => coord[0])
-        return this.calculateBoundsFromCoordinates(swappedLngs, swappedLats, map)
+        return calculateBoundsFromCoordinates(swappedLngs, swappedLats, map)
       }
 
-      return this.calculateBoundsFromCoordinates(lngs, lats, map)
+      return calculateBoundsFromCoordinates(lngs, lats, map)
     } catch (error) {
       console.error('❌ Error in zoomToFarmViewInitial:', error)
       // Fallback to default Mauritius view
@@ -499,7 +499,7 @@ export default function FarmGISLayout() {
   }
 
   // Helper function to calculate bounds from coordinate arrays
-  private static calculateBoundsFromCoordinates(lngs: number[], lats: number[], map: L.Map): void {
+  const calculateBoundsFromCoordinates = (lngs: number[], lats: number[], map: L.Map): void => {
     console.log('🔍 Sample coordinates for bounds calculation:', {
       sampleLngs: lngs.slice(0, 3),
       sampleLats: lats.slice(0, 3),
