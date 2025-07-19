@@ -2,9 +2,10 @@
 const nextConfig = {
   // App Router is stable in Next.js 14, no experimental flag needed
 
-  // Temporarily allow ESLint errors during build to focus on environment variable issues
+  // ESLint configuration for builds
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false, // Enable ESLint during builds
+    dirs: ['src'], // Only lint src directory
   },
 
   // Performance optimizations for demo mode

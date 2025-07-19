@@ -386,6 +386,87 @@ export class MockApiService {
   }
 
   /**
+   * Bloc Creation Methods
+   */
+  static async createBloc(blocData: {
+    name: string
+    farmId: string
+    coordinates: [number, number][]
+    area: number
+    soilType?: string
+    elevation?: number
+    slope?: number
+    drainageClass?: string
+    irrigationMethod?: string
+    accessRoad?: boolean
+    notes?: string
+  }): Promise<ApiResponse<Bloc>> {
+    await this.initializeData()
+
+    const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
+    const newBloc: Bloc = {
+      id: `bloc-${Date.now()}`,
+      uuid: `bloc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      localId: blocData.name,
+      name: blocData.name,
+      farmId: blocData.farmId,
+      area: blocData.area,
+      coordinates: blocData.coordinates,
+      soilType: blocData.soilType || 'Clay',
+      elevation: blocData.elevation || 100,
+      slope: blocData.slope || 2,
+      drainageClass: blocData.drainageClass || 'Well drained',
+      irrigationMethod: blocData.irrigationMethod || 'Drip irrigation',
+      accessRoad: blocData.accessRoad ?? true,
+      active: true,
+      notes: blocData.notes || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    blocs.push(newBloc)
+    DemoStorage.set(STORAGE_KEYS.BLOCS, blocs)
+
+    return this.simulateResponse(newBloc, 100)
+  }
+
+  static async updateBloc(blocId: string, updates: Partial<Bloc>): Promise<ApiResponse<Bloc>> {
+    await this.initializeData()
+
+    const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
+    const blocIndex = blocs.findIndex(b => b.id === blocId || b.uuid === blocId)
+
+    if (blocIndex === -1) {
+      throw new Error(`Bloc ${blocId} not found`)
+    }
+
+    const updatedBloc = {
+      ...blocs[blocIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }
+
+    blocs[blocIndex] = updatedBloc
+    DemoStorage.set(STORAGE_KEYS.BLOCS, blocs)
+
+    return this.simulateResponse(updatedBloc, 100)
+  }
+
+  static async deleteBloc(blocId: string): Promise<ApiResponse<void>> {
+    await this.initializeData()
+
+    const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
+    const filteredBlocs = blocs.filter(b => b.id !== blocId && b.uuid !== blocId)
+
+    if (filteredBlocs.length === blocs.length) {
+      throw new Error(`Bloc ${blocId} not found`)
+    }
+
+    DemoStorage.set(STORAGE_KEYS.BLOCS, filteredBlocs)
+    return this.simulateResponse(undefined)
+  }
+
+  /**
    * Utility Methods
    */
   static async resetData(): Promise<ApiResponse<void>> {

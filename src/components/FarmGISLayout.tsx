@@ -546,19 +546,24 @@ export default function FarmGISLayout() {
       }
 
       // STEP 2: Use MockApiService for demo mode
-      // STEP 3: Save all drawn areas using demo service
-      const savedBlocs = await Promise.all(
-        drawnAreas.map(async (area, index) => ({
-          id: `bloc-${Date.now()}-${index}`,
-          name: area.name || `Bloc ${index + 1}`,
-          farmId: defaultFarmId,
-          area: area.area || 0,
-          coordinates: area.coordinates,
-          active: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }))
-      )
+      const { MockApiService } = await import('@/services/mockApiService')
+
+      // STEP 3: Save all drawn areas to demo storage with farm ID
+      const savedBlocs = []
+      for (const drawnArea of drawnAreas) {
+        try {
+          const response = await MockApiService.createBloc({
+            name: drawnArea.localId,
+            farmId: defaultFarmId,
+            coordinates: drawnArea.coordinates,
+            area: drawnArea.area,
+            notes: `Created from map drawing on ${new Date().toLocaleDateString()}`
+          })
+          savedBlocs.push(response.data)
+        } catch (error) {
+          console.error(`Failed to save bloc ${drawnArea.localId}:`, error)
+        }
+      }
 
       // Transform saved blocs to DrawnArea format with UUIDs from database
       const savedDrawnAreas: DrawnArea[] = drawnAreas.map((drawnArea, index) => {
