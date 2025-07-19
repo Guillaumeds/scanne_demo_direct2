@@ -407,7 +407,6 @@ export default function MapComponent({
 
     // Cleanup function
     return () => {
-      clearTimeout(timeoutId)
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
