@@ -1,384 +1,285 @@
 /**
- * Transactional Data: Blocs
- * Dynamic bloc data that can be modified in demo mode
+ * Transactional Data: Blocs (Fields)
+ * Exact data from CSV: fields_md.csv
  */
 
 export interface Bloc {
   id: string
-  uuid: string
-  localId: string
+  field_id: string
   name: string
-  farmId: string
   area: number
-  coordinates: Array<[number, number]> // [lat, lng] pairs for polygon
-  soilType: string
-  elevation: number
-  slope: number
-  drainageClass: string
-  irrigationMethod: string
-  accessRoad: boolean
+  location: string | null
+  soil_type: string | null
+  irrigation_type: string | null
+  slope_percentage: number | null
+  drainage_status: string | null
+  last_soil_test_date: string | null
+  ph_level: number | null
+  organic_matter_percentage: number | null
   active: boolean
-  notes?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string | null
+  updated_at: string | null
+  // Additional computed fields
+  coordinates?: { lat: number; lng: number }
+  polygon?: Array<{ lat: number; lng: number }>
 }
 
-export interface CropCycle {
-  id: string
-  blocId: string
-  type: 'plantation' | 'ratoon'
-  cycleNumber: number
-  status: 'active' | 'closed' | 'planned'
-  
-  // Variety information
-  sugarcaneVarietyId: string
-  sugarcaneVarietyName: string
-  intercropVarietyId?: string
-  intercropVarietyName?: string
-  
-  // Dates
-  plantingDate?: string
-  plannedHarvestDate: string
-  actualHarvestDate?: string
-  
-  // Yield data
-  expectedYield: number // tons/ha
-  actualYield?: number // tons/ha
-  
-  // Financial data
-  estimatedTotalCost: number
-  actualTotalCost: number
-  revenue: number
-  netProfit: number
-  profitPerHectare: number
-  profitMarginPercent: number
-  
-  // Growth tracking
-  growthStage: string
-  growthStageUpdatedAt: string
-  daysSincePlanting: number
-  
-  // Parent relationship (for ratoon cycles)
-  parentCycleId?: string
-  
-  // Metadata
-  createdAt: string
-  updatedAt: string
-}
-
-export interface FieldOperation {
-  id: string
-  cropCycleId: string
-  blocId: string
-  type: string
-  method: string
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled'
-  
-  // Dates
-  plannedStartDate: string
-  plannedEndDate: string
-  actualStartDate?: string
-  actualEndDate?: string
-  
-  // Area and progress
-  plannedArea: number
-  actualArea?: number
-  progress: number // 0-100
-  
-  // Costs
-  estimatedCost: number
-  actualCost: number
-  
-  // Resources
-  labourRequired: string[]
-  equipmentRequired: string[]
-  productsUsed: Array<{
-    productId: string
-    quantity: number
-    unit: string
-    costPerUnit: number
-  }>
-  
-  // Notes and conditions
-  notes?: string
-  weatherConditions?: string
-  
-  // Metadata
-  createdAt: string
-  updatedAt: string
-}
-
-export interface WorkPackage {
-  id: string
-  fieldOperationId: string
-  date: string
-  area: number
-  hours: number
-  cost: number
-  crew: string
-  equipment: string
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled'
-  notes?: string
-  createdAt: string
-  updatedAt: string
-}
-
-// Demo blocs data
 export const DEMO_BLOCS: Bloc[] = [
+  // Exact data from CSV: fields_md.csv - ALL 10 FIELDS
   {
-    id: 'bloc-001',
-    uuid: 'bloc-001',
-    localId: 'B001',
+    id: 'field-001',
+    field_id: 'field-001',
     name: 'North Field A',
-    farmId: 'farm-001',
-    area: 45.2,
-    coordinates: [
-      [-20.2833, 57.6167],
-      [-20.2823, 57.6177],
-      [-20.2813, 57.6167],
-      [-20.2823, 57.6157],
-      [-20.2833, 57.6167]
-    ],
-    soilType: 'Clay Loam',
-    elevation: 125,
-    slope: 2.5,
-    drainageClass: 'Well Drained',
-    irrigationMethod: 'Drip Irrigation',
-    accessRoad: true,
+    area: 12.5,
+    location: 'Northern Section',
+    soil_type: 'Clay Loam',
+    irrigation_type: 'Drip Irrigation',
+    slope_percentage: 2.5,
+    drainage_status: 'Good',
+    last_soil_test_date: '2024-01-15',
+    ph_level: 6.8,
+    organic_matter_percentage: 3.2,
     active: true,
-    notes: 'Prime sugarcane growing area with excellent drainage',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1234, lng: 57.5678 },
+    polygon: [
+      { lat: -20.1234, lng: 57.5678 },
+      { lat: -20.1244, lng: 57.5688 },
+      { lat: -20.1254, lng: 57.5678 },
+      { lat: -20.1244, lng: 57.5668 }
+    ]
   },
   {
-    id: 'bloc-002',
-    uuid: 'bloc-002',
-    localId: 'B002',
+    id: 'field-002',
+    field_id: 'field-002',
     name: 'South Field B',
-    farmId: 'farm-001',
-    area: 38.7,
-    coordinates: [
-      [-20.2843, 57.6157],
-      [-20.2833, 57.6167],
-      [-20.2823, 57.6157],
-      [-20.2833, 57.6147],
-      [-20.2843, 57.6157]
-    ],
-    soilType: 'Sandy Loam',
-    elevation: 118,
-    slope: 1.8,
-    drainageClass: 'Moderately Well Drained',
-    irrigationMethod: 'Sprinkler',
-    accessRoad: true,
+    area: 18.3,
+    location: 'Southern Section',
+    soil_type: 'Sandy Loam',
+    irrigation_type: 'Sprinkler System',
+    slope_percentage: 1.8,
+    drainage_status: 'Excellent',
+    last_soil_test_date: '2024-02-10',
+    ph_level: 7.1,
+    organic_matter_percentage: 2.8,
     active: true,
-    notes: 'Good for early variety planting',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1334, lng: 57.5778 },
+    polygon: [
+      { lat: -20.1334, lng: 57.5778 },
+      { lat: -20.1354, lng: 57.5798 },
+      { lat: -20.1374, lng: 57.5778 },
+      { lat: -20.1354, lng: 57.5758 }
+    ]
   },
   {
-    id: 'bloc-003',
-    uuid: 'bloc-003',
-    localId: 'B003',
+    id: 'field-003',
+    field_id: 'field-003',
     name: 'East Field C',
-    farmId: 'farm-002',
-    area: 52.1,
-    coordinates: [
-      [-20.3167, 57.6000],
-      [-20.3157, 57.6010],
-      [-20.3147, 57.6000],
-      [-20.3157, 57.5990],
-      [-20.3167, 57.6000]
-    ],
-    soilType: 'Latosol',
-    elevation: 142,
-    slope: 3.2,
-    drainageClass: 'Well Drained',
-    irrigationMethod: 'Center Pivot',
-    accessRoad: true,
+    area: 15.7,
+    location: 'Eastern Section',
+    soil_type: 'Loam',
+    irrigation_type: 'Flood Irrigation',
+    slope_percentage: 3.2,
+    drainage_status: 'Fair',
+    last_soil_test_date: '2024-01-25',
+    ph_level: 6.5,
+    organic_matter_percentage: 3.5,
     active: true,
-    notes: 'High elevation field with good yields',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  }
-]
-
-// Demo crop cycles
-export const DEMO_CROP_CYCLES: CropCycle[] = [
-  {
-    id: 'cycle-001',
-    blocId: 'bloc-001',
-    type: 'plantation',
-    cycleNumber: 1,
-    status: 'active',
-    sugarcaneVarietyId: 'var-001',
-    sugarcaneVarietyName: 'R570',
-    plantingDate: '2024-03-15',
-    plannedHarvestDate: '2025-03-15',
-    expectedYield: 85,
-    estimatedTotalCost: 125000,
-    actualTotalCost: 45000,
-    revenue: 0,
-    netProfit: -45000,
-    profitPerHectare: -995.58,
-    profitMarginPercent: -100,
-    growthStage: 'Tillering',
-    growthStageUpdatedAt: '2024-07-19T00:00:00Z',
-    daysSincePlanting: 126,
-    createdAt: '2024-03-15T00:00:00Z',
-    updatedAt: '2024-07-19T00:00:00Z'
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1434, lng: 57.5878 },
+    polygon: [
+      { lat: -20.1434, lng: 57.5878 },
+      { lat: -20.1454, lng: 57.5898 },
+      { lat: -20.1474, lng: 57.5878 },
+      { lat: -20.1454, lng: 57.5858 }
+    ]
   },
   {
-    id: 'cycle-002',
-    blocId: 'bloc-002',
-    type: 'plantation',
-    cycleNumber: 1,
-    status: 'active',
-    sugarcaneVarietyId: 'var-002',
-    sugarcaneVarietyName: 'R579',
-    plantingDate: '2024-04-01',
-    plannedHarvestDate: '2025-02-01',
-    expectedYield: 78,
-    estimatedTotalCost: 110000,
-    actualTotalCost: 38000,
-    revenue: 0,
-    netProfit: -38000,
-    profitPerHectare: -982.17,
-    profitMarginPercent: -100,
-    growthStage: 'Grand Growth',
-    growthStageUpdatedAt: '2024-07-19T00:00:00Z',
-    daysSincePlanting: 109,
-    createdAt: '2024-04-01T00:00:00Z',
-    updatedAt: '2024-07-19T00:00:00Z'
-  }
-]
-
-// Demo field operations
-export const DEMO_FIELD_OPERATIONS: FieldOperation[] = [
-  {
-    id: 'op-001',
-    cropCycleId: 'cycle-001',
-    blocId: 'bloc-001',
-    type: 'Land Preparation',
-    method: 'Mechanical',
-    status: 'completed',
-    plannedStartDate: '2024-02-15',
-    plannedEndDate: '2024-02-20',
-    actualStartDate: '2024-02-15',
-    actualEndDate: '2024-02-19',
-    plannedArea: 45.2,
-    actualArea: 45.2,
-    progress: 100,
-    estimatedCost: 15000,
-    actualCost: 14500,
-    labourRequired: ['labour-001', 'labour-002'],
-    equipmentRequired: ['equip-001', 'equip-003'],
-    productsUsed: [],
-    notes: 'Completed ahead of schedule',
-    weatherConditions: 'Dry and sunny',
-    createdAt: '2024-02-15T00:00:00Z',
-    updatedAt: '2024-02-19T00:00:00Z'
+    id: 'field-004',
+    field_id: 'field-004',
+    name: 'West Field D',
+    area: 22.1,
+    location: 'Western Section',
+    soil_type: 'Clay',
+    irrigation_type: 'Drip Irrigation',
+    slope_percentage: 1.5,
+    drainage_status: 'Poor',
+    last_soil_test_date: '2024-03-05',
+    ph_level: 7.3,
+    organic_matter_percentage: 2.1,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1534, lng: 57.5978 },
+    polygon: [
+      { lat: -20.1534, lng: 57.5978 },
+      { lat: -20.1564, lng: 57.6008 },
+      { lat: -20.1594, lng: 57.5978 },
+      { lat: -20.1564, lng: 57.5948 }
+    ]
   },
   {
-    id: 'op-002',
-    cropCycleId: 'cycle-001',
-    blocId: 'bloc-001',
-    type: 'Planting',
-    method: 'Mechanical',
-    status: 'completed',
-    plannedStartDate: '2024-03-10',
-    plannedEndDate: '2024-03-15',
-    actualStartDate: '2024-03-12',
-    actualEndDate: '2024-03-15',
-    plannedArea: 45.2,
-    actualArea: 45.2,
-    progress: 100,
-    estimatedCost: 25000,
-    actualCost: 24800,
-    labourRequired: ['labour-001', 'labour-002'],
-    equipmentRequired: ['equip-004'],
-    productsUsed: [
-      {
-        productId: 'prod-001',
-        quantity: 200,
-        unit: 'kg',
-        costPerUnit: 45.50
-      }
-    ],
-    notes: 'Good planting conditions',
-    weatherConditions: 'Partly cloudy, no rain',
-    createdAt: '2024-03-10T00:00:00Z',
-    updatedAt: '2024-03-15T00:00:00Z'
-  }
-]
-
-// Demo work packages
-export const DEMO_WORK_PACKAGES: WorkPackage[] = [
-  {
-    id: 'wp-001',
-    fieldOperationId: 'op-001',
-    date: '2024-02-15',
-    area: 22.6,
-    hours: 8,
-    cost: 7250,
-    crew: 'Team A',
-    equipment: 'Tractor T1 + Disc Harrow',
-    status: 'completed',
-    notes: 'First half of field completed',
-    createdAt: '2024-02-15T00:00:00Z',
-    updatedAt: '2024-02-15T00:00:00Z'
+    id: 'field-005',
+    field_id: 'field-005',
+    name: 'Central Field E',
+    area: 8.9,
+    location: 'Central Section',
+    soil_type: 'Silt Loam',
+    irrigation_type: 'Micro Sprinkler',
+    slope_percentage: 2.8,
+    drainage_status: 'Good',
+    last_soil_test_date: '2024-02-20',
+    ph_level: 6.9,
+    organic_matter_percentage: 4.1,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1634, lng: 57.6078 },
+    polygon: [
+      { lat: -20.1634, lng: 57.6078 },
+      { lat: -20.1644, lng: 57.6088 },
+      { lat: -20.1654, lng: 57.6078 },
+      { lat: -20.1644, lng: 57.6068 }
+    ]
   },
   {
-    id: 'wp-002',
-    fieldOperationId: 'op-001',
-    date: '2024-02-16',
-    area: 22.6,
-    hours: 7.5,
-    cost: 7250,
-    crew: 'Team A',
-    equipment: 'Tractor T1 + Disc Harrow',
-    status: 'completed',
-    notes: 'Second half completed efficiently',
-    createdAt: '2024-02-16T00:00:00Z',
-    updatedAt: '2024-02-16T00:00:00Z'
+    id: 'field-006',
+    field_id: 'field-006',
+    name: 'Upper Field F',
+    area: 14.2,
+    location: 'Upper Section',
+    soil_type: 'Sandy Clay Loam',
+    irrigation_type: 'Center Pivot',
+    slope_percentage: 4.1,
+    drainage_status: 'Excellent',
+    last_soil_test_date: '2024-01-30',
+    ph_level: 7.0,
+    organic_matter_percentage: 3.0,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1734, lng: 57.6178 },
+    polygon: [
+      { lat: -20.1734, lng: 57.6178 },
+      { lat: -20.1754, lng: 57.6198 },
+      { lat: -20.1774, lng: 57.6178 },
+      { lat: -20.1754, lng: 57.6158 }
+    ]
+  },
+  {
+    id: 'field-007',
+    field_id: 'field-007',
+    name: 'Lower Field G',
+    area: 19.6,
+    location: 'Lower Section',
+    soil_type: 'Clay Loam',
+    irrigation_type: 'Furrow Irrigation',
+    slope_percentage: 1.2,
+    drainage_status: 'Fair',
+    last_soil_test_date: '2024-03-12',
+    ph_level: 6.7,
+    organic_matter_percentage: 2.9,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1834, lng: 57.6278 },
+    polygon: [
+      { lat: -20.1834, lng: 57.6278 },
+      { lat: -20.1864, lng: 57.6308 },
+      { lat: -20.1894, lng: 57.6278 },
+      { lat: -20.1864, lng: 57.6248 }
+    ]
+  },
+  {
+    id: 'field-008',
+    field_id: 'field-008',
+    name: 'Hillside Field H',
+    area: 11.4,
+    location: 'Hillside Section',
+    soil_type: 'Rocky Loam',
+    irrigation_type: 'Drip Irrigation',
+    slope_percentage: 6.5,
+    drainage_status: 'Excellent',
+    last_soil_test_date: '2024-02-28',
+    ph_level: 6.4,
+    organic_matter_percentage: 3.8,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.1934, lng: 57.6378 },
+    polygon: [
+      { lat: -20.1934, lng: 57.6378 },
+      { lat: -20.1944, lng: 57.6388 },
+      { lat: -20.1954, lng: 57.6378 },
+      { lat: -20.1944, lng: 57.6368 }
+    ]
+  },
+  {
+    id: 'field-009',
+    field_id: 'field-009',
+    name: 'Valley Field I',
+    area: 25.8,
+    location: 'Valley Section',
+    soil_type: 'Alluvial Loam',
+    irrigation_type: 'Flood Irrigation',
+    slope_percentage: 0.8,
+    drainage_status: 'Poor',
+    last_soil_test_date: '2024-03-18',
+    ph_level: 7.2,
+    organic_matter_percentage: 4.5,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.2034, lng: 57.6478 },
+    polygon: [
+      { lat: -20.2034, lng: 57.6478 },
+      { lat: -20.2074, lng: 57.6518 },
+      { lat: -20.2114, lng: 57.6478 },
+      { lat: -20.2074, lng: 57.6438 }
+    ]
+  },
+  {
+    id: 'field-010',
+    field_id: 'field-010',
+    name: 'Plateau Field J',
+    area: 16.3,
+    location: 'Plateau Section',
+    soil_type: 'Red Clay',
+    irrigation_type: 'Sprinkler System',
+    slope_percentage: 2.1,
+    drainage_status: 'Good',
+    last_soil_test_date: '2024-01-08',
+    ph_level: 6.6,
+    organic_matter_percentage: 2.7,
+    active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    coordinates: { lat: -20.2134, lng: 57.6578 },
+    polygon: [
+      { lat: -20.2134, lng: 57.6578 },
+      { lat: -20.2154, lng: 57.6598 },
+      { lat: -20.2174, lng: 57.6578 },
+      { lat: -20.2154, lng: 57.6558 }
+    ]
   }
 ]
 
-// Utility functions
+// Utility functions for bloc data
 export const blocUtils = {
-  getById: (id: string, blocs: Bloc[] = DEMO_BLOCS) => blocs.find(b => b.id === id || b.uuid === id),
-  getByFarmId: (farmId: string, blocs: Bloc[] = DEMO_BLOCS) => blocs.filter(b => b.farmId === farmId),
-  getActive: (blocs: Bloc[] = DEMO_BLOCS) => blocs.filter(b => b.active),
-  getTotalArea: (blocs: Bloc[] = DEMO_BLOCS) => blocs.reduce((total, bloc) => total + bloc.area, 0),
-}
-
-export const cropCycleUtils = {
-  getById: (id: string, cycles: CropCycle[] = DEMO_CROP_CYCLES) => cycles.find(c => c.id === id),
-  getByBlocId: (blocId: string, cycles: CropCycle[] = DEMO_CROP_CYCLES) => cycles.filter(c => c.blocId === blocId),
-  getActive: (cycles: CropCycle[] = DEMO_CROP_CYCLES) => cycles.filter(c => c.status === 'active'),
-  getActiveByCycle: (blocId: string, cycles: CropCycle[] = DEMO_CROP_CYCLES) => 
-    cycles.find(c => c.blocId === blocId && c.status === 'active'),
-}
-
-export const fieldOperationUtils = {
-  getById: (id: string, operations: FieldOperation[] = DEMO_FIELD_OPERATIONS) => operations.find(o => o.id === id),
-  getByCropCycleId: (cropCycleId: string, operations: FieldOperation[] = DEMO_FIELD_OPERATIONS) => 
-    operations.filter(o => o.cropCycleId === cropCycleId),
-  getByBlocId: (blocId: string, operations: FieldOperation[] = DEMO_FIELD_OPERATIONS) => 
-    operations.filter(o => o.blocId === blocId),
-}
-
-export const workPackageUtils = {
-  getById: (id: string, packages: WorkPackage[] = DEMO_WORK_PACKAGES) => packages.find(p => p.id === id),
-  getByOperationId: (operationId: string, packages: WorkPackage[] = DEMO_WORK_PACKAGES) =>
-    packages.filter(p => p.fieldOperationId === operationId),
-}
-
-// BlocData interface for comprehensive bloc information
-export interface BlocData {
-  bloc: Bloc
-  cropCycles: CropCycle[]
-  activeCropCycle: CropCycle | null
-  fieldOperations: FieldOperation[]
-  workPackages: WorkPackage[]
-  lastUpdated: string
+  getById: (id: string) => DEMO_BLOCS.find(b => b.id === id),
+  getByFieldId: (field_id: string) => DEMO_BLOCS.find(b => b.field_id === field_id),
+  getActive: () => DEMO_BLOCS.filter(b => b.active === true),
+  getBySoilType: (soil_type: string) => DEMO_BLOCS.filter(b => b.soil_type === soil_type),
+  getByIrrigationType: (irrigation_type: string) => DEMO_BLOCS.filter(b => b.irrigation_type === irrigation_type),
+  getByDrainageStatus: (drainage_status: string) => DEMO_BLOCS.filter(b => b.drainage_status === drainage_status),
+  getLargeFields: () => DEMO_BLOCS.filter(b => b.area >= 20),
+  getSmallFields: () => DEMO_BLOCS.filter(b => b.area < 15),
+  getTotalArea: () => DEMO_BLOCS.reduce((total, bloc) => total + bloc.area, 0),
+  searchByName: (query: string) => DEMO_BLOCS.filter(b => 
+    b.name.toLowerCase().includes(query.toLowerCase())
+  ),
 }

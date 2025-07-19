@@ -1,251 +1,108 @@
 /**
  * Master Data: Labour Types
- * Static reference data for labour categories and rates used in demo
+ * Exact data from CSV: labour_md.csv
  */
 
 export interface LabourType {
   id: string
+  labour_id: string
   name: string
-  category: 'field_operations' | 'maintenance' | 'harvesting' | 'supervision' | 'specialized'
-  skillLevel: 'unskilled' | 'semi_skilled' | 'skilled' | 'supervisor'
-  hourlyRate: number
-  dailyRate: number
-  overtimeMultiplier: number
-  benefits: {
-    healthInsurance: boolean
-    transportAllowance: number
-    mealAllowance: number
-    safetyEquipment: boolean
-  }
-  workingHours: {
-    standard: number
-    maximum: number
-  }
-  seasonalAvailability: string[]
-  certificationRequired: string[]
+  category: string
+  unit: string
+  cost_per_unit: number
+  description: string | null
   active: boolean
-  createdAt: string
-  updatedAt: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export const LABOUR_TYPES: LabourType[] = [
+  // Exact data from CSV: labour_md.csv - ALL 6 LABOUR TYPES
   {
-    id: 'labour-001',
-    name: 'Field Worker - General',
-    category: 'field_operations',
-    skillLevel: 'unskilled',
-    hourlyRate: 8.50,
-    dailyRate: 68.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 5.00,
-      mealAllowance: 8.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 10
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: [],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-002',
-    name: 'Tractor Operator',
-    category: 'field_operations',
-    skillLevel: 'skilled',
-    hourlyRate: 15.00,
-    dailyRate: 120.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 8.00,
-      mealAllowance: 10.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 12
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: ['Heavy Vehicle License', 'Tractor Operation Certificate'],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-003',
-    name: 'Irrigation Specialist',
-    category: 'specialized',
-    skillLevel: 'skilled',
-    hourlyRate: 18.50,
-    dailyRate: 148.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 10.00,
-      mealAllowance: 12.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 10
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: ['Irrigation Systems Certificate', 'Water Management Training'],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-004',
-    name: 'Harvest Crew Leader',
-    category: 'harvesting',
-    skillLevel: 'supervisor',
-    hourlyRate: 22.00,
-    dailyRate: 176.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 12.00,
-      mealAllowance: 15.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 12
-    },
-    seasonalAvailability: ['May-November'],
-    certificationRequired: ['Team Leadership Certificate', 'Safety Training'],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-005',
-    name: 'Harvest Worker',
-    category: 'harvesting',
-    skillLevel: 'semi_skilled',
-    hourlyRate: 12.00,
-    dailyRate: 96.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 6.00,
-      mealAllowance: 10.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 12
-    },
-    seasonalAvailability: ['May-November'],
-    certificationRequired: ['Basic Safety Training'],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-006',
-    name: 'Equipment Mechanic',
-    category: 'maintenance',
-    skillLevel: 'skilled',
-    hourlyRate: 20.00,
-    dailyRate: 160.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 10.00,
-      mealAllowance: 12.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 10
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: ['Mechanical Engineering Certificate', 'Equipment Maintenance Training'],
-    active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'labour-007',
+    id: 'supervisor',
+    labour_id: 'supervisor',
     name: 'Field Supervisor',
-    category: 'supervision',
-    skillLevel: 'supervisor',
-    hourlyRate: 25.00,
-    dailyRate: 200.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 15.00,
-      mealAllowance: 18.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 10
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: ['Agricultural Management Certificate', 'Leadership Training'],
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 60,
+    description: null,
     active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    created_at: null,
+    updated_at: null
   },
   {
-    id: 'labour-008',
-    name: 'Pesticide Applicator',
-    category: 'specialized',
-    skillLevel: 'skilled',
-    hourlyRate: 16.50,
-    dailyRate: 132.00,
-    overtimeMultiplier: 1.5,
-    benefits: {
-      healthInsurance: true,
-      transportAllowance: 8.00,
-      mealAllowance: 10.00,
-      safetyEquipment: true
-    },
-    workingHours: {
-      standard: 8,
-      maximum: 10
-    },
-    seasonalAvailability: ['All Year'],
-    certificationRequired: ['Pesticide Application License', 'Chemical Safety Training'],
+    id: 'field-worker_m',
+    labour_id: 'field-worker_m',
+    name: 'Field Worker Male',
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 25,
+    description: null,
     active: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'field-worker_fm',
+    labour_id: 'field-worker_fm',
+    name: 'Field Worker Female',
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 35,
+    description: null,
+    active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'machine_operator',
+    labour_id: 'machine_operator',
+    name: 'Machine Operator',
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 45,
+    description: null,
+    active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'parttime_worker_m',
+    labour_id: 'parttime_worker_m',
+    name: 'Field Worker Male (Part time)',
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 30,
+    description: null,
+    active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'parttime_worker_fm',
+    labour_id: 'parttime_worker_fm',
+    name: 'Field Worker Female (Part time)',
+    category: 'labour',
+    unit: 'hours',
+    cost_per_unit: 40,
+    description: null,
+    active: true,
+    created_at: null,
+    updated_at: null
   }
 ]
 
 // Utility functions for labour data
 export const labourUtils = {
   getById: (id: string) => LABOUR_TYPES.find(l => l.id === id),
-  getByCategory: (category: LabourType['category']) => LABOUR_TYPES.filter(l => l.category === category),
-  getBySkillLevel: (skillLevel: LabourType['skillLevel']) => LABOUR_TYPES.filter(l => l.skillLevel === skillLevel),
-  getActive: () => LABOUR_TYPES.filter(l => l.active),
-  getAvailableInSeason: (season: string) => LABOUR_TYPES.filter(l => 
-    l.seasonalAvailability.includes(season) || l.seasonalAvailability.includes('All Year')
+  getByLabourId: (labour_id: string) => LABOUR_TYPES.find(l => l.labour_id === labour_id),
+  getByCategory: (category: string) => LABOUR_TYPES.filter(l => l.category === category),
+  getActive: () => LABOUR_TYPES.filter(l => l.active === true),
+  getSupervisors: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('supervisor')),
+  getFieldWorkers: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('field worker')),
+  getMachineOperators: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('machine operator')),
+  getPartTimeWorkers: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('part time')),
+  searchByName: (query: string) => LABOUR_TYPES.filter(l => 
+    l.name.toLowerCase().includes(query.toLowerCase())
   ),
-  getByHourlyRateRange: (min: number, max: number) => LABOUR_TYPES.filter(l => 
-    l.hourlyRate >= min && l.hourlyRate <= max
-  ),
-  calculateDailyCost: (labourId: string, hours: number = 8) => {
-    const labour = labourUtils.getById(labourId)
-    if (!labour) return 0
-    
-    const standardHours = Math.min(hours, labour.workingHours.standard)
-    const overtimeHours = Math.max(0, hours - labour.workingHours.standard)
-    
-    const standardCost = standardHours * labour.hourlyRate
-    const overtimeCost = overtimeHours * labour.hourlyRate * labour.overtimeMultiplier
-    const benefitsCost = labour.benefits.transportAllowance + labour.benefits.mealAllowance
-    
-    return standardCost + overtimeCost + benefitsCost
-  },
 }

@@ -286,6 +286,8 @@ export class DemoStorage {
       const { EQUIPMENT_TYPES } = await import('@/data/master/equipment')
       const { LABOUR_TYPES } = await import('@/data/master/labour')
       const { SUGARCANE_VARIETIES } = await import('@/data/master/sugarcaneVarieties')
+      const { OPERATION_TYPES } = await import('@/data/configuration/operationTypes')
+      const { OPERATION_METHODS } = await import('@/data/configuration/operationMethods')
 
       // Store initial demo data
       this.set('blocs', DEMO_BLOCS)
@@ -293,6 +295,8 @@ export class DemoStorage {
       this.set('equipment', EQUIPMENT_TYPES)
       this.set('labour', LABOUR_TYPES)
       this.set('varieties', SUGARCANE_VARIETIES)
+      this.set('operation_types', OPERATION_TYPES)
+      this.set('operation_methods', OPERATION_METHODS)
 
       // Initialize empty collections for user data
       this.set('operations', [])
