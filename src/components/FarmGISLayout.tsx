@@ -499,7 +499,7 @@ export default function FarmGISLayout() {
   }
 
   // Helper function to calculate bounds from coordinate arrays
-  private static calculateBoundsFromCoordinates(lngs: number[], lats: number[], map: L.Map) {
+  private static calculateBoundsFromCoordinates(lngs: number[], lats: number[], map: L.Map): void {
     console.log('🔍 Sample coordinates for bounds calculation:', {
       sampleLngs: lngs.slice(0, 3),
       sampleLats: lats.slice(0, 3),
