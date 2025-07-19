@@ -264,4 +264,45 @@ export class DemoStorage {
   static configure(newConfig: Partial<StorageConfig>): void {
     this.config = { ...this.config, ...newConfig }
   }
+
+  /**
+   * Initialize demo data if storage is empty
+   * This method seeds the storage with initial demo data
+   */
+  static async initializeIfEmpty(): Promise<void> {
+    try {
+      // Check if we already have demo data
+      const existingKeys = this.getKeys()
+      if (existingKeys.length > 0) {
+        console.log('📦 Demo storage already has data, skipping initialization')
+        return
+      }
+
+      console.log('🌱 Initializing demo storage with seed data...')
+
+      // Import demo data services
+      const { DEMO_BLOCS } = await import('@/data/transactional/blocs')
+      const { PRODUCTS } = await import('@/data/master/products')
+      const { EQUIPMENT_TYPES } = await import('@/data/master/equipment')
+      const { LABOUR_TYPES } = await import('@/data/master/labour')
+      const { SUGARCANE_VARIETIES } = await import('@/data/master/sugarcaneVarieties')
+
+      // Store initial demo data
+      this.set('blocs', DEMO_BLOCS)
+      this.set('products', PRODUCTS)
+      this.set('equipment', EQUIPMENT_TYPES)
+      this.set('labour', LABOUR_TYPES)
+      this.set('varieties', SUGARCANE_VARIETIES)
+
+      // Initialize empty collections for user data
+      this.set('operations', [])
+      this.set('crop_cycles', [])
+      this.set('work_packages', [])
+
+      console.log('✅ Demo storage initialized successfully')
+    } catch (error) {
+      console.error('❌ Failed to initialize demo storage:', error)
+      throw error
+    }
+  }
 }
