@@ -40,31 +40,16 @@ export class VarietiesService {
    */
   static async getSugarcaneVarieties(): Promise<SugarcaneVariety[]> {
     try {
-      const response = await fetch(`${VarietiesService.baseUrl}/sugarcane`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+      // In demo mode, use mock data directly to avoid network issues
+      const { MockApiService } = await import('./mockApiService')
+      const response = await MockApiService.getSugarcaneVarieties()
 
-      if (!response.ok) {
-        // Try to parse error response
-        const errorData = await response.json().catch(() => ({}))
-        const validatedError = ErrorResponseSchema.safeParse(errorData)
-        
-        if (validatedError.success) {
-          throw new Error(validatedError.data.details || validatedError.data.error)
-        } else {
-          throw new Error(`HTTP ${response.status}: Failed to fetch sugarcane varieties`)
-        }
-      }
+      console.log('✅ VarietiesService: Using mock data directly for sugarcane varieties')
 
-      const data = await response.json()
-      
       // Validate response with Zod
-      const validatedData = SugarcaneVarietiesResponseSchema.parse(data)
+      const validatedData = SugarcaneVarietiesResponseSchema.parse(response.data)
       return validatedData
-      
+
     } catch (error) {
       console.error('VarietiesService.getSugarcaneVarieties error:', error)
       

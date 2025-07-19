@@ -462,65 +462,31 @@ export default function FarmGISLayout() {
         return
       }
 
-      // Our coordinates are in [lng, lat] format (DrawnArea standard)
-      // Extract lat/lng consistently
+      // Our coordinates should be in [lng, lat] format after conversion from demo data
+      // Demo data: [-20.2833, 57.6167] -> Converted: [57.6167, -20.2833]
+      // So coord[0] = longitude, coord[1] = latitude
       const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
       const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
 
-      console.log('🔍 Sample coordinates for bounds calculation:', {
-        sampleCoords: allCoordinates.slice(0, 3),
-        sampleLngs: lngs.slice(0, 3),
-        sampleLats: lats.slice(0, 3)
+      // Validate that we have reasonable Mauritius coordinates
+      const sampleLng = lngs[0]
+      const sampleLat = lats[0]
+      console.log('🔍 Coordinate validation:', {
+        sampleLng,
+        sampleLat,
+        isValidMauritiusLng: sampleLng > 57 && sampleLng < 58,
+        isValidMauritiusLat: sampleLat > -21 && sampleLat < -19
       })
 
-      // Validate that we have valid numbers
-      const validLats = lats.filter(lat => !isNaN(lat) && isFinite(lat))
-      const validLngs = lngs.filter(lng => !isNaN(lng) && isFinite(lng))
-
-      if (validLats.length === 0 || validLngs.length === 0) {
-        console.error('❌ No valid lat/lng values found')
-        return
+      // If coordinates seem swapped, fix them
+      if (sampleLng < 0 && sampleLat > 0) {
+        console.warn('⚠️ Coordinates appear to be in [lat, lng] format, swapping...')
+        const swappedLngs = allCoordinates.map(coord => coord[1])
+        const swappedLats = allCoordinates.map(coord => coord[0])
+        return this.calculateBoundsFromCoordinates(swappedLngs, swappedLats, map)
       }
 
-      const minLat = Math.min(...validLats)
-      const maxLat = Math.max(...validLats)
-      const minLng = Math.min(...validLngs)
-      const maxLng = Math.max(...validLngs)
-
-      console.log('🔍 Initial farm view bounds:', { minLat, maxLat, minLng, maxLng })
-
-      // Validate bounds are reasonable (not world-wide)
-      const latRange = maxLat - minLat
-      const lngRange = maxLng - minLng
-
-      if (isNaN(latRange) || isNaN(lngRange) || latRange > 10 || lngRange > 10 || latRange <= 0 || lngRange <= 0) {
-        const boundsInfo = {
-          latRange: isNaN(latRange) ? 'NaN' : latRange,
-          lngRange: isNaN(lngRange) ? 'NaN' : lngRange,
-          minLat, maxLat, minLng, maxLng,
-          coordinateCount: allCoordinates.length,
-          blocCount: allBlocs.length,
-          sampleCoordinates: allCoordinates.slice(0, 5)
-        }
-        console.error('❌ Bounds too large or invalid for initial zoom, skipping:', boundsInfo)
-        // Fallback to default Mauritius view
-        const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
-        map.fitBounds(mauritiusBounds, {
-          animate: false,
-          padding: [50, 50]
-        })
-        return
-      }
-
-      // Create bounds with reasonable padding for initial view
-      const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
-
-      map.fitBounds(bounds, {
-        animate: false, // No animation for initial load
-        padding: [20, 20] // Reasonable padding to keep blocs visible
-      })
-
-      console.log('✅ Initial zoom completed successfully')
+      return this.calculateBoundsFromCoordinates(lngs, lats, map)
     } catch (error) {
       console.error('❌ Error in zoomToFarmViewInitial:', error)
       // Fallback to default Mauritius view
@@ -530,6 +496,69 @@ export default function FarmGISLayout() {
         padding: [50, 50]
       })
     }
+  }
+
+  // Helper function to calculate bounds from coordinate arrays
+  private static calculateBoundsFromCoordinates(lngs: number[], lats: number[], map: L.Map) {
+    console.log('🔍 Sample coordinates for bounds calculation:', {
+      sampleLngs: lngs.slice(0, 3),
+      sampleLats: lats.slice(0, 3),
+      coordinateFormat: 'Using lng/lat arrays',
+      mauritiusExpected: 'lng: ~57.6, lat: ~-20.3'
+    })
+
+    // Validate that we have valid numbers
+    const validLats = lats.filter(lat => !isNaN(lat) && isFinite(lat))
+    const validLngs = lngs.filter(lng => !isNaN(lng) && isFinite(lng))
+
+    if (validLats.length === 0 || validLngs.length === 0) {
+      console.error('❌ No valid lat/lng values found')
+      return
+    }
+
+    const minLat = Math.min(...validLats)
+    const maxLat = Math.max(...validLats)
+    const minLng = Math.min(...validLngs)
+    const maxLng = Math.max(...validLngs)
+
+    console.log('🔍 Initial farm view bounds:', { minLat, maxLat, minLng, maxLng })
+
+    // Validate bounds are reasonable for Mauritius
+    const latRange = maxLat - minLat
+    const lngRange = maxLng - minLng
+
+    // Mauritius coordinates should be: lat: -20.5 to -19.9, lng: 57.3 to 57.8
+    const isValidMauritiusLat = minLat >= -21 && maxLat <= -19
+    const isValidMauritiusLng = minLng >= 57 && maxLng <= 58
+
+    if (!isValidMauritiusLat || !isValidMauritiusLng || latRange > 2 || lngRange > 2 || latRange <= 0 || lngRange <= 0) {
+      const boundsInfo = {
+        latRange: isNaN(latRange) ? 'NaN' : latRange,
+        lngRange: isNaN(lngRange) ? 'NaN' : lngRange,
+        minLat, maxLat, minLng, maxLng,
+        isValidMauritiusLat,
+        isValidMauritiusLng,
+        coordinateCount: lats.length
+      }
+      console.error('❌ Bounds invalid for Mauritius, using fallback:', boundsInfo)
+      // Fallback to default Mauritius view
+      const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
+      map.fitBounds(mauritiusBounds, {
+        animate: false,
+        padding: [50, 50]
+      })
+      return
+    }
+
+    // Create bounds with reasonable padding for initial view
+    const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
+
+    map.fitBounds(bounds, {
+      animate: false, // No animation for initial load
+      padding: [20, 20] // Reasonable padding to keep blocs visible
+    })
+
+    console.log('✅ Initial zoom completed successfully')
   }
 
   const handleBlocCardClick = (areaId: string) => {
