@@ -16,6 +16,7 @@ import { useFarmGISData } from '@/hooks/useDemoData'
 import { GlobalLoadingIndicator } from '@/components/global/GlobalLoadingIndicator'
 import { GlobalErrorHandler } from '@/components/global/GlobalErrorHandler'
 import { CacheManagementDashboard } from '@/components/dev/CacheManagementDashboard'
+import { FIELDS } from '@/data/master/fields'
 
 export default function FarmGISLayout() {
   // Field functionality removed - blocs are the primary entities
@@ -38,6 +39,11 @@ export default function FarmGISLayout() {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const [farms, setFarms] = useState<any[]>([])
   const [companies, setCompanies] = useState<any[]>([])
+
+  // Field polygons and labels
+  const [fieldPolygons, setFieldPolygons] = useState<L.Polygon[]>([])
+  const [fieldLabels, setFieldLabels] = useState<L.Marker[]>([])
+  const [currentZoom, setCurrentZoom] = useState<number>(10)
 
   // Use modern farm data hook instead of manual loading
   const {
@@ -416,75 +422,163 @@ export default function FarmGISLayout() {
     })
   }
 
+  // Create field polygons on the map
+  const createFieldPolygons = (map: L.Map) => {
+    try {
+      // Clear existing polygons and labels
+      fieldPolygons.forEach(polygon => map.removeLayer(polygon))
+      fieldLabels.forEach(label => map.removeLayer(label))
+
+      const newPolygons: L.Polygon[] = []
+      const newLabels: L.Marker[] = []
+
+      FIELDS.forEach(field => {
+        if (field.active && field.polygon && field.polygon.length > 0) {
+          // Create polygon with slate styling
+          const polygon = L.polygon(
+            field.polygon.map(coord => [coord.lat, coord.lng]),
+            {
+              color: '#64748b', // slate-500 border
+              weight: 2,
+              opacity: 0.8,
+              fillColor: '#64748b', // slate-500 fill
+              fillOpacity: 0.1, // very transparent
+              interactive: true
+            }
+          )
+
+          // Add popup with field info
+          polygon.bindPopup(`
+            <div class="p-2">
+              <h3 class="font-semibold text-slate-800">${field.name}</h3>
+              <p class="text-sm text-slate-600">Area: ${field.area} ha</p>
+              <p class="text-sm text-slate-600">Soil: ${field.soil_type || 'Unknown'}</p>
+              <p class="text-sm text-slate-600">Irrigation: ${field.irrigation_type || 'Unknown'}</p>
+            </div>
+          `)
+
+          polygon.addTo(map)
+          newPolygons.push(polygon)
+
+          // Create field label (initially hidden, shown based on zoom)
+          const labelIcon = L.divIcon({
+            className: 'field-label',
+            html: `<div class="field-label-text bg-white/80 backdrop-blur-sm px-2 py-1 rounded shadow-sm border border-slate-200 text-xs font-medium text-slate-700 whitespace-nowrap">${field.name}</div>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0]
+          })
+
+          const label = L.marker([field.center.lat, field.center.lng], {
+            icon: labelIcon,
+            interactive: false
+          })
+
+          label.addTo(map)
+          newLabels.push(label)
+        }
+      })
+
+      setFieldPolygons(newPolygons)
+      setFieldLabels(newLabels)
+
+      // Set up zoom event listener to show/hide labels
+      map.on('zoomend', () => {
+        const zoom = map.getZoom()
+        setCurrentZoom(zoom)
+        updateFieldLabelsVisibility(zoom)
+      })
+
+      // Initial label visibility
+      updateFieldLabelsVisibility(map.getZoom())
+
+      console.log('✅ Created', newPolygons.length, 'field polygons')
+    } catch (error) {
+      console.error('❌ Error creating field polygons:', error)
+    }
+  }
+
+  // Update field label visibility based on zoom level
+  const updateFieldLabelsVisibility = (zoom: number) => {
+    fieldLabels.forEach((label, index) => {
+      const field = FIELDS[index]
+      if (field) {
+        // Show labels at zoom level 14 and above
+        // Hide if text would overflow the polygon (simple heuristic)
+        const shouldShow = zoom >= 14
+
+        if (shouldShow) {
+          label.getElement()?.style.setProperty('display', 'block')
+        } else {
+          label.getElement()?.style.setProperty('display', 'none')
+        }
+      }
+    })
+  }
+
   // Handle map ready callback
   const handleMapReady = (map: L.Map) => {
     setMapInstance(map)
+    // Create field polygons when map is ready
+    createFieldPolygons(map)
     // Initial zoom is handled by the useEffect below - no duplicate zoom here
   }
 
   // Initial farm view zoom (no animation for startup)
   const zoomToFarmViewInitial = (map: L.Map) => {
     try {
-      // For initial zoom, only use savedAreas (demo blocs) since drawnAreas might be empty
-      const allBlocs = savedAreas
-      if (allBlocs.length === 0) {
-        console.log('🔍 No saved blocs available for initial zoom')
+      // Use field data for initial zoom since blocs are removed
+      const activeFields = FIELDS.filter(field => field.active)
+      if (activeFields.length === 0) {
+        console.log('🔍 No active fields available for initial zoom, using default Mauritius view')
+        const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
+        map.fitBounds(mauritiusBounds, {
+          animate: false,
+          padding: [50, 50]
+        })
         return
       }
 
-      console.log('🔍 Using', allBlocs.length, 'saved blocs for initial zoom')
+      console.log('🔍 Using', activeFields.length, 'fields for initial zoom')
 
-      // Collect all coordinates from all blocs with validation
+      // Collect all coordinates from all fields
       const allCoordinates: [number, number][] = []
-      allBlocs.forEach((bloc, index) => {
-        if (bloc.coordinates && Array.isArray(bloc.coordinates)) {
-          // Validate each coordinate pair
-          const validCoords = bloc.coordinates.filter(coord =>
-            Array.isArray(coord) &&
-            coord.length === 2 &&
-            typeof coord[0] === 'number' &&
-            typeof coord[1] === 'number' &&
-            !isNaN(coord[0]) &&
-            !isNaN(coord[1])
-          )
+      activeFields.forEach((field, index) => {
+        if (field.polygon && Array.isArray(field.polygon)) {
+          // Convert field polygon coordinates to [lat, lng] format
+          const validCoords = field.polygon
+            .filter(coord =>
+              coord.lat && coord.lng &&
+              !isNaN(coord.lat) && !isNaN(coord.lng) &&
+              isFinite(coord.lat) && isFinite(coord.lng)
+            )
+            .map(coord => [coord.lat, coord.lng] as [number, number])
 
-          console.log(`🔍 Bloc ${index} (${bloc.localId}) coordinates:`, {
-            first2Coords: validCoords.slice(0, 2),
-            totalCoords: validCoords.length
-          })
-
-          allCoordinates.push(...validCoords)
+          if (validCoords.length > 0) {
+            allCoordinates.push(...validCoords)
+            console.log(`🔍 Field ${index + 1} (${field.name}): ${validCoords.length} valid coordinates`)
+          } else {
+            console.warn(`⚠️ Field ${index + 1} (${field.name}): No valid coordinates`)
+          }
+        } else {
+          console.warn(`⚠️ Field ${index + 1} (${field.name}): No polygon coordinates`)
         }
       })
 
       if (allCoordinates.length === 0) {
-        console.warn('⚠️ No valid coordinates found in blocs')
+        console.error('❌ No valid coordinates found in any fields, using default view')
+        const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
+        map.fitBounds(mauritiusBounds, {
+          animate: false,
+          padding: [50, 50]
+        })
         return
       }
 
-      // Our coordinates should be in [lng, lat] format after conversion from demo data
-      // Demo data: [-20.2833, 57.6167] -> Converted: [57.6167, -20.2833]
-      // So coord[0] = longitude, coord[1] = latitude
-      const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
-      const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
+      console.log('🔍 Total valid coordinates for bounds calculation:', allCoordinates.length)
 
-      // Validate that we have reasonable Mauritius coordinates
-      const sampleLng = lngs[0]
-      const sampleLat = lats[0]
-      console.log('🔍 Coordinate validation:', {
-        sampleLng,
-        sampleLat,
-        isValidMauritiusLng: sampleLng > 57 && sampleLng < 58,
-        isValidMauritiusLat: sampleLat > -21 && sampleLat < -19
-      })
-
-      // If coordinates seem swapped, fix them
-      if (sampleLng < 0 && sampleLat > 0) {
-        console.warn('⚠️ Coordinates appear to be in [lat, lng] format, swapping...')
-        const swappedLngs = allCoordinates.map(coord => coord[1])
-        const swappedLats = allCoordinates.map(coord => coord[0])
-        return calculateBoundsFromCoordinates(swappedLngs, swappedLats, map)
-      }
+      // Extract lat/lng arrays for bounds calculation
+      const lats = allCoordinates.map(coord => coord[0])
+      const lngs = allCoordinates.map(coord => coord[1])
 
       return calculateBoundsFromCoordinates(lngs, lats, map)
     } catch (error) {
@@ -748,8 +842,24 @@ export default function FarmGISLayout() {
   }
 
   return (
-    <div className="gis-layout h-full w-full flex">
-      {/* Main content area */}
+    <>
+      {/* CSS for field labels */}
+      <style jsx global>{`
+        .field-label {
+          pointer-events: none;
+        }
+        .field-label-text {
+          transform: translate(-50%, -50%);
+          font-size: 11px;
+          line-height: 1.2;
+          text-align: center;
+          max-width: 120px;
+          word-wrap: break-word;
+        }
+      `}</style>
+
+      <div className="gis-layout h-full w-full flex">
+        {/* Main content area */}
       <div className="flex-1 flex">
         {/* Conditionally show sidebar only when not in data screen mode */}
         {!showDataScreen && (
@@ -837,5 +947,6 @@ export default function FarmGISLayout() {
         <CacheManagementDashboard />
       </div>
     </div>
+    </>
   )
 }
