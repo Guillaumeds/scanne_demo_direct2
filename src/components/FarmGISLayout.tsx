@@ -425,11 +425,14 @@ export default function FarmGISLayout() {
   // Initial farm view zoom (no animation for startup)
   const zoomToFarmViewInitial = (map: L.Map) => {
     try {
-      const allBlocs = [...drawnAreas, ...savedAreas]
+      // For initial zoom, only use savedAreas (demo blocs) since drawnAreas might be empty
+      const allBlocs = savedAreas
       if (allBlocs.length === 0) {
-        console.log('🔍 No blocs available for initial zoom')
+        console.log('🔍 No saved blocs available for initial zoom')
         return
       }
+
+      console.log('🔍 Using', allBlocs.length, 'saved blocs for initial zoom')
 
       // Collect all coordinates from all blocs with validation
       const allCoordinates: [number, number][] = []
@@ -491,12 +494,15 @@ export default function FarmGISLayout() {
       const lngRange = maxLng - minLng
 
       if (isNaN(latRange) || isNaN(lngRange) || latRange > 10 || lngRange > 10 || latRange <= 0 || lngRange <= 0) {
-        console.error('❌ Bounds too large or invalid for initial zoom, skipping:', {
+        const boundsInfo = {
           latRange: isNaN(latRange) ? 'NaN' : latRange,
           lngRange: isNaN(lngRange) ? 'NaN' : lngRange,
           minLat, maxLat, minLng, maxLng,
-          coordinateCount: allCoordinates.length
-        })
+          coordinateCount: allCoordinates.length,
+          blocCount: allBlocs.length,
+          sampleCoordinates: allCoordinates.slice(0, 5)
+        }
+        console.error('❌ Bounds too large or invalid for initial zoom, skipping:', boundsInfo)
         // Fallback to default Mauritius view
         const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
         map.fitBounds(mauritiusBounds, {
