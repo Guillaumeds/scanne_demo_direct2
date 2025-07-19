@@ -439,38 +439,38 @@ const INITIAL_DEMO_DATA: DemoDataStore = {
       id: '550e8400-e29b-41d4-a716-446655440030',
       name: 'R579',
       description: 'High-yielding variety with excellent disease resistance',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440031',
       name: 'M1176/77',
       description: 'Medium maturity variety suitable for various soil types',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440032',
       name: 'R570',
       description: 'Premium variety with exceptional yield potential',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440033',
       name: 'M2593/92',
       description: 'Fast-growing variety ideal for quick turnaround',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z'
     }
   ],
   intercropVarieties: [
     {
-      id: 'intercrop-1',
+      id: '550e8400-e29b-41d4-a716-446655440040',
       name: 'Sweet Potato',
       description: 'Root vegetable suitable for intercropping with sugarcane',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z'
     }
   ],
   lastUpdated: new Date().toISOString()

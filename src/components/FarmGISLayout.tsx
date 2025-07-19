@@ -366,61 +366,7 @@ export default function FarmGISLayout() {
     }
   }
 
-  // Function to zoom to fit all blocs (farm view)
-  const zoomToFarmView = () => {
-    if (!mapInstance) {
-      console.error('❌ Map instance not available for farm view')
-      return
-    }
 
-    const allBlocs = [...drawnAreas, ...savedAreas]
-    if (allBlocs.length === 0) {
-      console.warn('⚠️ No blocs to fit in view')
-      return
-    }
-
-    // Collect all coordinates from all blocs
-    const allCoordinates: [number, number][] = []
-    allBlocs.forEach(bloc => {
-      allCoordinates.push(...bloc.coordinates)
-    })
-
-    if (allCoordinates.length === 0) {
-      console.error('❌ No coordinates found in any bloc')
-      return
-    }
-
-    // Our coordinates are always in [lng, lat] format (GeoJSON standard)
-    // Extract lat/lng consistently
-    const lats = allCoordinates.map(coord => coord[1]) // latitude is second element
-    const lngs = allCoordinates.map(coord => coord[0]) // longitude is first element
-
-    const minLat = Math.min(...lats)
-    const maxLat = Math.max(...lats)
-    const minLng = Math.min(...lngs)
-    const maxLng = Math.max(...lngs)
-
-    console.log('🔍 Farm view bounds:', { minLat, maxLat, minLng, maxLng })
-
-    // Validate bounds are reasonable (not world-wide)
-    const latRange = maxLat - minLat
-    const lngRange = maxLng - minLng
-
-    if (latRange > 10 || lngRange > 10) {
-      console.error('❌ Bounds too large for farm view, skipping zoom:', { latRange, lngRange })
-      return
-    }
-
-    // Create bounds with reasonable padding for farm view
-    const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
-
-    mapInstance.fitBounds(bounds, {
-      animate: true,
-      duration: 0.8, // Fast animation for farm view
-      easeLinearity: 0.25, // Standard easing
-      padding: [20, 20] // Reasonable padding to keep blocs visible
-    })
-  }
 
   // Create field polygons on the map
   const createFieldPolygons = (map: L.Map) => {
@@ -432,8 +378,11 @@ export default function FarmGISLayout() {
       const newPolygons: L.Polygon[] = []
       const newLabels: L.Marker[] = []
 
-      FIELDS.forEach(field => {
-        if (field.active && field.polygon && field.polygon.length > 0) {
+      console.log(`🗺️ Creating polygons for ${FIELDS.length} fields from CSV data`)
+
+      FIELDS.forEach((field, index) => {
+        try {
+          if (field.active && field.polygon && field.polygon.length > 0) {
           // Create polygon with slate styling
           const polygon = L.polygon(
             field.polygon.map(coord => [coord.lat, coord.lng]),
@@ -457,13 +406,52 @@ export default function FarmGISLayout() {
             </div>
           `)
 
+          // Add click handler for field selection
+          polygon.on('click', () => {
+            if (selectedAreaId === field.id) {
+              // Unselect field - zoom back to full farm view
+              setSelectedAreaId(null)
+              zoomToFarmView(map)
+            } else {
+              // Select field - zoom to this field
+              setSelectedAreaId(field.id)
+              zoomToField(map, field)
+            }
+          })
+
+          // Highlight selected field
+          if (selectedAreaId === field.id) {
+            polygon.setStyle({
+              color: '#3b82f6', // blue-500 for selected
+              weight: 3,
+              fillOpacity: 0.2
+            })
+          }
+
           polygon.addTo(map)
           newPolygons.push(polygon)
 
           // Create field label (initially hidden, shown based on zoom)
           const labelIcon = L.divIcon({
             className: 'field-label',
-            html: `<div class="field-label-text bg-white/80 backdrop-blur-sm px-2 py-1 rounded shadow-sm border border-slate-200 text-xs font-medium text-slate-700 whitespace-nowrap">${field.name}</div>`,
+            html: `<div style="
+              transform: translate(-50%, -50%);
+              font-size: 11px;
+              line-height: 1.2;
+              text-align: center;
+              max-width: 120px;
+              word-wrap: break-word;
+              pointer-events: none;
+              background: rgba(255, 255, 255, 0.8);
+              backdrop-filter: blur(4px);
+              padding: 4px 8px;
+              border-radius: 4px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              border: 1px solid rgb(226, 232, 240);
+              font-weight: 500;
+              color: rgb(51, 65, 85);
+              white-space: nowrap;
+            ">${field.name}</div>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0]
           })
@@ -473,8 +461,14 @@ export default function FarmGISLayout() {
             interactive: false
           })
 
-          label.addTo(map)
-          newLabels.push(label)
+            label.addTo(map)
+            newLabels.push(label)
+          } else {
+            console.warn(`⚠️ Skipping field ${field.name}: inactive or no polygon data`)
+          }
+        } catch (fieldError) {
+          console.error(`❌ Error creating polygon for field ${field.name}:`, fieldError)
+          throw new Error(`Failed to create polygon for field ${field.name}: ${fieldError instanceof Error ? fieldError.message : String(fieldError)}`)
         }
       })
 
@@ -491,9 +485,57 @@ export default function FarmGISLayout() {
       // Initial label visibility
       updateFieldLabelsVisibility(map.getZoom())
 
-      console.log('✅ Created', newPolygons.length, 'field polygons')
+      console.log(`✅ Successfully created ${newPolygons.length} field polygons from CSV data`)
     } catch (error) {
-      console.error('❌ Error creating field polygons:', error)
+      console.error('❌ Critical error creating field polygons:', error)
+      throw new Error(`Failed to create field polygons: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  // Zoom to a specific field
+  const zoomToField = (map: L.Map, field: any) => {
+    try {
+      if (field.polygon && field.polygon.length > 0) {
+        const bounds = L.latLngBounds(field.polygon.map((coord: any) => [coord.lat, coord.lng]))
+        map.fitBounds(bounds, {
+          animate: true,
+          padding: [20, 20] // Small padding for individual field
+        })
+        console.log(`🔍 Zoomed to field: ${field.name}`)
+      }
+    } catch (error) {
+      console.error('❌ Error zooming to field:', error)
+    }
+  }
+
+  // Zoom to full farm view (all fields, no padding)
+  const zoomToFarmView = (map: L.Map) => {
+    try {
+      const activeFields = FIELDS.filter(field => field.active)
+      if (activeFields.length === 0) return
+
+      // Collect all coordinates from all fields
+      const allCoordinates: [number, number][] = []
+      activeFields.forEach(field => {
+        if (field.polygon && Array.isArray(field.polygon)) {
+          field.polygon.forEach(coord => {
+            if (coord.lat && coord.lng) {
+              allCoordinates.push([coord.lat, coord.lng])
+            }
+          })
+        }
+      })
+
+      if (allCoordinates.length > 0) {
+        const bounds = L.latLngBounds(allCoordinates)
+        map.fitBounds(bounds, {
+          animate: true,
+          padding: [0, 0] // NO PADDING for full farm view
+        })
+        console.log('🔍 Zoomed to full farm view (no padding)')
+      }
+    } catch (error) {
+      console.error('❌ Error zooming to farm view:', error)
     }
   }
 
@@ -569,25 +611,29 @@ export default function FarmGISLayout() {
         const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
         map.fitBounds(mauritiusBounds, {
           animate: false,
-          padding: [50, 50]
+          padding: [0, 0] // NO PADDING for initial view
         })
         return
       }
 
       console.log('🔍 Total valid coordinates for bounds calculation:', allCoordinates.length)
 
-      // Extract lat/lng arrays for bounds calculation
-      const lats = allCoordinates.map(coord => coord[0])
-      const lngs = allCoordinates.map(coord => coord[1])
+      // Create bounds from all field coordinates and fit with NO PADDING
+      const bounds = L.latLngBounds(allCoordinates)
+      map.fitBounds(bounds, {
+        animate: false,
+        padding: [0, 0] // NO PADDING for initial farm view
+      })
 
-      return calculateBoundsFromCoordinates(lngs, lats, map)
+      console.log('✅ Initial zoom set to all fields (no padding)')
+      return
     } catch (error) {
       console.error('❌ Error in zoomToFarmViewInitial:', error)
       // Fallback to default Mauritius view
       const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
       map.fitBounds(mauritiusBounds, {
         animate: false,
-        padding: [50, 50]
+        padding: [0, 0] // NO PADDING
       })
     }
   }
@@ -639,17 +685,17 @@ export default function FarmGISLayout() {
       const mauritiusBounds = L.latLngBounds([-20.5, 57.3], [-19.9, 57.8])
       map.fitBounds(mauritiusBounds, {
         animate: false,
-        padding: [50, 50]
+        padding: [0, 0] // NO PADDING
       })
       return
     }
 
-    // Create bounds with reasonable padding for initial view
+    // Create bounds with NO PADDING for initial view
     const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng])
 
     map.fitBounds(bounds, {
       animate: false, // No animation for initial load
-      padding: [20, 20] // Reasonable padding to keep blocs visible
+      padding: [0, 0] // NO PADDING for full farm view
     })
 
     console.log('✅ Initial zoom completed successfully')
@@ -806,9 +852,11 @@ export default function FarmGISLayout() {
     setDataScreenBloc(null)
 
     // Zoom to farm view immediately - no delays
-    zoomToFarmView()
-    // Keep the bloc selected (blue border, no fill) after returning to farm view
-    // selectedAreaId remains unchanged so bloc stays selected
+    if (mapInstance) {
+      zoomToFarmView(mapInstance)
+    }
+    // Keep the field selected (blue border, no fill) after returning to farm view
+    // selectedAreaId remains unchanged so field stays selected
   }
 
   if (loading) {
@@ -842,23 +890,7 @@ export default function FarmGISLayout() {
   }
 
   return (
-    <>
-      {/* CSS for field labels */}
-      <style jsx global>{`
-        .field-label {
-          pointer-events: none;
-        }
-        .field-label-text {
-          transform: translate(-50%, -50%);
-          font-size: 11px;
-          line-height: 1.2;
-          text-align: center;
-          max-width: 120px;
-          word-wrap: break-word;
-        }
-      `}</style>
-
-      <div className="gis-layout h-full w-full flex">
+    <div className="gis-layout h-full w-full flex">
         {/* Main content area */}
       <div className="flex-1 flex">
         {/* Conditionally show sidebar only when not in data screen mode */}
@@ -947,6 +979,5 @@ export default function FarmGISLayout() {
         <CacheManagementDashboard />
       </div>
     </div>
-    </>
   )
 }

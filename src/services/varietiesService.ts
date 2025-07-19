@@ -7,13 +7,22 @@ import { z } from 'zod'
 import { dataService } from './dataService'
 import { isDemoMode } from '@/utils/demoMode'
 
-// Zod schemas for API responses (matching the API route schemas)
+// Zod schemas for API responses (matching the demo data structure)
 export const SugarcaneVarietySchema = z.object({
   id: z.string(),
+  variety_id: z.string(),
   name: z.string(),
+  category: z.string(),
   description: z.string().nullable(),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
+  maturity_period_months: z.number(),
+  yield_potential_tons_per_ha: z.number(),
+  sugar_content_percentage: z.number(),
+  disease_resistance: z.string().nullable(),
+  climate_suitability: z.string().nullable(),
+  planting_season: z.string().nullable(),
+  active: z.boolean(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
 })
 
 export const SugarcaneVarietiesResponseSchema = z.array(SugarcaneVarietySchema)
@@ -47,11 +56,20 @@ export class VarietiesService {
       // Use service abstraction - automatically handles demo vs production
       const varieties = await dataService.getSugarcaneVarieties()
 
-      // Validate response with Zod for type safety
-      const validatedData = SugarcaneVarietiesResponseSchema.parse(varieties)
+      // Debug: Log the actual data structure
+      console.log('🔍 Raw varieties data structure:', JSON.stringify(varieties[0], null, 2))
+      console.log('🔍 Total varieties count:', varieties.length)
 
-      console.log(`✅ Successfully fetched ${validatedData.length} sugarcane varieties`)
-      return validatedData
+      // Validate response with Zod for type safety
+      try {
+        const validatedData = SugarcaneVarietiesResponseSchema.parse(varieties)
+        console.log(`✅ Successfully fetched ${validatedData.length} sugarcane varieties`)
+        return validatedData
+      } catch (zodError) {
+        console.error('❌ Zod validation failed:', zodError)
+        console.log('🔍 First variety data:', varieties[0])
+        throw zodError
+      }
 
     } catch (error) {
       console.error('VarietiesService.getSugarcaneVarieties error:', error)
