@@ -7,10 +7,10 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Performance optimizations
+  // Performance optimizations for demo mode
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['@supabase/supabase-js', 'leaflet', 'react-leaflet'],
+    optimizePackageImports: ['@tanstack/react-query', 'leaflet', 'react-leaflet'],
   },
 
   // Optimize for development stability and performance

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CropCycleManagementService } from '@/services/cropCycleManagementService'
+import { MockApiService } from '@/services/mockApiService'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const activeCycle = await CropCycleManagementService.getActiveCropCycle(blocId)
+    const response = await MockApiService.getActiveCropCycle(blocId)
+    const activeCycle = response.data
     
     return NextResponse.json(activeCycle)
   } catch (error) {

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CropCycleManagementService } from '@/services/cropCycleManagementService'
-import { CreateCropCycleRequest } from '@/types/cropCycleManagement'
+import { MockApiService } from '@/services/mockApiService'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: CreateCropCycleRequest = await request.json()
+    const body = await request.json()
 
     // Validate required fields
     if (!body.blocId || !body.sugarcaneVarietyId || !body.expectedHarvestDate || !body.expectedYield) {
@@ -22,7 +21,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const newCycle = await CropCycleManagementService.createCropCycle(body)
+    const response = await MockApiService.createCropCycle(body)
+    const newCycle = response.data
     
     return NextResponse.json(newCycle, { status: 201 })
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { supabase } from '@/lib/supabase'
+import { MockApiService } from '@/services/mockApiService'
 
 // Zod schema for sugarcane variety response
 const SugarcaneVarietySchema = z.object({
@@ -26,17 +26,10 @@ export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
 
 export async function GET() {
   try {
-    console.log('Fetching sugarcane varieties from database...')
+    console.log('Fetching sugarcane varieties from demo service...')
 
-    const { data, error } = await supabase
-      .from('sugarcane_varieties')
-      .select('id, name, description, created_at, updated_at')
-      .order('name')
-
-    if (error) {
-      console.error('Supabase error:', error)
-      throw new Error(`Database error: ${error.message}`)
-    }
+    const response = await MockApiService.getSugarcaneVarieties()
+    const data = response.data
 
     // Validate response data with Zod
     const validatedData = SugarcaneVarietiesResponseSchema.parse(data || [])

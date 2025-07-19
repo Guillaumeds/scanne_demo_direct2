@@ -185,9 +185,9 @@ export default function CropCycleManagementScreen({
                   <CheckCircle className="h-12 w-12 mx-auto mb-4 text-emerald-600" />
                   <h3 className="font-medium text-slate-800 mb-2">Active Crop Cycle</h3>
                   <p>Variety: {activeCycle.sugarcaneVarietyName}</p>
-                  <p>Planting Date: {activeCycle.sugarcaneePlantingDate ? new Date(activeCycle.sugarcaneePlantingDate).toLocaleDateString() : 'Not set'}</p>
-                  <p>Expected Harvest: {new Date(activeCycle.sugarcaneePlannedHarvestDate).toLocaleDateString()}</p>
-                  <p>Expected Yield: {activeCycle.sugarcaneExpectedYieldTonsHa} tons/ha</p>
+                  <p>Planting Date: {activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'Not set'}</p>
+                  <p>Expected Harvest: {new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</p>
+                  <p>Expected Yield: {activeCycle.expectedYield} tons/ha</p>
                 </div>
               ) : isLoadingVarieties ? (
                 <div className="flex items-center justify-center py-8">
@@ -550,20 +550,20 @@ export default function CropCycleManagementScreen({
                         <div>
                           <span className="text-slate-600">Harvest Date:</span>
                           <div className="font-medium text-slate-800">
-                            {cycle.sugarcaneActualHarvestDate 
-                              ? new Date(cycle.sugarcaneActualHarvestDate).toLocaleDateString()
+                            {cycle.actualHarvestDate
+                              ? new Date(cycle.actualHarvestDate).toLocaleDateString()
                               : 'Not recorded'
                             }
                           </div>
                         </div>
                         <div>
                           <span className="text-slate-600">Expected Yield:</span>
-                          <div className="font-medium text-slate-800">{cycle.sugarcaneExpectedYieldTonsHa} t/ha</div>
+                          <div className="font-medium text-slate-800">{cycle.expectedYield} t/ha</div>
                         </div>
                         <div>
                           <span className="text-slate-600">Actual Yield:</span>
                           <div className="font-medium text-slate-800">
-                            {cycle.sugarcaneActualYieldTonsHa ? `${cycle.sugarcaneActualYieldTonsHa} t/ha` : 'Not recorded'}
+                            {cycle.actualYield ? `${cycle.actualYield} t/ha` : 'Not recorded'}
                           </div>
                         </div>
                       </div>

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import '@/utils/debugUtils' // Initialize debug utilities
 import QueryProvider from '@/components/providers/QueryProvider'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -35,77 +34,55 @@ export default function RootLayout({
         </QueryProvider>
         <script dangerouslySetInnerHTML={{
           __html: `
-            // Auto-refresh cache on page load
+            // Demo mode debug functions
             window.addEventListener('DOMContentLoaded', function() {
-              try {
-                console.log('🔄 Auto-refreshing localStorage cache on page load...');
-
-                // Check if cache exists and is older than 1 hour
-                const cacheKeys = ['scanne_sugarcane_varieties', 'scanne_intercrop_varieties', 'scanne_products', 'scanne_resources'];
-                let shouldRefresh = false;
-
-                for (const key of cacheKeys) {
-                  const item = localStorage.getItem(key);
-                  if (!item) {
-                    shouldRefresh = true;
-                    break;
-                  }
-
-                  try {
-                    const parsed = JSON.parse(item);
-                    const age = Date.now() - (parsed.timestamp || 0);
-                    const ageHours = age / (1000 * 60 * 60);
-
-                    // Refresh if older than 1 hour or no timestamp
-                    if (ageHours > 1 || !parsed.timestamp) {
-                      shouldRefresh = true;
-                      break;
-                    }
-                  } catch (e) {
-                    shouldRefresh = true;
-                    break;
-                  }
-                }
-
-                if (shouldRefresh) {
-                  console.log('🔄 Cache is stale or missing, refreshing...');
-                  // Clear old cache
-                  cacheKeys.forEach(key => localStorage.removeItem(key));
-                  console.log('✅ Auto-refresh completed on page load');
-                } else {
-                  console.log('✅ Cache is fresh, no refresh needed');
-                }
-              } catch (error) {
-                console.error('❌ Error during auto-refresh:', error);
-              }
+              console.log('🎬 Scanne Demo Mode Initialized');
+              console.log('🛠️ Demo functions available:');
+              console.log('- window.resetDemo() - Reset demo to initial state');
+              console.log('- window.exportDemo() - Export current demo data');
+              console.log('- window.clearDemoCache() - Clear TanStack Query cache');
             });
 
-            // Global function to refresh localStorage data
-            window.refreshLocalStorageData = async function() {
+            // Global demo functions
+            window.resetDemo = async function() {
               try {
-                const { LocalStorageService } = await import('/src/services/localStorageService.js');
-                await LocalStorageService.refreshAllData();
-                console.log('✅ localStorage data refreshed! Please reload the page.');
+                const { DemoUtils } = await import('/src/utils/demoUtils.js');
+                await DemoUtils.resetToDefault();
+                console.log('✅ Demo reset completed! Reloading page...');
+                window.location.reload();
               } catch (error) {
-                console.error('❌ Error refreshing localStorage data:', error);
-                console.log('Please try refreshing the page manually.');
+                console.error('❌ Error resetting demo:', error);
               }
             };
 
-            // Global function to clear localStorage cache
-            window.clearLocalStorageCache = function() {
+            window.exportDemo = async function() {
               try {
-                const keys = ['scanne_sugarcane_varieties', 'scanne_intercrop_varieties', 'scanne_products', 'scanne_resources'];
-                keys.forEach(key => localStorage.removeItem(key));
-                console.log('🧹 localStorage cache cleared! Please reload the page.');
+                const { DemoUtils } = await import('/src/utils/demoUtils.js');
+                const data = await DemoUtils.exportCurrentState();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'scanne-demo-export.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log('✅ Demo data exported!');
               } catch (error) {
-                console.error('❌ Error clearing localStorage cache:', error);
+                console.error('❌ Error exporting demo:', error);
               }
             };
 
-            console.log('🛠️ Debug functions available:');
-            console.log('- clearLocalStorageCache() - Clear cached data');
-            console.log('- refreshLocalStorageData() - Refresh data from database');
+            window.clearDemoCache = function() {
+              try {
+                localStorage.removeItem('SCANNE_DEMO_QUERY_CACHE');
+                console.log('🧹 Demo cache cleared! Reloading page...');
+                window.location.reload();
+              } catch (error) {
+                console.error('❌ Error clearing demo cache:', error);
+              }
+            };
           `
         }} />
       </body>

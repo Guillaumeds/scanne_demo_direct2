@@ -14,7 +14,7 @@ import { fuzzySearch } from '@/utils/fuzzySearch'
 import ModernCardSelector from '@/components/selectors/ModernCardSelector'
 
 export interface SelectedVariety {
-  variety: SugarcaneVariety
+  variety: any // Using any for demo mode
 }
 
 interface ModernVarietySelectorProps {
@@ -143,18 +143,18 @@ export default function ModernVarietySelector({
                 <div className="pb-6">
                   <ModernCardSelector
                     options={filteredVarieties.map((variety) => {
-                      const seasonTags = variety.seasons?.map(season =>
+                      const seasonTags = (variety as any).seasons?.map((season: any) =>
                         season.charAt(0).toUpperCase() + season.slice(1)
                       ).join(', ') || 'All seasons'
                       return {
                         id: variety.id,
                         name: variety.name,
-                        description: variety.description || `Harvest: ${variety.harvestStart} - ${variety.harvestEnd}`,
+                        description: variety.description || `Harvest: ${(variety as any).harvestStart} - ${(variety as any).harvestEnd}`,
                         badge: seasonTags,
                         color: 'bg-green-50',
                         icon: Leaf,
-                        sugarContent: variety.sugarContentPercent,
-                        soilTypes: variety.soilTypes
+                        sugarContent: (variety as any).sugarContentPercent,
+                        soilTypes: (variety as any).soilTypes
                       }
                     })}
                     value=""

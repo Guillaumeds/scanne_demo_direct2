@@ -1,0 +1,40 @@
+product_id,name,category,subcategory,description,unit,cost_per_unit,active
+npk-13-13-20,13-13-20+2MgO,Compound and NPK Fertilizers,compound-npk,,kg,45,TRUE
+npk-13-8-24,13:08:24,Compound and NPK Fertilizers,compound-npk,,kg,42,TRUE
+npk-12-8-20,12:08:20,Compound and NPK Fertilizers,compound-npk,,kg,40,TRUE
+npk-12-12-17,12:12:17,Compound and NPK Fertilizers,compound-npk,,kg,38,TRUE
+npk-19-19-19,19:19:19,Compound and NPK Fertilizers,compound-npk,,kg,50,TRUE
+npk-20-20-20,20:20:20,Compound and NPK Fertilizers,compound-npk,,kg,52,TRUE
+npk-8-10-40,08:10:40,Compound and NPK Fertilizers,compound-npk,,kg,48,TRUE
+npk-11-8-6,11-8-6 (Co-Vert),Compound and NPK Fertilizers,compound-npk,,kg,35,TRUE
+npk-nitrate-blends,Nitrate Based NPK Blends,Compound and NPK Fertilizers,compound-npk,,kg,55,TRUE
+azophoska,Azophoska (13-13-20+2 micro),Compound and NPK Fertilizers,compound-npk,,kg,48,TRUE
+bluefficient,Bluefficient Fertilizer (10-10-20+2MgO+micro),Compound and NPK Fertilizers,compound-npk,,kg,50,TRUE
+fairway-master,Fairway Master,Compound and NPK Fertilizers,compound-npk,,kg,60,TRUE
+icl-sierrablen,ICL Sierrablen Plus Granular Fertiliser,Compound and NPK Fertilizers,compound-npk,,kg,65,TRUE
+ammonium-sulphate-crystal,Ammonium Sulphate 21% (Crystal),Nitrogen Fertilizers,nitrogen,,kg,25,TRUE
+ammonium-sulphate-granular,Ammonium Sulphate 21% (Granular),Nitrogen Fertilizers,nitrogen,,kg,27,TRUE
+urea-46,Urea (46% N Granular),Nitrogen Fertilizers,nitrogen,,kg,30,TRUE
+nano-urea-plus,NANO Urea Plus (Kalol),Nitrogen Fertilizers,nitrogen,,L,120,TRUE
+nano-dap,NANO DAP,Nitrogen Fertilizers,nitrogen,,L,125,TRUE
+map,Monoammonium Phosphate (MAP),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,55,TRUE
+mkp,Mono Potassium Phosphate (MKP 0-52-34),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,85,TRUE
+potassium-nitrate,Potassium Nitrate,Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,90,TRUE
+potassium-sulphate,Potassium Sulphate (SOP 0-0-50+46SO3),Phosphorus and Potassium Fertilizers,phosphorus-potassium,,kg,80,TRUE
+nova-calcium-nitrate,Nova Calcium Nitrate (15.5-0-0+26.5CaO),Calcium and Magnesium Fertilizers,calcium-magnesium,,kg,45,TRUE
+nova-mag-s,Nova Mag-S (Magnesium Sulphate 0-0-0+16MgO+32SO3),Calcium and Magnesium Fertilizers,calcium-magnesium,,kg,40,TRUE
+micro-kanieltra,Micro elements (Kanieltra),Micronutrient and Specialty Fertilizers,micronutrient,,kg,150,TRUE
+unikey-11-40-10,Unikey Nano Professional 11-40-10+2.5MgO+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,180,TRUE
+unikey-15-5-40,Unikey Nano Professional 15-5-40+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,175,TRUE
+unikey-20-20-20,Unikey Nano Professional 20-20-20+2MgO+TE,Micronutrient and Specialty Fertilizers,micronutrient,,kg,185,TRUE
+hydro-pack-1,Hydro Pack No. 1,Micronutrient and Specialty Fertilizers,micronutrient,,kg,200,TRUE
+hydro-pack-2,Hydro Pack No. 2,Micronutrient and Specialty Fertilizers,micronutrient,,kg,200,TRUE
+hydro-pack-3,Hydro Pack No. 3,Micronutrient and Specialty Fertilizers,micronutrient,,kg,200,TRUE
+organic-all-purpose,All-purpose Organic Fertiliser,Organic and Bio Fertilizers,organic-bio,,kg,20,TRUE
+bat-guano,Bat Guano Fertilizer,Organic and Bio Fertilizers,organic-bio,,kg,35,TRUE
+seabird-guano,Seabird Guano,Organic and Bio Fertilizers,organic-bio,,kg,40,TRUE
+seaweed-powder,Fresh Seaweed and Sargassum (Powder),Organic and Bio Fertilizers,organic-bio,,kg,25,TRUE
+seaweed-liquid,Fresh Seaweed and Sargassum (Liquid),Organic and Bio Fertilizers,organic-bio,,L,30,TRUE
+organic-mineral-liquid,Organic Mineral Liquid Fertilizers (Made in Moris),Organic and Bio Fertilizers,organic-bio,,L,45,TRUE
+phostrogen,Phostrogen (800g),Other Fertilizer Products,other,,pack,85,TRUE
+agroleaf-power,Agroleaf Power,Other Fertilizer Products,other,,kg,120,TRUE

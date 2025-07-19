@@ -6,7 +6,7 @@ import { DrawnArea } from '@/types/drawnArea'
 import { BlocProvider } from './contexts/BlocContext'
 import { BlocLayout } from './layout/BlocLayout'
 import { LoadingSpinner } from './shared/LoadingSpinner'
-import { useBlocData } from '@/hooks/useModernFarmData'
+import { useBlocData } from '@/hooks/useDemoData'
 import { useGlobalLoading } from '@/hooks/useGlobalState'
 
 interface BlocScreenProps {

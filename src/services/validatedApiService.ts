@@ -1,9 +1,9 @@
 /**
  * Validated API Service Layer
- * All API calls go through Zod validation for runtime type safety
+ * Demo-only implementation - redirects to MockApiService
  */
 
-import { supabase } from '@/lib/supabase'
+import { MockApiService } from './mockApiService'
 import { z } from 'zod'
 import {
   FarmGISInitialDataSchema,
@@ -67,59 +67,44 @@ export class ValidatedApiService {
   
   /**
    * Fetch initial farm GIS data (overview level)
+   * @deprecated Use MockApiService.getFarmGISInitialData() directly
    */
-  static async fetchFarmGISInitialData(): Promise<FarmGISInitialData> {
-    return validateApiResponse(
-      async () => await supabase.rpc('get_farm_gis_initial_data'),
-      FarmGISInitialDataSchema,
-      'Fetch Farm GIS Initial Data'
-    )
+  static async fetchFarmGISInitialData(): Promise<any> {
+    const response = await MockApiService.getFarmGISInitialData()
+    return response.data
   }
-  
+
   /**
    * Fetch comprehensive bloc data (bloc level)
+   * @deprecated Use MockApiService.getComprehensiveBlocData() directly
    */
-  static async fetchComprehensiveBlocData(blocId: string): Promise<BlocData> {
-    return validateApiResponse(
-      async () => await supabase.rpc('get_comprehensive_bloc_data', { p_bloc_id: blocId }),
-      BlocDataSchema,
-      `Fetch Comprehensive Bloc Data for ${blocId}`
-    )
+  static async fetchComprehensiveBlocData(blocId: string): Promise<any> {
+    const response = await MockApiService.getComprehensiveBlocData(blocId)
+    return response.data
   }
   
   /**
    * Fetch configuration data with validation
+   * @deprecated Use MockApiService methods directly
    */
   static async fetchProducts() {
-    return validateApiResponse(
-      async () => await supabase.from('products').select('*').eq('active', true).order('name'),
-      z.array(ProductSchema),
-      'Fetch Products'
-    )
+    const response = await MockApiService.getProducts()
+    return response.data
   }
-  
+
   static async fetchLabour() {
-    return validateApiResponse(
-      async () => await supabase.from('labour').select('*').eq('active', true).order('name'),
-      z.array(LabourSchema),
-      'Fetch Labour'
-    )
+    const response = await MockApiService.getLabourTypes()
+    return response.data
   }
-  
+
   static async fetchSugarcaneVarieties() {
-    return validateApiResponse(
-      async () => await supabase.from('sugarcane_varieties').select('*').order('name'),
-      z.array(SugarcaneVarietySchema),
-      'Fetch Sugarcane Varieties'
-    )
+    const response = await MockApiService.getSugarcaneVarieties()
+    return response.data
   }
   
   static async fetchIntercropVarieties() {
-    return validateApiResponse(
-      async () => await supabase.from('intercrop_varieties').select('*').order('name'),
-      z.array(InterCropVarietySchema),
-      'Fetch Intercrop Varieties'
-    )
+    // Demo mode returns empty array for intercrop varieties
+    return []
   }
   
   /**
@@ -142,14 +127,8 @@ export class ValidatedApiService {
       status: 'active'
     }
 
-    const { data: result, error } = await supabase
-      .from('crop_cycles')
-      .insert(mappedData)
-      .select()
-      .single()
-
-    if (error) throw error
-    return result as any
+    // Demo mode - not implemented
+    throw new Error('Crop cycle creation not available in demo mode')
   }
   
   static async createFieldOperation(data: CreateFieldOperationRequest): Promise<FieldOperation> {
@@ -171,14 +150,8 @@ export class ValidatedApiService {
       status: 'planned'
     }
 
-    const { data: result, error } = await supabase
-      .from('field_operations')
-      .insert(mappedData)
-      .select()
-      .single()
-
-    if (error) throw error
-    return result as any
+    // Demo mode - not implemented
+    throw new Error('Field operation creation not available in demo mode')
   }
   
   static async createWorkPackage(data: CreateWorkPackageRequest): Promise<WorkPackage> {
@@ -187,16 +160,8 @@ export class ValidatedApiService {
   }
 
   static async updateFieldOperation(uuid: string, data: Partial<CreateFieldOperationRequest>): Promise<FieldOperation> {
-    // RPC function not available - use regular update
-    const { data: result, error } = await supabase
-      .from('field_operations')
-      .update(data)
-      .eq('uuid', uuid)
-      .select()
-      .single()
-
-    if (error) throw error
-    return result as any
+    // Demo mode - not implemented
+    throw new Error('Field operation updates not available in demo mode')
   }
 
   static async updateWorkPackage(uuid: string, data: Partial<CreateWorkPackageRequest>): Promise<WorkPackage> {
@@ -205,14 +170,8 @@ export class ValidatedApiService {
   }
 
   static async deleteFieldOperation(uuid: string): Promise<void> {
-    const { error } = await supabase
-      .from('field_operations')
-      .delete()
-      .eq('uuid', uuid)
-
-    if (error) {
-      throw new Error(`Delete Field Operation failed: ${error.message}`)
-    }
+    // Demo mode - not implemented
+    throw new Error('Field operation deletion not available in demo mode')
   }
 
   static async deleteWorkPackage(uuid: string): Promise<void> {
@@ -225,18 +184,12 @@ export class ValidatedApiService {
    */
   static async healthCheck(): Promise<{ status: 'ok' | 'error'; message: string }> {
     try {
-      // Test basic connectivity
-      const { data, error } = await supabase.from('companies').select('count').limit(1)
-      
-      if (error) {
-        return { status: 'error', message: `Database connection failed: ${error.message}` }
-      }
-      
-      return { status: 'ok', message: 'API service is healthy' }
+      // Demo mode always returns healthy
+      return { status: 'ok', message: 'Demo API service is healthy' }
     } catch (error) {
-      return { 
-        status: 'error', 
-        message: `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      return {
+        status: 'error',
+        message: `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       }
     }
   }

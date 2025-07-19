@@ -1,9 +1,17 @@
-// TanStack Query hooks for optimal bloc data management
-// Implements best practices: single data load, frontend caching, optimistic updates
+/**
+ * Clean useBlocData.ts for Demo Mode
+ * Optimized TanStack Query hooks for bloc data management
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BlocDataService, BlocData, FieldOperation, WorkPackage } from '@/services/blocDataService'
-import { CropCycle, CreateCropCycleRequest } from '@/types/cropCycleManagement'
+import { MockApiService } from '@/services/mockApiService'
+import type { 
+  Bloc, 
+  CropCycle, 
+  FieldOperation, 
+  WorkPackage, 
+  BlocData 
+} from '@/data/transactional/blocs'
 
 // Query keys for consistent cache management
 export const blocDataKeys = {
@@ -21,7 +29,10 @@ export const blocDataKeys = {
 export function useBlocData(blocId: string) {
   return useQuery({
     queryKey: blocDataKeys.bloc(blocId),
-    queryFn: () => BlocDataService.fetchComprehensiveBlocData(blocId),
+    queryFn: async () => {
+      const response = await MockApiService.getComprehensiveBlocData(blocId)
+      return response.data
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
     gcTime: 30 * 60 * 1000, // 30 minutes - cache retention
     refetchOnWindowFocus: false, // Don't refetch on window focus
@@ -57,7 +68,7 @@ export function useFieldOperations(blocId: string, cropCycleId?: string) {
   
   // Filter by crop cycle if specified
   if (cropCycleId) {
-    operations = operations.filter(op => op.cropCycleUuid === cropCycleId)
+    operations = operations.filter(op => op.cropCycleId === cropCycleId)
   }
   
   return {
@@ -79,7 +90,7 @@ export function useWorkPackages(blocId: string, operationId?: string) {
   
   // Filter by operation if specified
   if (operationId) {
-    workPackages = workPackages.filter(wp => wp.fieldOperationUuid === operationId)
+    workPackages = workPackages.filter(wp => wp.fieldOperationId === operationId)
   }
   
   return {
@@ -90,46 +101,17 @@ export function useWorkPackages(blocId: string, operationId?: string) {
 }
 
 /**
- * Optimistic mutation for creating crop cycles
- * Updates cache immediately, syncs to DB, rolls back on error
+ * Create crop cycle mutation with optimistic updates
  */
 export function useCreateCropCycle(blocId: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (request: CreateCropCycleRequest) => {
-      // TODO: Implement actual API call when crop_cycles table is ready
-      console.log('Creating crop cycle:', request)
-      
-      // Mock response for now
-      const newCropCycle: CropCycle = {
-        id: `crop-cycle-${Date.now()}`,
-        blocId: request.blocId,
-        type: request.type,
-        cycleNumber: 1, // Calculate from existing cycles
-        status: 'active',
-        sugarcaneVarietyId: request.sugarcaneVarietyId,
-        sugarcaneVarietyName: 'Mock Variety',
-        sugarcaneePlantingDate: request.plantingDate,
-        sugarcaneePlannedHarvestDate: request.expectedHarvestDate,
-        sugarcaneExpectedYieldTonsHa: request.expectedYield,
-        estimatedTotalCost: 0,
-        actualTotalCost: 0,
-        sugarcaneeRevenue: 0,
-        totalRevenue: 0,
-        netProfit: 0,
-        profitPerHectare: 0,
-        profitMarginPercent: 0,
-        daysSincePlanting: 0,
-        closureValidated: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      return newCropCycle
+    mutationFn: async (request: Partial<CropCycle>) => {
+      const response = await MockApiService.createCropCycle(request)
+      return response.data
     },
     
-    // Optimistic update
     onMutate: async (request) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: blocDataKeys.bloc(blocId) })
@@ -141,24 +123,24 @@ export function useCreateCropCycle(blocId: string) {
       if (previousData) {
         const optimisticCropCycle: CropCycle = {
           id: `temp-${Date.now()}`,
-          blocId: request.blocId,
-          type: request.type,
+          blocId: request.blocId || blocId,
+          type: request.type || 'plantation',
           cycleNumber: previousData.cropCycles.length + 1,
           status: 'active',
-          sugarcaneVarietyId: request.sugarcaneVarietyId,
+          sugarcaneVarietyId: request.sugarcaneVarietyId || '',
           sugarcaneVarietyName: 'Loading...',
-          sugarcaneePlantingDate: request.plantingDate,
-          sugarcaneePlannedHarvestDate: request.expectedHarvestDate,
-          sugarcaneExpectedYieldTonsHa: request.expectedYield,
+          plantingDate: request.plantingDate || new Date().toISOString(),
+          plannedHarvestDate: request.plannedHarvestDate || new Date().toISOString(),
+          expectedYield: request.expectedYield || 0,
           estimatedTotalCost: 0,
           actualTotalCost: 0,
-          sugarcaneeRevenue: 0,
-          totalRevenue: 0,
+          revenue: 0,
           netProfit: 0,
           profitPerHectare: 0,
           profitMarginPercent: 0,
+          growthStage: 'planted',
+          growthStageUpdatedAt: new Date().toISOString(),
           daysSincePlanting: 0,
-          closureValidated: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
@@ -166,6 +148,7 @@ export function useCreateCropCycle(blocId: string) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...previousData,
           cropCycles: [optimisticCropCycle, ...previousData.cropCycles],
+          activeCropCycle: optimisticCropCycle,
           lastUpdated: new Date().toISOString()
         })
       }
@@ -173,62 +156,42 @@ export function useCreateCropCycle(blocId: string) {
       return { previousData }
     },
     
-    // On success, replace optimistic data with server response
     onSuccess: (newCropCycle, variables, context) => {
       const currentData = queryClient.getQueryData<BlocData>(blocDataKeys.bloc(blocId))
       
       if (currentData) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...currentData,
-          cropCycles: currentData.cropCycles.map(cycle => 
+          cropCycles: currentData.cropCycles.map(cycle =>
             cycle.id.startsWith('temp-') ? newCropCycle : cycle
           ),
+          activeCropCycle: newCropCycle,
           lastUpdated: new Date().toISOString()
         })
       }
     },
     
-    // On error, rollback to previous state
     onError: (error, variables, context) => {
+      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(blocDataKeys.bloc(blocId), context.previousData)
       }
-    },
+    }
   })
 }
 
 /**
- * Optimistic mutation for creating field operations
+ * Create field operation mutation with optimistic updates
  */
 export function useCreateFieldOperation(blocId: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (operationData: Partial<FieldOperation>) => {
-      // TODO: Implement actual API call
-      console.log('Creating field operation:', operationData)
-      
-      const newOperation: FieldOperation = {
-        uuid: `operation-${Date.now()}`,
-        cropCycleUuid: operationData.cropCycleUuid!,
-        operationName: operationData.operationName!,
-        operationType: operationData.operationType!,
-        method: operationData.method,
-        priority: operationData.priority!,
-        plannedStartDate: operationData.plannedStartDate!,
-        plannedEndDate: operationData.plannedEndDate!,
-        status: 'planned',
-        completionPercentage: 0,
-        estimatedTotalCost: operationData.estimatedTotalCost || 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...operationData
-      }
-      
-      return newOperation
+      const response = await MockApiService.createFieldOperation(operationData)
+      return response.data
     },
     
-    // Optimistic update
     onMutate: async (operationData) => {
       await queryClient.cancelQueries({ queryKey: blocDataKeys.bloc(blocId) })
       
@@ -236,20 +199,23 @@ export function useCreateFieldOperation(blocId: string) {
       
       if (previousData) {
         const optimisticOperation: FieldOperation = {
-          uuid: `temp-operation-${Date.now()}`,
-          cropCycleUuid: operationData.cropCycleUuid!,
-          operationName: operationData.operationName!,
-          operationType: operationData.operationType!,
-          method: operationData.method,
-          priority: operationData.priority!,
-          plannedStartDate: operationData.plannedStartDate!,
-          plannedEndDate: operationData.plannedEndDate!,
+          id: `temp-operation-${Date.now()}`,
+          cropCycleId: operationData.cropCycleId || '',
+          blocId: operationData.blocId || blocId,
+          type: operationData.type || 'cultivation',
+          method: operationData.method || 'standard',
           status: 'planned',
-          completionPercentage: 0,
-          estimatedTotalCost: operationData.estimatedTotalCost || 0,
+          plannedStartDate: operationData.plannedStartDate || new Date().toISOString(),
+          plannedEndDate: operationData.plannedEndDate || new Date().toISOString(),
+          plannedArea: operationData.plannedArea || 0,
+          progress: 0,
+          estimatedCost: operationData.estimatedCost || 0,
+          actualCost: 0,
+          labourRequired: [],
+          equipmentRequired: [],
+          productsUsed: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          ...operationData
+          updatedAt: new Date().toISOString()
         }
         
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
@@ -268,8 +234,8 @@ export function useCreateFieldOperation(blocId: string) {
       if (currentData) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...currentData,
-          fieldOperations: currentData.fieldOperations.map(op => 
-            op.uuid.startsWith('temp-operation-') ? newOperation : op
+          fieldOperations: currentData.fieldOperations.map(op =>
+            op.id.startsWith('temp-operation-') ? newOperation : op
           ),
           lastUpdated: new Date().toISOString()
         })
@@ -280,36 +246,22 @@ export function useCreateFieldOperation(blocId: string) {
       if (context?.previousData) {
         queryClient.setQueryData(blocDataKeys.bloc(blocId), context.previousData)
       }
-    },
+    }
   })
 }
 
 /**
- * Optimistic mutation for creating work packages
+ * Create work package mutation with optimistic updates
  */
 export function useCreateWorkPackage(blocId: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (workPackageData: Partial<WorkPackage>) => {
-      // TODO: Implement actual API call
-      console.log('Creating work package:', workPackageData)
-      
-      const newWorkPackage: WorkPackage = {
-        uuid: `work-package-${Date.now()}`,
-        fieldOperationUuid: workPackageData.fieldOperationUuid!,
-        workDate: workPackageData.workDate!,
-        shift: workPackageData.shift || 'day',
-        status: 'not-started',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...workPackageData
-      }
-      
-      return newWorkPackage
+      const response = await MockApiService.createWorkPackage(workPackageData)
+      return response.data
     },
     
-    // Optimistic update
     onMutate: async (workPackageData) => {
       await queryClient.cancelQueries({ queryKey: blocDataKeys.bloc(blocId) })
       
@@ -317,14 +269,17 @@ export function useCreateWorkPackage(blocId: string) {
       
       if (previousData) {
         const optimisticWorkPackage: WorkPackage = {
-          uuid: `temp-wp-${Date.now()}`,
-          fieldOperationUuid: workPackageData.fieldOperationUuid!,
-          workDate: workPackageData.workDate!,
-          shift: workPackageData.shift || 'day',
-          status: 'not-started',
+          id: `temp-wp-${Date.now()}`,
+          fieldOperationId: workPackageData.fieldOperationId || '',
+          date: workPackageData.date || new Date().toISOString(),
+          area: workPackageData.area || 0,
+          hours: workPackageData.hours || 0,
+          cost: workPackageData.cost || 0,
+          crew: workPackageData.crew || '',
+          equipment: workPackageData.equipment || '',
+          status: 'planned',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          ...workPackageData
+          updatedAt: new Date().toISOString()
         }
         
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
@@ -343,8 +298,8 @@ export function useCreateWorkPackage(blocId: string) {
       if (currentData) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...currentData,
-          workPackages: currentData.workPackages.map(wp => 
-            wp.uuid.startsWith('temp-wp-') ? newWorkPackage : wp
+          workPackages: currentData.workPackages.map(wp =>
+            wp.id.startsWith('temp-wp-') ? newWorkPackage : wp
           ),
           lastUpdated: new Date().toISOString()
         })
@@ -355,19 +310,6 @@ export function useCreateWorkPackage(blocId: string) {
       if (context?.previousData) {
         queryClient.setQueryData(blocDataKeys.bloc(blocId), context.previousData)
       }
-    },
+    }
   })
-}
-
-/**
- * Force refresh bloc data from database
- * Use sparingly - only when explicitly needed
- */
-export function useRefreshBlocData(blocId: string) {
-  const queryClient = useQueryClient()
-  
-  return () => {
-    console.log('🔄 Force refreshing bloc data from database...')
-    queryClient.invalidateQueries({ queryKey: blocDataKeys.bloc(blocId) })
-  }
 }

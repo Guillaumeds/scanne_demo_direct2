@@ -4,11 +4,12 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { ConfigurationService } from '@/services/configurationService'
-import { supabase } from '@/lib/supabase'
-import { Product } from '@/types/products'
-import { Resource } from '@/types/resources'
-import { SugarcaneVariety, InterCropPlant, CropVariety } from '@/types/varieties'
+import {
+  useProducts as useDemoProducts,
+  useLabourTypes as useDemoLabour,
+  useEquipmentTypes as useDemoEquipment,
+  useSugarcaneVarieties as useDemoVarieties
+} from '@/hooks/useDemoData'
 
 // Query keys for consistent caching
 export const configurationKeys = {
@@ -30,48 +31,26 @@ export const configurationKeys = {
 
 /**
  * Hook for fetching all products
+ * @deprecated Use useDemoProducts from useDemoData instead
  */
 export function useProducts() {
-  return useQuery({
-    queryKey: configurationKeys.products(),
-    queryFn: ConfigurationService.getProducts,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  return useDemoProducts()
 }
 
 /**
  * Hook for fetching all labour
+ * @deprecated Use useDemoLabour from useDemoData instead
  */
 export function useLabour() {
-  return useQuery({
-    queryKey: configurationKeys.labour(),
-    queryFn: ConfigurationService.getLabour,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  return useDemoLabour()
 }
 
 /**
  * Hook for fetching all equipment
+ * @deprecated Use useDemoEquipment from useDemoData instead
  */
 export function useEquipment() {
-  return useQuery({
-    queryKey: configurationKeys.equipment(),
-    queryFn: async () => {
-      const { data, error } = await supabase.from('equipment').select('*').eq('active', true).order('name')
-      if (error) throw error
-      return data || []
-    },
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  return useDemoEquipment()
 }
 
 /**
@@ -83,101 +62,98 @@ export function useResources() {
 
 /**
  * Hook for fetching sugarcane varieties only
+ * @deprecated Use useDemoVarieties from useDemoData instead
  */
 export function useSugarcaneVarieties() {
-  return useQuery({
-    queryKey: configurationKeys.sugarcaneVarieties(),
-    queryFn: ConfigurationService.getSugarcaneVarieties,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  return useDemoVarieties()
 }
 
 /**
  * Hook for fetching intercrop varieties only
+ * @deprecated Use useDemoVarieties from useDemoData instead (returns empty for intercrop in demo)
  */
 export function useIntercropVarieties() {
   return useQuery({
     queryKey: configurationKeys.intercropVarieties(),
-    queryFn: ConfigurationService.getIntercropVarieties,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: () => Promise.resolve({ data: [], success: true, timestamp: new Date().toISOString() }),
+    staleTime: 60 * 60 * 1000,
   })
 }
 
 /**
  * Hook for fetching all varieties (sugarcane + intercrop)
+ * @deprecated Use useDemoVarieties from useDemoData instead
  */
 export function useAllVarieties() {
-  return useQuery({
-    queryKey: configurationKeys.allVarieties(),
-    queryFn: ConfigurationService.getAllVarieties,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  return useDemoVarieties()
 }
 
 /**
  * Hook for configuration health check
+ * @deprecated Demo mode always returns healthy status
  */
 export function useConfigurationHealth() {
   return useQuery({
     queryKey: configurationKeys.health(),
-    queryFn: ConfigurationService.healthCheck,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    queryFn: () => Promise.resolve({
+      data: { status: 'healthy', message: 'Demo mode - all systems operational' },
+      success: true,
+      timestamp: new Date().toISOString()
+    }),
+    staleTime: 5 * 60 * 1000,
   })
 }
 
 /**
  * Hook for fetching a specific product by ID
+ * @deprecated Use demo data directly from useDemoData
  */
 export function useProductById(id: string) {
+  const { data: products } = useDemoProducts()
   return useQuery({
     queryKey: configurationKeys.productById(id),
-    queryFn: () => ConfigurationService.getProductById(id),
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    enabled: !!id,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: () => {
+      const product = products?.find((p: any) => p.id === id)
+      if (!product) throw new Error(`Product ${id} not found`)
+      return { data: product, success: true, timestamp: new Date().toISOString() }
+    },
+    enabled: !!id && !!products,
+    staleTime: 60 * 60 * 1000,
   })
 }
 
 /**
  * Hook for fetching a specific resource by ID
+ * @deprecated Use demo data directly from useDemoData
  */
 export function useResourceById(id: string) {
+  const { data: labour } = useDemoLabour()
   return useQuery({
     queryKey: configurationKeys.resourceById(id),
-    queryFn: () => ConfigurationService.getLabourById(id),
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    enabled: !!id,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: () => {
+      const resource = labour?.find((l: any) => l.id === id)
+      if (!resource) throw new Error(`Resource ${id} not found`)
+      return { data: resource, success: true, timestamp: new Date().toISOString() }
+    },
+    enabled: !!id && !!labour,
+    staleTime: 60 * 60 * 1000,
   })
 }
 
 /**
  * Hook for fetching a specific variety by ID
+ * @deprecated Use demo data directly from useDemoData
  */
 export function useVarietyById(id: string) {
+  const { data: varieties } = useDemoVarieties()
   return useQuery({
     queryKey: configurationKeys.varietyById(id),
-    queryFn: () => ConfigurationService.getVarietyById(id),
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    enabled: !!id,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: () => {
+      const variety = varieties?.find((v: any) => v.id === id)
+      if (!variety) throw new Error(`Variety ${id} not found`)
+      return { data: variety, success: true, timestamp: new Date().toISOString() }
+    },
+    enabled: !!id && !!varieties,
+    staleTime: 60 * 60 * 1000,
   })
 }

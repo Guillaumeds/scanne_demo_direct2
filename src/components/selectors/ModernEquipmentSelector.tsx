@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { ArrowLeft, X, Search, Tractor, Wrench, Clock, DollarSign, User } from 'lucide-react'
 import { useEquipment } from '@/hooks/useConfigurationData'
-import { Equipment } from '@/lib/supabase'
+// Equipment type now comes from demo data
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,7 @@ import { fuzzySearch } from '@/utils/fuzzySearch'
 import ModernCardSelector from '@/components/selectors/ModernCardSelector'
 
 export interface SelectedEquipment {
-  equipment: Equipment
+  equipment: any // Using any for demo mode
   estimatedDuration?: number
   actualDuration?: number
   costPerHour?: number
@@ -43,7 +43,7 @@ export default function ModernEquipmentSelector({
   title = "Select Equipment",
   subtitle = "Choose equipment for this operation"
 }: ModernEquipmentSelectorProps) {
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState<any | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
   const [costPerHour, setCostPerHour] = useState<number>(0)
@@ -58,11 +58,11 @@ export default function ModernEquipmentSelector({
   // Pre-populate fields when editing existing equipment
   useEffect(() => {
     if (existingEquipment && equipment && equipment.length > 0) {
-      const equipmentItem = equipment.find(e => e.equipment_id === existingEquipment.equipment.id)
+      const equipmentItem = equipment.find(e => e.id === existingEquipment.equipment.id)
       if (equipmentItem) {
         setSelectedEquipment(equipmentItem)
         setEstimatedDuration(existingEquipment.estimatedDuration || 0)
-        setCostPerHour(existingEquipment.costPerHour || equipmentItem.hourly_rate || 0)
+        setCostPerHour(existingEquipment.costPerHour || equipmentItem.operationalCosts?.hourlyRate || 0)
         setOperator(existingEquipment.operator || '')
         setNotes(existingEquipment.notes || '')
       }
@@ -82,10 +82,10 @@ export default function ModernEquipmentSelector({
   const handleEquipmentSelect = (value: string | string[]) => {
     const equipmentId = Array.isArray(value) ? value[0] : value
     if (!equipmentId) return
-    const equipmentItem = (equipment || []).find(e => e.equipment_id === equipmentId)
+    const equipmentItem = (equipment || []).find(e => e.id === equipmentId)
     if (equipmentItem) {
       setSelectedEquipment(equipmentItem)
-      setCostPerHour(equipmentItem.hourly_rate || 0)
+      setCostPerHour(equipmentItem.operationalCosts?.hourlyRate || 0)
       setEstimatedDuration(1) // Default to 1 hour
     }
   }
@@ -278,13 +278,13 @@ export default function ModernEquipmentSelector({
                 <div className="pb-6">
                   <ModernCardSelector
                     options={filteredEquipment.map((equipmentItem) => ({
-                      id: equipmentItem.equipment_id,
+                      id: equipmentItem.id,
                       name: equipmentItem.name,
-                      description: equipmentItem.description || 'Farm equipment',
+                      description: equipmentItem.name || 'Farm equipment',
                       badge: equipmentItem.category || undefined,
                       color: 'bg-blue-50',
                       icon: Tractor,
-                      cost: equipmentItem.hourly_rate,
+                      cost: equipmentItem.operationalCosts?.hourlyRate,
                       unit: 'hour',
                       skillLevel: 'Basic' // Equipment doesn't have skillLevel in DB
                     }))}

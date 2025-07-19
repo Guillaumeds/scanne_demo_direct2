@@ -1,0 +1,34 @@
+variety_id,name,category,category_enum,harvest_start_month,harvest_end_month,seasons,soil_types,sugar_content_percent,characteristics,description,icon,image_url,information_leaflet_url,active
+m-1176-77,M 1176/77,Sugarcane Variety,sugarcane,Aug,Sep,"{Aug,Sep}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-52-78,M 52/78,Sugarcane Variety,sugarcane,Jun,Aug,"{Jun,Jul,Aug}","{B1,B2,F1,F2,H1,H2,L2}",,{},,,,,TRUE
+m-387-85,M 387/85,Sugarcane Variety,sugarcane,Jul,Oct,"{Jul,Aug,Sep,Oct}","{B1,B2}",,{},,,,,TRUE
+m-1400-86,M 1400/86,Sugarcane Variety,sugarcane,Aug,Sep,"{Aug,Sep}","{B1,B2,F1,F2,H1,H2,L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-2256-88,M 2256/88,Sugarcane Variety,sugarcane,Jun,Sep,"{Jun,Jul,Aug,Sep}","{B1,B2,F1,F2,H1,H2,L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-703-89,M 703/89,Sugarcane Variety,sugarcane,Jun,Jul,"{Jun,Jul}","{H1,H2,L1,L2}",,{},,,,,TRUE
+m-1861-89,M 1861/89,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2,F1,F2,H1,H2}",,{},,,,,TRUE
+m-1672-90,M 1672/90,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-2593-92,M 2593/92,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{H1,H2,L1,L2,P1,P2,P3}",,{},,,,/sugarcane_varieties_leaflets/m2593.pdf,TRUE
+m-2283-98,M 2283/98,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2,F1,F2}",,{},,,/images/varieties/m-2283-98.jpg,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%2283-98.pdf,TRUE
+m-683-99,M 683/99,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{L1,L2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%20683-99.pdf,TRUE
+m-1989-99,M 1989/99,Sugarcane Variety,sugarcane,Aug,Oct,"{Aug,Sep,Oct}","{L1,L2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%201989-99.pdf,TRUE
+m-2502-99,M 2502/99,Sugarcane Variety,sugarcane,Aug,Oct,"{Aug,Sep,Oct}","{B1,B2,F1,F2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%202502-99.pdf,TRUE
+m-1392-00,M 1392/00,Sugarcane Variety,sugarcane,Jul,Oct,"{Jul,Aug,Sep,Oct}","{B1,B2,F1,F2,L1,L2,P1,P2,P3}",,{},,,/images/varieties/m-1392-00.jpg,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%201392-00.pdf,TRUE
+m-63,M 63,Sugarcane Variety,sugarcane,Aug,Oct,"{Aug,Sep,Oct}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-1561-01,M 1561/01,Sugarcane Variety,sugarcane,Jun,Oct,"{Jun,Jul,Aug,Sep,Oct}","{B1,B2}",,{},,,,,TRUE
+m-216-02,M 216/02,Sugarcane Variety,sugarcane,Jun,Oct,"{Jun,Jul,Aug,Sep,Oct}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-1002-02,M 1002/02,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{L1,L2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%201002-02.pdf,TRUE
+m-1698-02,M 1698/02,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-64,M 64,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2,F1,F2}",,{},,,,,TRUE
+m-1256-04,M 1256/04,Sugarcane Variety,sugarcane,Aug,Oct,"{Aug,Sep,Oct}","{L1,L2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%201256-04.pdf,TRUE
+m-915-05,M 915/05,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2,F1,F2,H1,H2,L1,L2,P1,P2,P3}",,{},,,,http://www.msiri.mu/UserFiles/File/sugarcane%20pamphlets/M%20915-05.pdf,TRUE
+m-65,M 65,Sugarcane Variety,sugarcane,Aug,Oct,"{Aug,Sep,Oct}","{B1,B2,P1,P2,P3}",,{},,,,,TRUE
+r573,R573,Sugarcane Variety,sugarcane,Jul,Sep,"{Jul,Aug,Sep}","{H1,H2,L1,L2,P1,P2,P3}",,{},,,,,TRUE
+r575,R575,Sugarcane Variety,sugarcane,Jun,Aug,"{Jun,Jul,Aug}","{H1,H2,L1,L2,P1,P2,P3}",,{},,,,https://www.ercane.re/nos-varietes/r-575/,TRUE
+r579,R579,Sugarcane Variety,sugarcane,Oct,Dec,"{Oct,Nov,Dec}","{H1,H2,L2,P1,P2,P3}",,{},,,,https://www.ercane.re/nos-varietes/r-579/,TRUE
+m-3035-66,M 3035/66,Sugarcane Variety,sugarcane,Aug,Dec,"{Aug,Sep,Oct,Nov,Dec}","{B1,B2,F1,F2,H1,H2}",,{},,,,,TRUE
+m-1246-84,M 1246/84,Sugarcane Variety,sugarcane,Aug,Sep,"{Aug,Sep}","{H1,H2,L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-1394-86,M 1394/86,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2,F1,F2,H1,H2}",,{},,,,,TRUE
+m-2024-88,M 2024/88,Sugarcane Variety,sugarcane,Jun,Aug,"{Jun,Jul,Aug}","{L1,L2,P1,P2,P3}",,{},,,,,TRUE
+m-2238-89,M 2238/89,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}","{B1,B2}",,{},,,,,TRUE
+r570,R570,Sugarcane Variety,sugarcane,Sep,Dec,"{Sep,Oct,Nov,Dec}","{H1,H2,L1,L2,P1,P2,P3}",,{},,,,https://www.ercane.re/nos-varietes/r-570/,TRUE
+r585,R585,Sugarcane Variety,sugarcane,Aug,Nov,"{Aug,Sep,Oct,Nov}",,,{},,,,https://www.ercane.re/nos-varietes/r-585/,TRUE

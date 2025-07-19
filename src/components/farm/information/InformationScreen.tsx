@@ -11,8 +11,7 @@ import { useBlocContext } from '../contexts/BlocContext'
 import { CropCycleSelector } from './CropCycleSelector'
 import { BlocMetrics } from './BlocMetrics'
 import { GrowthStageChart } from './GrowthStageChart'
-import { SolarRadiationChart } from './SolarRadiationChart'
-import { PrecipitationChart } from './PrecipitationChart'
+// Charts removed for demo mode
 
 export function InformationScreen() {
   const { bloc } = useBlocContext()
@@ -209,14 +208,10 @@ export function InformationScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.5 }}
           >
-            <SolarRadiationChart
-              cropCycle={{
-                plantingDate: cropCycleData.currentCycle.plantingDate,
-                plannedHarvestDate: cropCycleData.currentCycle.expectedHarvestDate,
-                type: 'plantation'
-              }}
-              stationId="default"
-            />
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-medium text-slate-800 mb-4">Solar Radiation</h3>
+              <p className="text-slate-600">Climate monitoring features are not available in demo mode.</p>
+            </div>
           </motion.div>
 
           <motion.div
@@ -224,14 +219,10 @@ export function InformationScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.6 }}
           >
-            <PrecipitationChart
-              cropCycle={{
-                plantingDate: cropCycleData.currentCycle.plantingDate,
-                plannedHarvestDate: cropCycleData.currentCycle.expectedHarvestDate,
-                type: 'plantation'
-              }}
-              stationId="default"
-            />
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-medium text-slate-800 mb-4">Precipitation</h3>
+              <p className="text-slate-600">Climate monitoring features are not available in demo mode.</p>
+            </div>
           </motion.div>
         </div>
       </div>

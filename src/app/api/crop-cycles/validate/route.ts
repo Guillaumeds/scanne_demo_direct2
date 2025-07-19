@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CropCycleManagementService } from '@/services/cropCycleManagementService'
+import { MockApiService } from '@/services/mockApiService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const validation = await CropCycleManagementService.validateCropCycleForClosure(cycleId)
+    // Demo mode - return mock validation
+    const validation = {
+      isValid: true,
+      errors: [],
+      warnings: [],
+      canClose: true
+    }
     
     return NextResponse.json(validation)
   } catch (error) {

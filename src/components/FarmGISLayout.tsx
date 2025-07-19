@@ -12,7 +12,7 @@ import { BlocScreen } from './farm/BlocScreen'
 import FloatingInfoBox from './FloatingInfoBox'
 import { DrawnArea, DrawnAreaUtils } from '@/types/drawnArea'
 import { LocalStorageService } from '@/services/localStorageService'
-import { useFarmGISData } from '@/hooks/useModernFarmData'
+import { useFarmGISData } from '@/hooks/useDemoData'
 import { GlobalLoadingIndicator } from '@/components/global/GlobalLoadingIndicator'
 import { GlobalErrorHandler } from '@/components/global/GlobalErrorHandler'
 import { CacheManagementDashboard } from '@/components/dev/CacheManagementDashboard'
@@ -162,23 +162,21 @@ export default function FarmGISLayout() {
           return
         }
 
-        // Transform database objects to DrawnArea format
+        // Transform demo bloc objects to DrawnArea format
         const savedBlocs: DrawnArea[] = farmData.blocs.map(bloc => {
-          // Parse WKT coordinates using the existing utility function (returns [lng, lat] format)
-          const wktCoordinates = DrawnAreaUtils.parseWKTToCoordinates(bloc.coordinates_wkt || '')
-          // WKT parsing already returns [lng, lat] format - use directly
-          const coordinates: [number, number][] = wktCoordinates
+          // Demo blocs already have coordinates as [lat, lng] pairs, convert to [lng, lat] for map
+          const coordinates: [number, number][] = bloc.coordinates.map(([lat, lng]) => [lng, lat])
 
           return {
             uuid: bloc.id,
             localId: bloc.name,
             type: 'polygon' as const,
             coordinates,
-            area: bloc.area_hectares || 0,
+            area: bloc.area || 0,
             isSaved: true,
             isDirty: false,
-            createdAt: bloc.created_at || new Date().toISOString(),
-            updatedAt: bloc.updated_at || new Date().toISOString()
+            createdAt: bloc.createdAt || new Date().toISOString(),
+            updatedAt: bloc.updatedAt || new Date().toISOString()
           }
         })
 
@@ -547,11 +545,20 @@ export default function FarmGISLayout() {
         })
       }
 
-      // STEP 2: Import BlocService dynamically to avoid import issues
-      const { BlocService } = await import('@/services/blocService')
-
-      // STEP 3: Save all drawn areas to database with farm ID
-      const savedBlocs = await BlocService.saveMultipleDrawnAreas(drawnAreas, defaultFarmId)
+      // STEP 2: Use MockApiService for demo mode
+      // STEP 3: Save all drawn areas using demo service
+      const savedBlocs = await Promise.all(
+        drawnAreas.map(async (area, index) => ({
+          id: `bloc-${Date.now()}-${index}`,
+          name: area.name || `Bloc ${index + 1}`,
+          farmId: defaultFarmId,
+          area: area.area || 0,
+          coordinates: area.coordinates,
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }))
+      )
 
       // Transform saved blocs to DrawnArea format with UUIDs from database
       const savedDrawnAreas: DrawnArea[] = drawnAreas.map((drawnArea, index) => {
@@ -562,8 +569,8 @@ export default function FarmGISLayout() {
             uuid: correspondingBloc.id, // Set UUID from database
             isSaved: true,
             isDirty: false,
-            createdAt: correspondingBloc.created_at || new Date().toISOString(),
-            updatedAt: correspondingBloc.updated_at || new Date().toISOString()
+            createdAt: correspondingBloc.createdAt || new Date().toISOString(),
+            updatedAt: correspondingBloc.updatedAt || new Date().toISOString()
           }
         }
         return drawnArea

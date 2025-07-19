@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { CropCycle, CyclePermissions } from '@/types/cropCycles'
-import { CropCycleService } from '@/services/cropCycleService'
+import { MockApiService } from '@/services/mockApiService'
 
 interface CropCycleContextType {
   activeCycle: CropCycle | null
@@ -44,24 +44,31 @@ export function CropCycleProvider({
       setError(null)
 
       // Get all cycles for the bloc (includes active + closed)
-      const cycles = await CropCycleService.getCropCyclesForBloc(blocId)
+      const response = await MockApiService.getCropCyclesForBloc(blocId)
+      const cycles = response.data
       console.log('📊 CropCycleContext: Fetched cycles from DB:', cycles.map(c => ({
         id: c.id.substring(0, 8) + '...',
         estimatedCost: c.estimatedTotalCost,
         actualCost: c.actualTotalCost,
-        lastUpdated: c.lastUpdated
+        lastUpdated: (c as any).lastUpdated || new Date().toISOString()
       })))
 
-      setAllCycles(cycles)
+      setAllCycles(cycles as any)
       console.log('✅ CropCycleContext: allCycles state updated')
 
       // Find active cycle from the data we already have (no extra DB call needed!)
       const active = cycles.find(cycle => cycle.status === 'active') || null
-      setActiveCycle(active)
+      setActiveCycle(active as any)
 
       if (active) {
-        const cyclePermissions = CropCycleService.getCyclePermissions(active, userRole)
-        setPermissions(cyclePermissions)
+        // Demo mode - simplified permissions
+        const cyclePermissions = {
+          canEdit: true,
+          canClose: true,
+          canDelete: false,
+          canViewFinancials: true
+        }
+        setPermissions(cyclePermissions as any)
       } else {
         setPermissions(null)
       }
@@ -81,11 +88,18 @@ export function CropCycleProvider({
         return
       }
 
-      const cycle = await CropCycleService.getCropCycleById(cycleId)
+      const response = await MockApiService.getCropCycleById(cycleId)
+      const cycle = response.data
       if (cycle) {
-        setActiveCycle(cycle)
-        const cyclePermissions = CropCycleService.getCyclePermissions(cycle, userRole)
-        setPermissions(cyclePermissions)
+        setActiveCycle(cycle as any)
+        // Demo mode - simplified permissions
+        const cyclePermissions = {
+          canEdit: true,
+          canClose: true,
+          canDelete: false,
+          canViewFinancials: true
+        }
+        setPermissions(cyclePermissions as any)
       }
     } catch (err) {
       console.error('Error setting active cycle:', err)
@@ -95,11 +109,12 @@ export function CropCycleProvider({
 
   const createCycle = async (request: any): Promise<CropCycle> => {
     try {
-      const newCycle = await CropCycleService.createCropCycle(request)
+      const response = await MockApiService.createCropCycle(request)
+      const newCycle = response.data
       await refreshCycles()
       // Automatically set the newly created cycle as active
       await setActiveCycleId(newCycle.id)
-      return newCycle
+      return newCycle as any
     } catch (err) {
       console.error('Error creating cycle:', err)
       throw err
@@ -108,9 +123,8 @@ export function CropCycleProvider({
 
   const closeCycle = async (request: any): Promise<CropCycle> => {
     try {
-      const closedCycle = await CropCycleService.closeCropCycle(request)
-      await refreshCycles()
-      return closedCycle
+      // Demo mode - not implemented
+      throw new Error('Crop cycle closure not available in demo mode')
     } catch (err) {
       console.error('Error closing cycle:', err)
       throw err

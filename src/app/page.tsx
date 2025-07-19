@@ -1,3 +1,8 @@
+/**
+ * Main Application Entry Point
+ * Demo-only farm management system with full GIS functionality
+ */
+
 'use client'
 
 import { Sprout, Shield, Menu } from 'lucide-react'
@@ -5,6 +10,7 @@ import { useDynamicViewportHeight } from '@/hooks/useViewportHeight'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Sheet,
   SheetContent,
@@ -21,13 +27,13 @@ const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
     <div className="flex items-center justify-center h-screen bg-gray-100">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading Farm GIS...</p>
+        <p className="text-gray-600">Loading Demo Farm GIS...</p>
       </div>
     </div>
   )
 })
 
-export default function Home() {
+export default function HomePage() {
   // Initialize dynamic viewport height for mobile compatibility
   useDynamicViewportHeight()
 
@@ -57,12 +63,17 @@ export default function Home() {
                 <h1 className="app-title text-3xl font-bold text-white leading-tight tracking-wide">
                   Scanne
                 </h1>
-                <p className="text-slate-100 text-sm font-medium flex items-center space-x-2">
-                  <span className="flex items-center space-x-1">
-                    <span>🇲🇺</span>
-                    <span>Mauritius</span>
-                  </span>
-                </p>
+                <div className="flex items-center space-x-3">
+                  <p className="text-slate-100 text-sm font-medium flex items-center space-x-2">
+                    <span className="flex items-center space-x-1">
+                      <span>🇲🇺</span>
+                      <span>Mauritius</span>
+                    </span>
+                  </p>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                    Demo Mode
+                  </Badge>
+                </div>
               </div>
             </div>
 
@@ -86,7 +97,7 @@ export default function Home() {
                       Scanne Applications
                     </SheetTitle>
                     <SheetDescription>
-                      Access all your management applications
+                      Demo farm management system
                     </SheetDescription>
                   </SheetHeader>
 
@@ -98,7 +109,7 @@ export default function Home() {
                           <Sprout className="w-5 h-5 text-emerald-600" />
                           <div>
                             <h3 className="font-medium text-emerald-900">Agriculture Management</h3>
-                            <p className="text-sm text-emerald-700">Farm GIS & Operations</p>
+                            <p className="text-sm text-emerald-700">Demo Farm GIS & Operations</p>
                           </div>
                         </div>
                         <span className="text-xs bg-emerald-600 text-white px-2 py-1 rounded-full font-medium">
@@ -107,21 +118,18 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Other Applications */}
+                    {/* Demo Information */}
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-slate-700 mb-3">Other Applications</h4>
-                      <a
-                        href="https://scanne-hse.vercel.app/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
-                      >
-                        <Shield className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <h3 className="font-medium text-slate-900">Health & Safety</h3>
-                          <p className="text-sm text-slate-600">HSE Management System</p>
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Demo Information</h4>
+                      <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <Shield className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <h3 className="font-medium text-blue-900">Demo System</h3>
+                            <p className="text-sm text-blue-700">All data is simulated and stored locally</p>
+                          </div>
                         </div>
-                      </a>
+                      </div>
                     </div>
                   </div>
                 </SheetContent>
@@ -131,14 +139,12 @@ export default function Home() {
         </div>
       </header>
 
-
-
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <FarmGISLayout />
       </div>
-
-
     </main>
   )
 }
+
+

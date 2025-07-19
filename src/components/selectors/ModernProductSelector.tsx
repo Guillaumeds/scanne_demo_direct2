@@ -52,7 +52,7 @@ export default function ModernProductSelector({
 
   // Convert categories to card options
   const categoryOptions: CardOption[] = PRODUCT_CATEGORIES.map(category => {
-    const productCount = (products || []).filter(p => p.category === category.id).length
+    const productCount = (products || []).filter(p => (p as any).category === category.id).length
     return {
       id: category.id,
       name: category.name,
@@ -82,7 +82,7 @@ export default function ModernProductSelector({
     if (existingProduct && products && products.length > 0) {
       const product = products.find(p => p.id === existingProduct.product.id)
       if (product) {
-        setSelectedProduct(product)
+        setSelectedProduct(product as any)
         setQuantity(existingProduct.quantity)
         setRate(existingProduct.rate)
         setActualCost(existingProduct.actualCost)
@@ -101,8 +101,8 @@ export default function ModernProductSelector({
     if (!productId) return
     const product = (products || []).find(p => p.id === productId)
     if (product) {
-      setSelectedProduct(product)
-      const defaultRate = product.defaultRate || 0
+      setSelectedProduct(product as any)
+      const defaultRate = (product as any).defaultRate || 0
       const calculatedQuantity = Math.round((defaultRate * blocArea) * 10) / 10
       setRate(Math.round(defaultRate * 10) / 10)
       setQuantity(calculatedQuantity)
@@ -377,15 +377,15 @@ export default function ModernProductSelector({
                 <div className="pb-6">
                   <ModernCardSelector
                     options={filteredProducts.map((product) => {
-                    const category = PRODUCT_CATEGORIES.find(c => c.id === product.category)
+                    const category = PRODUCT_CATEGORIES.find(c => c.id === (product as any).category)
                       return {
                         id: product.id,
                         name: product.name,
-                        description: product.description || `Default rate: ${product.defaultRate || 0} ${product.unit}/ha`,
+                        description: (product as any).description || `Default rate: ${(product as any).defaultRate || 0} ${product.unit}/ha`,
                         badge: category?.name.split(' ')[0] || product.category || undefined,
                         color: category?.color?.replace('text-', 'bg-').replace('-700', '-100') || 'bg-slate-100',
                         icon: typeof category?.icon === 'function' ? category.icon : Package,
-                        cost: product.cost,
+                        cost: (product as any).cost,
                         unit: product.unit
                       }
                     })}

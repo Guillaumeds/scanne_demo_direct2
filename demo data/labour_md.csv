@@ -1,0 +1,7 @@
+id,labour_id,name,category,unit,cost_per_unit,description,active,created_at,updated_at
+,supervisor,Field Supervisor,labour,hours,60,,TRUE,,
+,field-worker_m,Field Worker Male,labour,hours,25,,TRUE,,
+,field-worker_fm,Field Worker Female,labour,hours,35,,TRUE,,
+,machine_operator,Machine Operator,labour,hours,45,,TRUE,,
+,parttime_worker_m,Field Worker Male (Part time),labour,hours,30,,TRUE,,
+,parttime_worker_fm,Field Worker Female (Part time),labour,hours,40,,TRUE,,

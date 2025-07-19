@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useEffect, useState } from 'react'
-import { CropCycleService } from '@/services/cropCycleService'
+import { MockApiService } from '@/services/mockApiService'
 import { DrawnArea, DrawnAreaUtils, DrawnAreaGuards } from '@/types/drawnArea'
 import { Button } from '@/components/ui/button'
 
@@ -78,8 +78,8 @@ export default function BlocList({
           .filter(bloc => bloc.uuid) // Only include areas with UUIDs
           .map(bloc => bloc.uuid!)
 
-        // Use optimized batch method to avoid 406 errors
-        const batchData = await CropCycleService.getBlocSummariesBatch(blocIds)
+        // Use demo service for batch data
+        const batchData = await MockApiService.getBlocSummariesBatch(blocIds)
 
         setCropCycleDataMap(batchData)
         // Batch crop cycle data loaded

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CropCycleManagementService } from '@/services/cropCycleManagementService'
-import { CloseCropCycleRequest } from '@/types/cropCycleManagement'
+import { MockApiService } from '@/services/mockApiService'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: CloseCropCycleRequest = await request.json()
+    const body = await request.json()
 
     // Validate required fields
     if (!body.cycleId || !body.actualHarvestDate || !body.userConfirmation) {
@@ -14,9 +13,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const closedCycle = await CropCycleManagementService.closeCropCycle(body)
-    
-    return NextResponse.json(closedCycle)
+    // Demo mode - not implemented
+    return NextResponse.json(
+      { error: 'Crop cycle closure not available in demo mode' },
+      { status: 501 }
+    )
+
   } catch (error) {
     console.error('Error closing crop cycle:', error)
     return NextResponse.json(

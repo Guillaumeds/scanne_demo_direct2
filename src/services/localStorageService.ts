@@ -5,7 +5,7 @@
  * 2. Cycle totals (financial calculations) - cleared when bloc closed
  */
 
-import { ConfigurationService } from './configurationService'
+import { MockApiService } from './mockApiService'
 import { SugarcaneVariety, InterCropPlant, CropVariety } from '@/types/varieties'
 import { Product } from '@/types/products'
 import { Resource } from '@/types/resources'
@@ -126,16 +126,12 @@ export class LocalStorageService {
   /**
    * Get sugarcane varieties (localStorage + DB fallback)
    */
-  static async getSugarcaneVarieties(): Promise<SugarcaneVariety[]> {
+  static async getSugarcaneVarieties(): Promise<any[]> {
     return this.getOrFetch(
       this.KEYS.SUGARCANE_VARIETIES,
-      () => {
-        console.log('🔍 ConfigurationService:', ConfigurationService)
-        console.log('🔍 ConfigurationService.getSugarcaneVarieties:', ConfigurationService?.getSugarcaneVarieties)
-        if (!ConfigurationService || !ConfigurationService.getSugarcaneVarieties) {
-          throw new Error('ConfigurationService or getSugarcaneVarieties method is not available')
-        }
-        return ConfigurationService.getSugarcaneVarieties()
+      async () => {
+        const response = await MockApiService.getSugarcaneVarieties()
+        return response.data
       }
     )
   }
@@ -146,7 +142,10 @@ export class LocalStorageService {
   static async getIntercropVarieties(): Promise<InterCropPlant[]> {
     return this.getOrFetch(
       this.KEYS.INTERCROP_VARIETIES,
-      () => ConfigurationService.getIntercropVarieties()
+      async () => {
+        // Demo mode returns empty array for intercrop varieties
+        return []
+      }
     )
   }
 
@@ -164,20 +163,26 @@ export class LocalStorageService {
   /**
    * Get products (localStorage + DB fallback)
    */
-  static async getProducts(): Promise<Product[]> {
+  static async getProducts(): Promise<any[]> {
     return this.getOrFetch(
       this.KEYS.PRODUCTS,
-      () => ConfigurationService.getProducts()
+      async () => {
+        const response = await MockApiService.getProducts()
+        return response.data
+      }
     )
   }
 
   /**
    * Get resources (localStorage + DB fallback)
    */
-  static async getResources(): Promise<Resource[]> {
+  static async getResources(): Promise<any[]> {
     return this.getOrFetch(
       this.KEYS.RESOURCES,
-      () => ConfigurationService.getLabour()
+      async () => {
+        const response = await MockApiService.getLabourTypes()
+        return response.data
+      }
     )
   }
 
