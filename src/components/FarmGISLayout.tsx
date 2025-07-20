@@ -145,6 +145,17 @@ export default function FarmGISLayout() {
     initializeApp()
   }, [])
 
+  // Expose refresh function globally for demo purposes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).refreshDemoData = async () => {
+        const { MockApiService } = await import('@/services/mockApiService')
+        await MockApiService.refreshWithNewData()
+        window.location.reload()
+      }
+    }
+  }, [])
+
   // Update state when farm data loads
   useEffect(() => {
     if (farmData) {
@@ -166,36 +177,9 @@ export default function FarmGISLayout() {
           return
         }
 
-        // Transform demo bloc objects to DrawnArea format
+        // Transform demo bloc objects to DrawnArea format using proper utility
         const savedBlocs: DrawnArea[] = farmData.blocs.map(bloc => {
-          // Demo blocs have coordinates as [lat, lng] pairs, convert to [lng, lat] for DrawnArea format
-          const coordinates: [number, number][] = Array.isArray(bloc.coordinates)
-            ? bloc.coordinates.map(([lat, lng]) => [lng, lat])
-            : []
-
-          // Ensure UUID is properly set - use bloc.uuid if available, fallback to bloc.id
-          const blocUuid = bloc.uuid || bloc.id
-
-          console.log('🔧 Converting demo bloc to DrawnArea:', {
-            blocId: bloc.id,
-            blocUuid: bloc.uuid,
-            finalUuid: blocUuid,
-            blocName: bloc.name,
-            originalCoords: Array.isArray(bloc.coordinates) ? bloc.coordinates.slice(0, 2) : [], // First 2 coords
-            convertedCoords: coordinates.slice(0, 2) // First 2 converted coords
-          })
-
-          return {
-            uuid: blocUuid,
-            localId: bloc.name,
-            type: 'polygon' as const,
-            coordinates,
-            area: bloc.area || 0,
-            isSaved: true,
-            isDirty: false,
-            createdAt: bloc.createdAt || new Date().toISOString(),
-            updatedAt: bloc.updatedAt || new Date().toISOString()
-          }
+          return DrawnAreaUtils.fromDatabaseBloc(bloc)
         })
 
         // Set blocs immediately for card display (without waiting for polygon rendering)

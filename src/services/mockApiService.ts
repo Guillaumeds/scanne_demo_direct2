@@ -95,26 +95,34 @@ export class MockApiService {
       if (!existingFarms) {
         console.log('Initializing demo data...')
         
-        // Load initial data
+        // Load initial data - use new comprehensive Mauritius demo data
         const [
           { DEMO_COMPANIES },
           { DEMO_FARMS },
-          { DEMO_BLOCS, DEMO_CROP_CYCLES, DEMO_FIELD_OPERATIONS, DEMO_WORK_PACKAGES }
+          { generateCompleteMauritiusDemoData }
         ] = await Promise.all([
           import('../data/transactional/farms'),
           import('../data/transactional/farms'),
-          import('../data/transactional/blocs')
+          import('../services/mauritiusDemoDataGenerator')
         ])
 
-        // Store initial data
+        // Generate comprehensive Mauritius demo data
+        const comprehensiveData = generateCompleteMauritiusDemoData()
+
+        // Store initial data with new comprehensive data
         DemoStorage.set(STORAGE_KEYS.COMPANIES, DEMO_COMPANIES)
         DemoStorage.set(STORAGE_KEYS.FARMS, DEMO_FARMS)
-        DemoStorage.set(STORAGE_KEYS.BLOCS, DEMO_BLOCS)
-        DemoStorage.set(STORAGE_KEYS.CROP_CYCLES, DEMO_CROP_CYCLES)
-        DemoStorage.set(STORAGE_KEYS.FIELD_OPERATIONS, DEMO_FIELD_OPERATIONS)
-        DemoStorage.set(STORAGE_KEYS.WORK_PACKAGES, DEMO_WORK_PACKAGES)
+        DemoStorage.set(STORAGE_KEYS.BLOCS, comprehensiveData.blocs)
+        DemoStorage.set(STORAGE_KEYS.CROP_CYCLES, comprehensiveData.cropCycles)
+        DemoStorage.set(STORAGE_KEYS.FIELD_OPERATIONS, comprehensiveData.fieldOperations)
+        DemoStorage.set(STORAGE_KEYS.WORK_PACKAGES, comprehensiveData.workPackages)
 
-        console.log('Demo data initialized successfully')
+        console.log('✅ Comprehensive Mauritius demo data initialized successfully:', {
+          blocs: comprehensiveData.blocs?.length || 0,
+          cropCycles: comprehensiveData.cropCycles?.length || 0,
+          fieldOperations: comprehensiveData.fieldOperations?.length || 0,
+          workPackages: comprehensiveData.workPackages?.length || 0
+        })
       }
     } catch (error) {
       console.error('Failed to initialize demo data:', error)
@@ -185,7 +193,8 @@ export class MockApiService {
   static async getBlocs(): Promise<ApiResponse<Bloc[]>> {
     await this.initializeData()
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
-    return this.simulateResponse(blocs.filter(b => b.active))
+
+    return this.simulateResponse(blocs.filter(b => b.status === 'active'))
   }
 
   static async getBlocById(blocId: string): Promise<ApiResponse<Bloc>> {
@@ -211,7 +220,7 @@ export class MockApiService {
   static async getBlocsByFarm(farmId: string): Promise<ApiResponse<Bloc[]>> {
     await this.initializeData()
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
-    const farmBlocs = blocs.filter(b => b.farmId === farmId && b.active)
+    const farmBlocs = blocs.filter(b => b.farm_id === farmId && b.status === 'active')
     return this.simulateResponse(farmBlocs)
   }
 
@@ -285,10 +294,15 @@ export class MockApiService {
       this.getSugarcaneVarieties()
     ])
 
-    // Get demo data directly from storage
-    const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
-    const fieldOperations = DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || []
-    const workPackages = DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
+    // Get demo data directly from storage with safety checks
+    const cropCyclesData = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
+    const fieldOperationsData = DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || []
+    const workPackagesData = DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
+
+    // Ensure data is arrays
+    const cropCycles = Array.isArray(cropCyclesData) ? cropCyclesData : []
+    const fieldOperations = Array.isArray(fieldOperationsData) ? fieldOperationsData : []
+    const workPackages = Array.isArray(workPackagesData) ? workPackagesData : []
 
     const activeCropCycles = cropCycles.filter(c => c.status === 'active')
 
@@ -486,6 +500,20 @@ export class MockApiService {
   static async resetData(): Promise<ApiResponse<void>> {
     DemoStorage.clear()
     await this.initializeData()
+    return this.simulateResponse(undefined)
+  }
+
+  /**
+   * Force refresh with new comprehensive data
+   */
+  static async refreshWithNewData(): Promise<ApiResponse<void>> {
+    console.log('🔄 Forcing refresh with new comprehensive Mauritius data...')
+    DemoStorage.clear()
+    await this.initializeData()
+    // Also clear React Query cache if available
+    if (typeof window !== 'undefined' && (window as any).queryClient) {
+      (window as any).queryClient.clear()
+    }
     return this.simulateResponse(undefined)
   }
 

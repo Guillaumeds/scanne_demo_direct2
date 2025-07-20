@@ -113,7 +113,6 @@ export class DrawnAreaUtils {
   static fromDatabaseBloc(bloc: any): DrawnArea {
     // Parse PostGIS WKT coordinates from the database
     const coordinates = this.parseWKTToCoordinates(bloc.coordinates_wkt || '')
-    console.log('✅ Parsed bloc coordinates:', coordinates.length, 'points')
 
     return {
       localId: `bloc-${bloc.name?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'unknown'}`,

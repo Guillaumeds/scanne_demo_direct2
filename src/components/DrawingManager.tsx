@@ -292,8 +292,6 @@ export default function DrawingManager({
 
     // Update field label sizes based on zoom level
     updateFieldLabelSizes()
-
-    console.log(`🏞️ Made ${fieldPolygons.length} field polygons non-interactive`)
   }
 
   // Function to update field label sizes based on zoom level and polygon size
@@ -755,7 +753,6 @@ export default function DrawingManager({
   }
 
   const recreateWithValidationRobustly = () => {
-    console.log('🔄 Full recreation with validation')
     createAllPolygonsRobustly()
   }
 
@@ -772,7 +769,6 @@ export default function DrawingManager({
   }
 
   const validateAndDecideRobustly = (existingKeys: Set<string>, currentKeys: Set<string>) => {
-    console.log('🔄 Edge case detected, using safe recreation')
     createAllPolygonsRobustly()
   }
 
@@ -1039,7 +1035,6 @@ export default function DrawingManager({
         // More precise check - point STRICTLY inside polygon (not on boundary)
         const latlngs = savedLayer.getLatLngs()[0] as L.LatLng[]
         if (isPointStrictlyInsidePolygon(point, latlngs)) {
-          console.log('❌ POINT INSIDE saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
           return { isOverlap: true, reason: 'Cannot draw inside saved blocs' }
         } else {
           console.log('✅ Point touching boundary of saved bloc - allowed')
@@ -1055,7 +1050,6 @@ export default function DrawingManager({
         // More precise check - point STRICTLY inside polygon (not on boundary)
         const latlngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
         if (isPointStrictlyInsidePolygon(point, latlngs)) {
-          console.log('❌ POINT INSIDE drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
           return { isOverlap: true, reason: 'Cannot draw inside existing blocs' }
         } else {
           console.log('✅ Point touching boundary of drawn bloc - allowed')
@@ -1085,7 +1079,6 @@ export default function DrawingManager({
       if (savedLayer) {
         const latlngs = savedLayer.getLatLngs()[0] as L.LatLng[]
         if (lineIntersectsPolygon(startPoint, endPoint, latlngs)) {
-          console.log('❌ LINE CROSSES saved bloc:', DrawnAreaUtils.getDisplayName(savedArea))
           return { isOverlap: true, reason: 'Line crosses saved bloc' }
         }
       }
@@ -1097,7 +1090,6 @@ export default function DrawingManager({
       if (drawnLayer) {
         const latlngs = drawnLayer.getLatLngs()[0] as L.LatLng[]
         if (lineIntersectsPolygon(startPoint, endPoint, latlngs)) {
-          console.log('❌ LINE CROSSES drawn bloc:', DrawnAreaUtils.getDisplayName(drawnArea))
           return { isOverlap: true, reason: 'Line crosses drawn bloc' }
         }
       }
