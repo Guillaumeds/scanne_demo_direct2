@@ -121,47 +121,113 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
       }),
       columnHelper.accessor('type', {
         header: 'Operation',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="font-medium">{row.original.type}</div>
-              <Badge variant="outline" className={getStatusColor(row.original.status)}>
-                {row.original.status}
-              </Badge>
+        cell: ({ row }) => {
+          // Check if this is a work package row (sub-row)
+          const isWorkPackage = row.depth > 0
+
+          if (isWorkPackage) {
+            // Work package display
+            return (
+              <div className="flex items-center gap-2 pl-4">
+                <div>
+                  <div className="font-medium text-sm">Work Package - {(row.original as any).work_date || (row.original as any).workDate || 'N/A'}</div>
+                  <Badge variant="outline" className={getStatusColor(row.original.status)}>
+                    {row.original.status}
+                  </Badge>
+                </div>
+              </div>
+            )
+          }
+
+          // Operation display
+          return (
+            <div className="flex items-center gap-2">
+              <div>
+                <div className="font-medium">{row.original.type}</div>
+                <Badge variant="outline" className={getStatusColor(row.original.status)}>
+                  {row.original.status}
+                </Badge>
+              </div>
             </div>
-          </div>
-        )
+          )
+        }
       })
     ]
 
     if (perspective === 'operations') {
       return [
         ...baseColumns,
-        columnHelper.accessor('plannedStartDate', {
-          header: 'Planned Dates',
-          cell: ({ row }) => (
-            <div className="text-sm">
-              <div>{formatDate(row.original.plannedStartDate)} - {formatDate(row.original.plannedEndDate)}</div>
-              {row.original.actualStartDate && (
-                <div className="text-muted-foreground">
-                  Actual: {formatDate(row.original.actualStartDate)} - {formatDate(row.original.actualEndDate)}
+        columnHelper.display({
+          id: 'method',
+          header: 'Method / Date',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  {(row.original as any).work_date || (row.original as any).workDate || 'N/A'}
                 </div>
-              )}
-            </div>
-          )
+              )
+            }
+            return (
+              <div className="text-sm">
+                {(row.original as any).method || 'Manual'}
+              </div>
+            )
+          }
+        }),
+        columnHelper.display({
+          id: 'mainProduct',
+          header: 'Main Product / Area',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  {((row.original as any).area || (row.original as any).actual_area_hectares || 0).toFixed(1)} ha
+                </div>
+              )
+            }
+            return (
+              <div className="text-sm">
+                {row.original.workPackages?.[0]?.equipment || 'NPK Fertilizer'}
+              </div>
+            )
+          }
         }),
         columnHelper.accessor('area', {
-          header: 'Area (ha)',
-          cell: ({ getValue }) => getValue().toFixed(1)
+          header: 'Bloc Area / Status',
+          cell: ({ getValue, row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  <Badge variant="outline" className={getStatusColor(row.original.status)}>
+                    {row.original.status}
+                  </Badge>
+                </div>
+              )
+            }
+            return getValue().toFixed(1)
+          }
         }),
         columnHelper.accessor('progress', {
-          header: 'Progress',
-          cell: ({ getValue }) => (
-            <div className="w-20">
-              <Progress value={getValue()} className="h-2" />
-              <div className="text-xs text-center mt-1">{getValue()}%</div>
-            </div>
-          )
+          header: 'Progress (%)',
+          cell: ({ getValue, row }) => {
+            // Calculate progress as % of work packages area completed vs bloc area
+            const completedArea = row.original.workPackages
+              ?.filter(wp => wp.status === 'completed')
+              ?.reduce((sum, wp) => sum + (wp.area || 0), 0) || 0
+            const totalArea = row.original.area || 1
+            const progressPercent = Math.round((completedArea / totalArea) * 100)
+
+            return (
+              <div className="w-20">
+                <Progress value={progressPercent} className="h-2" />
+                <div className="text-xs text-center mt-1">{progressPercent}%</div>
+              </div>
+            )
+          }
         }),
         columnHelper.display({
           id: 'actions',
@@ -187,25 +253,29 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
           header: 'Equipment',
           cell: ({ row }) => (
             <div className="text-sm">
-              {row.original.workPackages.map(wp => wp.equipment).join(', ')}
+              {row.original.workPackages?.map(wp => wp.equipment).filter(Boolean).join(', ') ||
+               'Tractor, Planter, Spreader'}
             </div>
           )
         }),
         columnHelper.display({
-          id: 'crew',
-          header: 'Crew',
+          id: 'equipmentEffort',
+          header: 'Equipment Effort',
           cell: ({ row }) => (
             <div className="text-sm">
-              {row.original.workPackages.map(wp => wp.crew).join(', ')}
+              {row.original.workPackages?.reduce((acc, wp) => acc + (wp.hours || 8), 0) || 24}h
             </div>
           )
         }),
         columnHelper.display({
-          id: 'hours',
-          header: 'Total Hours',
+          id: 'labourEffort',
+          header: 'Labour Effort (Total Est.)',
           cell: ({ row }) => (
             <div className="text-sm">
-              {row.original.workPackages.reduce((acc, wp) => acc + wp.hours, 0)}h
+              {row.original.workPackages?.reduce((acc, wp) => acc + (wp.hours || 8), 0) || 32}h
+              <div className="text-xs text-muted-foreground">
+                Rs {((row.original.estimatedCost || 0) * 0.3).toLocaleString()}
+              </div>
             </div>
           )
         }),
@@ -228,27 +298,28 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
     // Financial perspective
     return [
       ...baseColumns,
-      columnHelper.accessor('estimatedCost', {
-        header: 'Estimated Cost',
-        cell: ({ getValue }) => `Rs ${(getValue() || 0).toLocaleString()}`
-      }),
-      columnHelper.accessor('actualCost', {
-        header: 'Actual Cost',
-        cell: ({ getValue }) => `Rs ${(getValue() || 0).toLocaleString()}`
+      columnHelper.display({
+        id: 'estimateProductCost',
+        header: 'Est. Product Cost',
+        cell: ({ row }) => {
+          const productCost = (row.original.estimatedCost || 0) * 0.4 // 40% for products
+          return `Rs ${productCost.toLocaleString()}`
+        }
       }),
       columnHelper.display({
-        id: 'variance',
-        header: 'Variance',
+        id: 'estEquipmentCost',
+        header: 'Est. Equipment Cost',
         cell: ({ row }) => {
-          const actualCost = row.original.actualCost || 0
-          const estimatedCost = row.original.estimatedCost || 0
-          const variance = actualCost - estimatedCost
-          const isOver = variance > 0
-          return (
-            <div className={`text-sm ${isOver ? 'text-red-600' : 'text-green-600'}`}>
-              {isOver ? '+' : ''}Rs {variance.toLocaleString()}
-            </div>
-          )
+          const equipmentCost = (row.original.estimatedCost || 0) * 0.35 // 35% for equipment
+          return `Rs ${equipmentCost.toLocaleString()}`
+        }
+      }),
+      columnHelper.display({
+        id: 'estLabourCost',
+        header: 'Est. Labour Cost',
+        cell: ({ row }) => {
+          const labourCost = (row.original.estimatedCost || 0) * 0.25 // 25% for labour
+          return `Rs ${labourCost.toLocaleString()}`
         }
       }),
       columnHelper.display({

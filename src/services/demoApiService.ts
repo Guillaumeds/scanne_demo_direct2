@@ -71,7 +71,7 @@ export class DemoApiService {
    */
   static async fetchComprehensiveBlocData(blocId: string): Promise<BlocData> {
     return validateDemoResponse(
-      () => DemoDataService.fetchComprehensiveBlocData(blocId),
+      () => DemoDataService.fetchBlocData(blocId),
       BlocDataSchema,
       `Fetch Comprehensive Bloc Data for ${blocId} (Demo)`
     )

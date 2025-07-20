@@ -196,7 +196,7 @@ export class ComprehensiveDemoDataService {
         name: blocName,
         area_hectares: area,
         coordinates_wkt: field.wkt,
-        status: 'active',
+        status: 'active' as const,
         farm_id: '550e8400-e29b-41d4-a716-446655440001',
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
@@ -229,9 +229,6 @@ export class ComprehensiveDemoDataService {
       farms: [{
         id: '550e8400-e29b-41d4-a716-446655440001',
         name: 'Belle Vue Estate',
-        area_hectares: 2500,
-        coordinates_wkt: 'POLYGON((57.6 -20.4, 57.7 -20.4, 57.7 -20.5, 57.6 -20.5, 57.6 -20.4))',
-        status: 'active',
         company_id: 'company-1',
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'

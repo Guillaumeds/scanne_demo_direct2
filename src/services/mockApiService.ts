@@ -431,11 +431,11 @@ export class MockApiService {
       // slope: blocData.slope || 2, // Property not in Bloc schema
       // drainageClass: blocData.drainageClass || 'Well drained', // Property not in Bloc schema
       // irrigationMethod: blocData.irrigationMethod || 'Drip irrigation', // Property not in Bloc schema
-      accessRoad: blocData.accessRoad ?? true,
-      active: true,
-      notes: blocData.notes || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      // accessRoad: blocData.accessRoad ?? true, // Property not in Bloc schema
+      // active: true, // Property not in Bloc schema
+      // notes: blocData.notes || '', // Property not in Bloc schema
+      // createdAt: new Date().toISOString(), // Property not in Bloc schema
+      // updatedAt: new Date().toISOString(), // Property not in Bloc schema
     }
 
     blocs.push(newBloc)
@@ -571,7 +571,7 @@ export class MockApiService {
       // sugarcaneVarietyName: cycleData.sugarcaneVarietyName || 'Unknown Variety', // Property not in CropCycle schema
       intercrop_variety_id: cycleData.intercropVarietyId || null,
       // intercropVarietyName: cycleData.intercropVarietyName || null, // Property not in CropCycle schema
-      plantingDate: cycleData.plantingDate || new Date().toISOString(),
+      planting_date: cycleData.plantingDate || new Date().toISOString(),
       plannedHarvestDate: cycleData.plannedHarvestDate || new Date().toISOString(),
       expectedYield: cycleData.expectedYield || 0,
       actualYield: undefined,
@@ -607,7 +607,7 @@ export class MockApiService {
       status: 'planned',
       planned_start_date: operationData.plannedStartDate || new Date().toISOString().split('T')[0],
       planned_end_date: operationData.plannedEndDate || new Date().toISOString().split('T')[0],
-      plannedArea: operationData.plannedArea || 0,
+      // plannedArea: operationData.plannedArea || 0, // Property not in FieldOperation schema
       progress: 0,
       estimatedCost: operationData.estimatedCost || 0,
       actualCost: 0,
@@ -634,7 +634,7 @@ export class MockApiService {
       work_date: workPackageData.date || new Date().toISOString().split('T')[0],
       planned_area_hectares: workPackageData.area || null,
       duration_hours: workPackageData.hours || null,
-      cost: workPackageData.cost || 0,
+      // cost: workPackageData.cost || 0, // Property not in WorkPackage schema
       crew: workPackageData.crew || '',
       equipment: workPackageData.equipment || '',
       status: 'not-started',
