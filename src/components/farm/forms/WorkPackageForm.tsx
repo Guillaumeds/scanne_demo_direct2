@@ -16,6 +16,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import ProductSelectionManager from '@/components/selectors/ProductSelectionManager'
+import EquipmentSelectionManager from '@/components/selectors/EquipmentSelectionManager'
+import { SelectedProduct } from '@/components/selectors/ModernProductSelector'
+import { SelectedEquipment } from '@/components/selectors/ModernEquipmentSelector'
+import { useProducts, useResources } from '@/hooks/useConfigurationData'
+import { useDemoCreateWorkPackage } from '@/hooks/useDemoFarmData'
+import type { CreateWorkPackageRequest } from '@/schemas/apiSchemas'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -110,6 +117,10 @@ const workPackageSchema = z.object({
     materialsUsed: []
   }),
 
+  // Products & Materials
+  products: z.array(z.any()).default([]),
+  equipment: z.array(z.any()).default([]),
+
   // Work Quality & Progress
   completionPercentage: z.number().min(0).max(100).default(0),
   qualityRating: z.number().min(1).max(5).default(3),
@@ -168,7 +179,7 @@ interface GPSLocation {
 }
 
 export function WorkPackageForm() {
-  const { bloc, setCurrentScreen, currentOperationId, currentWorkPackageId } = useBlocContext()
+  const { bloc, setCurrentScreen, currentOperationId, currentWorkPackageId, fieldOperations } = useBlocContext()
   const { isMobile, isTablet } = useResponsive()
 
   // Form state
@@ -198,6 +209,8 @@ export function WorkPackageForm() {
         equipmentUsed: [],
         materialsUsed: []
       },
+      products: [],
+      equipment: [],
       completionPercentage: 0,
       qualityRating: 3,
       workStandard: 'meets-standard' as const,
@@ -217,6 +230,13 @@ export function WorkPackageForm() {
       status: 'not-started' as const
     }
   })
+
+  // Fetch configuration data for error handling
+  const { isLoading: productsLoading, error: productsError } = useProducts()
+  const { isLoading: resourcesLoading, error: resourcesError } = useResources()
+
+  // Demo mutation hook for creating work packages
+  const createWorkPackageMutation = useDemoCreateWorkPackage()
 
   // Predefined options
   const crewOptions = [
@@ -344,12 +364,40 @@ export function WorkPackageForm() {
   const onSubmit = async (data: WorkPackageFormData) => {
     setIsSubmitting(true)
     try {
-      console.log('Saving work package:', data)
-      // TODO: Implement save logic with TanStack Query mutation
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      // Get the current field operation from context
+      let targetFieldOperation = null
+
+      if (currentOperationId) {
+        // If we have a specific operation ID, find it
+        targetFieldOperation = fieldOperations.data.find((op: any) => op.uuid === currentOperationId)
+      } else {
+        // Otherwise, get the most recent operation (for demo purposes)
+        targetFieldOperation = fieldOperations.data[fieldOperations.data.length - 1]
+      }
+
+      if (!targetFieldOperation) {
+        console.error('No field operation found. Cannot create work package.')
+        return
+      }
+
+      // Map form data to CreateWorkPackageRequest schema
+      const workPackageRequest: CreateWorkPackageRequest = {
+        fieldOperationUuid: targetFieldOperation.uuid,
+        workDate: data.date,
+        shift: 'day', // Default shift
+        plannedAreaHectares: data.actualArea || null,
+        plannedQuantity: null
+      }
+
+      console.log('Creating work package:', workPackageRequest)
+
+      // Use the demo mutation to create the work package
+      await createWorkPackageMutation.mutateAsync(workPackageRequest)
+
+      console.log('✅ Work package created successfully')
       setCurrentScreen('operations')
     } catch (error) {
-      console.error('Error saving work package:', error)
+      console.error('❌ Failed to create work package:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -361,6 +409,25 @@ export function WorkPackageForm() {
     } else {
       setCurrentScreen('operations')
     }
+  }
+
+  // Handlers for products and equipment
+  const handleProductsChange = (products: SelectedProduct[]) => {
+    form.setValue('products', products as any)
+    // Update estimated total cost
+    const totalProductCost = products.reduce((sum, p) => sum + ((p as any).actualCost || p.estimatedCost), 0)
+    const equipmentData = form.getValues('equipment') as SelectedEquipment[] || []
+    const equipmentCost = equipmentData.reduce((sum, e) => sum + ((e as any).totalActualCost || e.totalEstimatedCost || 0), 0)
+    form.setValue('actualCost', totalProductCost + equipmentCost)
+  }
+
+  const handleEquipmentChange = (equipment: SelectedEquipment[]) => {
+    form.setValue('equipment', equipment as any)
+    // Update estimated total cost
+    const equipmentCost = equipment.reduce((sum, e) => sum + ((e as any).totalActualCost || e.totalEstimatedCost || 0), 0)
+    const productsData = form.getValues('products') as SelectedProduct[] || []
+    const productCost = productsData.reduce((sum, p) => sum + ((p as any).actualCost || p.estimatedCost), 0)
+    form.setValue('actualCost', equipmentCost + productCost)
   }
 
   if (isLoading) {
@@ -433,18 +500,7 @@ export function WorkPackageForm() {
               </p>
             </div>
 
-            {/* Quick Status Indicators */}
-            <div className="flex items-center gap-2">
-              {currentLocation && (
-                <Badge variant="outline" className="text-green-600 border-green-200">
-                  <MapPin className="h-3 w-3 mr-1" />
-                  GPS
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-sm">
-                {bloc.area.toFixed(1)} ha
-              </Badge>
-            </div>
+
           </div>
         </motion.div>
 
@@ -456,13 +512,11 @@ export function WorkPackageForm() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
               >
-                <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-5'} bg-muted/80 bg-white/95`}>
+                <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-3'} bg-muted/80 bg-white/95`}>
                   {[
                     { value: 'basic', icon: Clock, label: 'Basic', fullLabel: 'Basic Info' },
-                    { value: 'location', icon: MapPin, label: 'Location', fullLabel: 'Location & GPS' },
-                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Products & Resources' },
-                    { value: 'quality', icon: Star, label: 'Quality', fullLabel: 'Quality & Issues' },
-                    { value: 'documentation', icon: Camera, label: 'Docs', fullLabel: 'Documentation' }
+                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Products & Materials' },
+                    { value: 'attachments', icon: Camera, label: 'Attachments', fullLabel: 'Attachments' }
                   ].map((tab, index) => {
                     const Icon = tab.icon
                     return (
@@ -516,59 +570,49 @@ export function WorkPackageForm() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Date and Time */}
-                      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                        {[
-                          { name: 'date', icon: Calendar, label: 'Work Date', type: 'date' },
-                          { name: 'startTime', icon: Timer, label: 'Start Time', type: 'time' },
-                          { name: 'endTime', icon: Timer, label: 'End Time', type: 'time' }
-                        ].map((fieldConfig, index) => {
-                          const Icon = fieldConfig.icon
-                          return (
-                            <motion.div
-                              key={fieldConfig.name}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: index * 0.1 }}
-                            >
-                              <FormField
-                                control={form.control}
-                                name={fieldConfig.name as any}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="flex items-center gap-2">
-                                      <motion.div
-                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                        transition={{ duration: 0.2 }}
-                                      >
-                                        <Icon className="h-4 w-4" />
-                                      </motion.div>
-                                      {fieldConfig.label}
-                                    </FormLabel>
-                                    <FormControl>
-                                      <motion.div
-                                        whileFocus={{ scale: 1.02 }}
-                                        transition={{ duration: 0.2 }}
-                                      >
-                                        <Input
-                                          type={fieldConfig.type}
-                                          {...field}
-                                          className={`${isMobile ? 'h-12 text-lg' : ''} transition-all duration-200 focus:ring-2 focus:ring-primary/20`}
-                                        />
-                                      </motion.div>
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </motion.div>
-                          )
-                        })}
+                      {/* Work Date */}
+                      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1'}`}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <FormField
+                            control={form.control}
+                            name="date"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <motion.div
+                                    whileHover={{ scale: 1.1, rotate: 5 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <Calendar className="h-4 w-4" />
+                                  </motion.div>
+                                  Work Date
+                                </FormLabel>
+                                <FormControl>
+                                  <motion.div
+                                    whileFocus={{ scale: 1.02 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <Input
+                                      type="date"
+                                      {...field}
+                                      className={`${isMobile ? 'h-12 text-lg' : ''} transition-all duration-200 focus:ring-2 focus:ring-primary/20`}
+                                    />
+                                  </motion.div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </motion.div>
                       </div>
 
-                      {/* Area and Progress */}
+                      {/* Area */}
                       <motion.div
-                        className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}
+                        className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1'}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.3 }}
@@ -616,81 +660,10 @@ export function WorkPackageForm() {
                             )}
                           />
                         </motion.div>
-
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <FormField
-                            control={form.control}
-                            name="completionPercentage"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="flex items-center gap-2">
-                                  <motion.div
-                                    animate={{
-                                      rotate: (field.value ?? 0) > 0 ? [0, 360] : 0,
-                                      scale: (field.value ?? 0) > 0 ? [1, 1.2, 1] : 1
-                                    }}
-                                    transition={{ duration: 0.5 }}
-                                  >
-                                    <Activity className="h-4 w-4" />
-                                  </motion.div>
-                                  Completion Percentage
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="space-y-3">
-                                    <motion.div
-                                      whileFocus={{ scale: 1.02 }}
-                                      transition={{ duration: 0.2 }}
-                                    >
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        placeholder="0"
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                        className={`${isMobile ? 'h-12 text-lg' : ''} transition-all duration-200 focus:ring-2 focus:ring-primary/20`}
-                                      />
-                                    </motion.div>
-                                    <motion.div
-                                      initial={{ width: 0 }}
-                                      animate={{ width: "100%" }}
-                                      transition={{ duration: 0.5, delay: 0.2 }}
-                                    >
-                                      <Progress
-                                        value={field.value}
-                                        className={`h-3 ${
-                                          (field.value ?? 0) >= 100 ? '[&>div]:bg-green-500' :
-                                          (field.value ?? 0) >= 75 ? '[&>div]:bg-blue-500' :
-                                          (field.value ?? 0) >= 50 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-blue-500'
-                                        }`}
-                                      />
-                                    </motion.div>
-                                    <motion.p
-                                      className="text-sm text-muted-foreground text-center"
-                                      animate={{
-                                        color: (field.value ?? 0) >= 100 ? '#22c55e' : 'hsl(var(--muted-foreground))'
-                                      }}
-                                      transition={{ duration: 0.3 }}
-                                    >
-                                      {(field.value ?? 0) >= 100 ? '🎉 Work Complete!' :
-                                       (field.value ?? 0) >= 75 ? '🚀 Almost Done!' :
-                                       (field.value ?? 0) >= 50 ? '⚡ Good Progress!' :
-                                       (field.value ?? 0) > 0 ? '📈 Getting Started!' : 'Ready to Begin'}
-                                    </motion.p>
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </motion.div>
                       </motion.div>
 
-                      {/* Status and Field Conditions */}
-                      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                      {/* Status */}
+                      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1'}`}>
                         <FormField
                           control={form.control}
                           name="status"
@@ -740,30 +713,6 @@ export function WorkPackageForm() {
                             </FormItem>
                           )}
                         />
-
-                        <FormField
-                          control={form.control}
-                          name="soilConditions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Soil Conditions</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className={isMobile ? 'h-12 text-lg' : ''}>
-                                    <SelectValue placeholder="Select soil condition" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="dry">Dry</SelectItem>
-                                  <SelectItem value="moist">Moist</SelectItem>
-                                  <SelectItem value="wet">Wet</SelectItem>
-                                  <SelectItem value="waterlogged">Waterlogged</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
                       </div>
 
                       <FormField
@@ -788,551 +737,49 @@ export function WorkPackageForm() {
                 </motion.div>
               </TabsContent>
 
-              {/* Location & GPS Tab */}
-              <TabsContent value="location" className="space-y-6 mt-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        Location & GPS Tracking
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* GPS Controls */}
-                      <motion.div
-                        className="relative overflow-hidden p-4 bg-gradient-to-r from-muted/30 to-muted/50 rounded-lg border border-border/50"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.4 }}
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        {/* Background pulse effect when getting location */}
-                        <AnimatePresence>
-                          {isGettingLocation && (
-                            <motion.div
-                              className="absolute inset-0 bg-primary/10 rounded-lg"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: [0, 1, 0] }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 1.5, repeat: Infinity }}
-                            />
-                          )}
-                        </AnimatePresence>
 
-                        <div className="flex items-center justify-between relative z-10">
-                          <div className="flex items-center gap-3">
-                            <motion.div
-                              animate={{
-                                rotate: isGettingLocation ? 360 : 0,
-                                scale: currentLocation ? [1, 1.2, 1] : 1
-                              }}
-                              transition={{
-                                rotate: { duration: 2, repeat: isGettingLocation ? Infinity : 0, ease: "linear" },
-                                scale: { duration: 0.5 }
-                              }}
-                            >
-                              <Navigation className={`h-5 w-5 ${currentLocation ? 'text-green-500' : 'text-primary'}`} />
-                            </motion.div>
-                            <div>
-                              <motion.p
-                                className="font-medium"
-                                animate={{
-                                  color: currentLocation ? '#22c55e' : 'hsl(var(--foreground))'
-                                }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                GPS Location
-                              </motion.p>
-                              <motion.p
-                                className="text-sm text-muted-foreground"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                              >
-                                {isGettingLocation ? (
-                                  <motion.span
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 1, repeat: Infinity }}
-                                  >
-                                    Getting location...
-                                  </motion.span>
-                                ) : currentLocation ? (
-                                  <motion.span
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                  >
-                                    {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
-                                    {currentLocation.accuracy && (
-                                      <span className="text-xs ml-2 text-green-600">
-                                        ±{currentLocation.accuracy.toFixed(0)}m
-                                      </span>
-                                    )}
-                                  </motion.span>
-                                ) : (
-                                  'Location not available'
-                                )}
-                              </motion.p>
-                            </div>
-                          </div>
-                          <TouchFriendly>
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <Button
-                                type="button"
-                                variant={currentLocation ? "default" : "outline"}
-                                onClick={getCurrentLocation}
-                                disabled={isGettingLocation}
-                                className={`${isMobile ? 'h-12 px-6' : ''} transition-all duration-200`}
-                              >
-                                {isGettingLocation ? (
-                                  <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                  >
-                                    <LoadingSpinner size="sm" />
-                                  </motion.div>
-                                ) : (
-                                  <>
-                                    <motion.div
-                                      whileHover={{ scale: 1.1 }}
-                                      transition={{ duration: 0.2 }}
-                                    >
-                                      <MapPin className="h-4 w-4 mr-2" />
-                                    </motion.div>
-                                    {currentLocation ? 'Update' : 'Get'} Location
-                                  </>
-                                )}
-                              </Button>
-                            </motion.div>
-                          </TouchFriendly>
-                        </div>
-                      </motion.div>
 
-                      {/* GPS Coordinates List */}
-                      {(form.getValues('gpsCoordinates') || []).length > 0 && (
-                        <div className="space-y-3">
-                          <Label>Recorded GPS Points</Label>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {(form.getValues('gpsCoordinates') || []).map((coord, index) => (
-                              <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-3 bg-background border border-border rounded-md"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <MapPin className="h-4 w-4 text-primary" />
-                                  <div>
-                                    <p className="text-sm font-medium">
-                                      Point {index + 1}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {coord.latitude.toFixed(6)}, {coord.longitude.toFixed(6)}
-                                    </p>
-                                    {coord.accuracy && (
-                                      <p className="text-xs text-muted-foreground">
-                                        Accuracy: ±{coord.accuracy.toFixed(0)}m
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <Badge variant="outline" className="text-xs">
-                                  {coord.timestamp ? new Date(coord.timestamp).toLocaleTimeString() : 'Now'}
-                                </Badge>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Weather Conditions */}
-                      <div className="space-y-4">
-                        <Label className="text-base font-medium">Weather Conditions</Label>
-
-                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                          <FormField
-                            control={form.control}
-                            name="weatherConditions.temperature"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="flex items-center gap-2">
-                                  <Thermometer className="h-4 w-4" />
-                                  Temperature (°C)
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    placeholder="25.0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="weatherConditions.humidity"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="flex items-center gap-2">
-                                  <Droplets className="h-4 w-4" />
-                                  Humidity (%)
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    placeholder="65"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="weatherConditions.windSpeed"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="flex items-center gap-2">
-                                  <Wind className="h-4 w-4" />
-                                  Wind Speed (km/h)
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.1"
-                                    placeholder="10.5"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          <FormField
-                            control={form.control}
-                            name="weatherConditions.conditions"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Weather Conditions</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className={isMobile ? 'h-12 text-lg' : ''}>
-                                      <SelectValue placeholder="Select weather" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {weatherConditions.map((condition) => {
-                                      const Icon = condition.icon
-                                      return (
-                                        <SelectItem key={condition.value} value={condition.value}>
-                                          <div className="flex items-center gap-2">
-                                            <Icon className="h-4 w-4" />
-                                            {condition.label}
-                                          </div>
-                                        </SelectItem>
-                                      )
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="weatherConditions.visibility"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Visibility</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className={isMobile ? 'h-12 text-lg' : ''}>
-                                      <SelectValue placeholder="Select visibility" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="excellent">Excellent</SelectItem>
-                                    <SelectItem value="good">Good</SelectItem>
-                                    <SelectItem value="fair">Fair</SelectItem>
-                                    <SelectItem value="poor">Poor</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-
-              {/* Resources Tab */}
+              {/* Products & Materials Tab */}
               <TabsContent value="resources" className="space-y-6 mt-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary" />
-                        Resources & Equipment
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Cost Breakdown */}
-                      <div className="space-y-4">
-                        <Label className="text-base font-medium">Cost Breakdown</Label>
-                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          <FormField
-                            control={form.control}
-                            name="costBreakdown.labor"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Labor Cost (Rs)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                {/* Products Section */}
+                <ProductSelectionManager
+                  selectedProducts={(form.watch('products') as SelectedProduct[]) || []}
+                  onProductsChange={handleProductsChange}
+                  blocArea={bloc.area}
+                  title="Products & Materials"
+                  subtitle="Select products for this work package"
+                  isLoading={productsLoading}
+                  error={productsError?.message || null}
+                />
 
-                          <FormField
-                            control={form.control}
-                            name="costBreakdown.equipment"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Equipment Cost ($)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                {/* Equipment Section */}
+                <EquipmentSelectionManager
+                  selectedEquipment={(form.watch('equipment') as SelectedEquipment[]) || []}
+                  onEquipmentChange={handleEquipmentChange}
+                  title="Equipment & Machinery"
+                  subtitle="Select equipment for this work package"
+                  isLoading={resourcesLoading}
+                  error={resourcesError?.message || null}
+                  blocArea={bloc.area}
+                />
 
-                          <FormField
-                            control={form.control}
-                            name="costBreakdown.materials"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Materials Cost (Rs)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="costBreakdown.other"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Other Costs (Rs)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                    className={isMobile ? 'h-12 text-lg' : ''}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {/* Total Cost Display */}
-                        <div className="p-4 bg-muted/30 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Total Actual Cost:</span>
-                            <span className="text-xl font-bold text-primary">
-                              ${(form.getValues('actualCost') || 0).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
+                {/* Total Actual Cost Display */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Total Actual Cost:</span>
+                        <span className="text-xl font-bold text-primary">
+                          Rs {(form.getValues('actualCost') || 0).toFixed(2)}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
-              {/* Quality & Issues Tab */}
-              <TabsContent value="quality" className="space-y-6 mt-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Star className="h-5 w-5 text-primary" />
-                        Quality Assessment & Issues
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Quality Rating */}
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="qualityRating"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Work Quality Rating</FormLabel>
-                              <FormControl>
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="range"
-                                      min="1"
-                                      max="5"
-                                      step="1"
-                                      {...field}
-                                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      className="flex-1"
-                                    />
-                                    <div className="flex items-center gap-1">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                          key={star}
-                                          className={`h-5 w-5 ${
-                                            star <= (field.value ?? 0)
-                                              ? 'text-yellow-500 fill-yellow-500'
-                                              : 'text-muted-foreground'
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {field.value === 1 && 'Poor - Below expectations'}
-                                    {field.value === 2 && 'Fair - Needs improvement'}
-                                    {field.value === 3 && 'Good - Meets expectations'}
-                                    {field.value === 4 && 'Very Good - Above expectations'}
-                                    {field.value === 5 && 'Excellent - Outstanding work'}
-                                  </p>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="workStandard"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Work Standard</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className={isMobile ? 'h-12 text-lg' : ''}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="below-standard">
-                                    <div className="flex items-center gap-2">
-                                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                                      Below Standard
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="meets-standard">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                      Meets Standard
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="exceeds-standard">
-                                    <div className="flex items-center gap-2">
-                                      <Star className="h-4 w-4 text-yellow-500" />
-                                      Exceeds Standard
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <Separator />
-
-                      {/* Issues Section */}
-                      <div className="space-y-4">
-                        <Label className="text-base font-medium">Issues Encountered</Label>
-                        <Textarea
-                          placeholder="Describe any problems, delays, equipment issues, weather challenges, or other obstacles encountered during the work..."
-                          className={`min-h-24 ${isMobile ? 'text-lg' : ''}`}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-
-              {/* Documentation Tab */}
-              <TabsContent value="documentation" className="space-y-6 mt-6">
+              {/* Attachments Tab */}
+              <TabsContent value="attachments" className="space-y-6 mt-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1356,7 +803,10 @@ export function WorkPackageForm() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => cameraInputRef.current?.click()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  cameraInputRef.current?.click()
+                                }}
                                 className={isMobile ? 'h-10 px-4' : ''}
                               >
                                 <Camera className="h-4 w-4 mr-2" />
@@ -1368,7 +818,10 @@ export function WorkPackageForm() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  fileInputRef.current?.click()
+                                }}
                                 className={isMobile ? 'h-10 px-4' : ''}
                               >
                                 <Upload className="h-4 w-4 mr-2" />
@@ -1413,7 +866,10 @@ export function WorkPackageForm() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => cameraInputRef.current?.click()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  cameraInputRef.current?.click()
+                                }}
                                 className={isMobile ? 'h-12 px-6' : ''}
                               >
                                 <Camera className="h-4 w-4 mr-2" />
@@ -1422,7 +878,10 @@ export function WorkPackageForm() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  fileInputRef.current?.click()
+                                }}
                                 className={isMobile ? 'h-12 px-6' : ''}
                               >
                                 <Upload className="h-4 w-4 mr-2" />
@@ -1564,48 +1023,30 @@ export function WorkPackageForm() {
                             {/* Add more photos button */}
                             <motion.div
                               layout
-                              className="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer relative overflow-hidden group"
+                              className="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center relative overflow-hidden group"
                               whileHover={{
                                 scale: 1.05,
                                 borderColor: 'hsl(var(--primary))',
                                 backgroundColor: 'hsl(var(--primary) / 0.05)'
                               }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => fileInputRef.current?.click()}
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: photos.length * 0.1 + 0.2 }}
                             >
-                              {/* Animated background */}
-                              <motion.div
-                                className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"
-                                initial={{ opacity: 0, scale: 0 }}
-                                whileHover={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3 }}
-                              />
-
-                              <div className="text-center relative z-10">
-                                <motion.div
-                                  animate={{
-                                    y: [0, -5, 0],
-                                    rotate: [0, 5, -5, 0]
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    ease: "easeInOut"
-                                  }}
-                                >
-                                  <Camera className="h-8 w-8 text-muted-foreground mx-auto mb-2 group-hover:text-primary transition-colors" />
-                                </motion.div>
-                                <motion.p
-                                  className="text-sm text-muted-foreground group-hover:text-primary transition-colors"
-                                  whileHover={{ scale: 1.1 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  Add More
-                                </motion.p>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full h-full border-dashed"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  fileInputRef.current?.click()
+                                }}
+                              >
+                                <div className="text-center">
+                                  <Camera className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                  <p className="text-sm text-muted-foreground">Add More</p>
+                                </div>
+                              </Button>
                             </motion.div>
                           </motion.div>
                         )}
@@ -1736,80 +1177,14 @@ export function WorkPackageForm() {
               </motion.div>
 
               <div className="flex gap-3">
-                <TouchFriendly className="flex-1">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full"
-                  >
-                    <Button
-                      type="submit"
-                      className={`w-full ${isMobile ? 'h-14 text-lg' : 'h-12'} relative overflow-hidden`}
-                      disabled={isSubmitting}
-                    >
-                      {/* Button background animation */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent"
-                        initial={{ x: '-100%' }}
-                        animate={{ x: isSubmitting ? '100%' : '-100%' }}
-                        transition={{ duration: 1, repeat: isSubmitting ? Infinity : 0 }}
-                      />
-
-                      <div className="relative z-10 flex items-center justify-center">
-                        {isSubmitting ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            >
-                              <LoadingSpinner size="sm" />
-                            </motion.div>
-                            <motion.span
-                              className="ml-2"
-                              animate={{ opacity: [0.5, 1, 0.5] }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                            >
-                              Saving...
-                            </motion.span>
-                          </>
-                        ) : (
-                          <>
-                            <motion.div
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Save className="h-4 w-4 mr-2" />
-                            </motion.div>
-                            Save Work Package
-                          </>
-                        )}
-                      </div>
-                    </Button>
-                  </motion.div>
-                </TouchFriendly>
-
-                <TouchFriendly>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancel}
-                      className={`${isMobile ? 'h-14 px-6' : 'h-12'} transition-all duration-200`}
-                      disabled={isSubmitting}
-                    >
-                      <motion.div
-                        whileHover={{ rotate: 90 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                      </motion.div>
-                      Cancel
-                    </Button>
-                  </motion.div>
-                </TouchFriendly>
+                <Button type="submit" className="flex-1" size="lg">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Work Package
+                </Button>
+                <Button type="button" variant="outline" onClick={handleCancel} size="lg" className="bg-background hover:bg-background">
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
               </div>
             </motion.div>
           </form>

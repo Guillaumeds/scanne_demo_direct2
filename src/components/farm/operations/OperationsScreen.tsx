@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Search, Filter, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,12 +18,13 @@ type ViewMode = 'table' | 'cards' | 'rows'
 type Perspective = 'operations' | 'resources' | 'financial'
 
 export function OperationsScreen() {
-  const { bloc } = useBlocContext()
+  const { bloc, fieldOperations, workPackages, isLoadingBlocData } = useBlocContext()
   const [viewMode, setViewMode] = useState<ViewMode>('rows')
   const [perspective, setPerspective] = useState<Perspective>('operations')
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [isLoading, setIsLoading] = useState(false) // Start with no loading
+  // Use real loading state from BlocContext
+  const isLoading = isLoadingBlocData || fieldOperations.isLoading || workPackages.isLoading
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   // No artificial loading delay - show content immediately
@@ -45,114 +46,48 @@ export function OperationsScreen() {
     }, 150)
   }
 
-  // Mock operations data - in real app, this would come from TanStack Query
-  const operationsData = [
-    {
-      id: '1',
-      type: 'Fertilization',
-      status: 'completed',
-      plannedStartDate: '2024-06-15',
-      plannedEndDate: '2024-06-17',
-      actualStartDate: '2024-06-15',
-      actualEndDate: '2024-06-16',
-      area: 25.5,
-      estimatedCost: 5000,
-      actualCost: 4800,
-      progress: 100,
-      workPackages: [
-        {
-          id: 'wp1',
-          date: '2024-06-15',
-          area: 12.5,
-          hours: 8,
-          cost: 2400,
-          crew: 'Team A',
-          equipment: 'Tractor T1',
-          status: 'completed'
-        },
-        {
-          id: 'wp2',
-          date: '2024-06-16',
-          area: 13.0,
-          hours: 8,
-          cost: 2400,
-          crew: 'Team A',
-          equipment: 'Tractor T1',
-          status: 'completed'
-        }
-      ]
-    },
-    {
-      id: '2',
-      type: 'Irrigation',
-      status: 'in-progress',
-      plannedStartDate: '2024-07-01',
-      plannedEndDate: '2024-07-15',
-      actualStartDate: '2024-07-01',
-      actualEndDate: null,
-      area: 25.5,
-      estimatedCost: 3000,
-      actualCost: 1800,
-      progress: 60,
-      workPackages: [
-        {
-          id: 'wp3',
-          date: '2024-07-01',
-          area: 8.5,
-          hours: 6,
-          cost: 600,
-          crew: 'Team B',
-          equipment: 'Irrigation System',
-          status: 'completed'
-        },
-        {
-          id: 'wp4',
-          date: '2024-07-08',
-          area: 8.5,
-          hours: 6,
-          cost: 600,
-          crew: 'Team B',
-          equipment: 'Irrigation System',
-          status: 'completed'
-        },
-        {
-          id: 'wp5',
-          date: '2024-07-15',
-          area: 8.5,
-          hours: 6,
-          cost: 600,
-          crew: 'Team B',
-          equipment: 'Irrigation System',
-          status: 'planned'
-        }
-      ]
-    },
-    {
-      id: '3',
-      type: 'Pest Control',
-      status: 'planned',
-      plannedStartDate: '2024-08-01',
-      plannedEndDate: '2024-08-02',
-      actualStartDate: null,
-      actualEndDate: null,
-      area: 25.5,
-      estimatedCost: 2500,
-      actualCost: 0,
-      progress: 0,
-      workPackages: [
-        {
-          id: 'wp6',
-          date: '2024-08-01',
-          area: 25.5,
-          hours: 10,
-          cost: 2500,
-          crew: 'Team C',
-          equipment: 'Sprayer S1',
-          status: 'planned'
-        }
-      ]
+  // Transform real data from BlocContext to the format expected by the UI components
+  const operationsData = useMemo(() => {
+    if (!fieldOperations.data || !workPackages.data) {
+      return []
     }
-  ]
+
+    return fieldOperations.data.map((operation: any) => {
+      // Find work packages for this operation
+      const operationWorkPackages = workPackages.data
+        .filter((wp: any) => wp.field_operation_uuid === operation.uuid)
+        .map((wp: any) => ({
+          id: wp.id,
+          date: wp.planned_date,
+          area: wp.actual_area || bloc.area,
+          hours: 8, // Default hours - could be calculated from work package data
+          cost: wp.total_cost || 0,
+          crew: 'Team A', // Default crew - could come from work package data
+          equipment: 'Equipment', // Default equipment - could come from work package data
+          status: wp.status
+        }))
+
+      // Calculate progress based on work package statuses
+      const completedPackages = operationWorkPackages.filter((wp: any) => wp.status === 'completed').length
+      const totalPackages = operationWorkPackages.length
+      const progress = totalPackages > 0 ? Math.round((completedPackages / totalPackages) * 100) : 0
+
+      return {
+        id: operation.uuid,
+        type: operation.operation_type,
+        status: operation.status,
+        plannedStartDate: operation.planned_start_date,
+        plannedEndDate: operation.planned_end_date,
+        actualStartDate: operation.actual_start_date || null,
+        actualEndDate: operation.actual_end_date || null,
+        area: bloc.area, // Use bloc area as default
+        estimatedCost: operation.estimated_total_cost || 0,
+        actualCost: operation.actual_total_cost || 0,
+        progress,
+        workPackages: operationWorkPackages
+      }
+    })
+  }, [fieldOperations.data, workPackages.data, bloc.area])
 
   const renderView = () => {
     const commonProps = {
@@ -362,14 +297,14 @@ export function OperationsScreen() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            {operationsData.length} operations • {operationsData.reduce((acc, op) => acc + op.workPackages.length, 0)} work packages
+            {operationsData.length} operations • {operationsData.reduce((acc: number, op: any) => acc + op.workPackages.length, 0)} work packages
           </motion.span>
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
           >
-            Total estimated cost: ${operationsData.reduce((acc, op) => acc + op.estimatedCost, 0).toLocaleString()}
+            Total estimated cost: ${operationsData.reduce((acc: number, op: any) => acc + op.estimatedCost, 0).toLocaleString()}
           </motion.span>
         </div>
       </motion.div>

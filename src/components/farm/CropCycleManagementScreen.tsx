@@ -19,11 +19,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 
 // Icons
-import { Leaf, Clock, CheckCircle, AlertCircle, MapPin } from 'lucide-react'
+import { Leaf, Clock, CheckCircle, AlertCircle, MapPin, Sprout } from 'lucide-react'
 
 // Types and Services
 import { CropCycle, CropCycleFormData, CreateCropCycleRequest } from '@/types/cropCycleManagement'
 import { useSugarcaneVarietiesForSelect } from '@/hooks/useVarieties'
+
+// Crop Cycle Components
+import { SolarRadiationCard } from './crop-cycle/SolarRadiationCard'
+import { PrecipitationCard } from './crop-cycle/PrecipitationCard'
 import VarietySelectionManager from '@/components/selectors/VarietySelectionManager'
 
 // Form validation schema
@@ -114,39 +118,24 @@ export default function CropCycleManagementScreen({
 
   return (
     <div className="h-full overflow-auto">
-      <div className="p-6 space-y-6">
-        {/* Hero Section */}
+      <div className="p-6 space-y-4">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="bg-gradient-to-r from-primary/20 to-primary/30 border-primary/40 bg-white/90">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl text-primary">
-                    Crop Cycle Management
-                  </CardTitle>
-                  <CardDescription className="text-lg mt-2">
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {blocArea} hectares
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Leaf className="h-4 w-4" />
-                        Bloc {blocName}
-                      </span>
-                    </div>
-                  </CardDescription>
-                </div>
-                <Badge variant="secondary" className="text-lg px-4 py-2">
-                  {isCycleSaved ? 'Active Cycle' : 'No Active Cycle'}
-                </Badge>
-              </div>
-            </CardHeader>
-          </Card>
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Sprout className="h-6 w-6 text-primary" />
+                Crop Cycle Management
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Crop cycle planning and history for {blocName}
+              </p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Current Crop Cycle */}
@@ -182,13 +171,44 @@ export default function CropCycleManagementScreen({
                   </div>
                 </div>
               ) : isCycleSaved && activeCycle ? (
-                <div className="text-center py-8 text-slate-600">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-emerald-600" />
-                  <h3 className="font-medium text-slate-800 mb-2">Active Crop Cycle</h3>
-                  <p>Variety: {activeCycle.sugarcaneVarietyName}</p>
-                  <p>Planting Date: {activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : 'Not set'}</p>
-                  <p>Expected Harvest: {new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}</p>
-                  <p>Expected Yield: {activeCycle.expectedYield} tons/ha</p>
+                <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  {/* Active Icon */}
+                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+
+                  {/* Crop Cycle Information */}
+                  <div className="flex-1">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      {/* Top Row */}
+                      <div>
+                        <span className="text-sm font-medium text-slate-600">Variety:</span>
+                        <span className="ml-2 text-sm text-slate-800">{activeCycle.sugarcaneVarietyName || 'R579'}</span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-slate-600">Expected Yield:</span>
+                        <span className="ml-2 text-sm text-slate-800">{activeCycle.expectedYield} tons/ha</span>
+                      </div>
+
+                      {/* Bottom Row */}
+                      <div>
+                        <span className="text-sm font-medium text-slate-600">
+                          {activeCycle.type === 'ratoon' ? 'Previous Harvest:' : 'Planting Date:'}
+                        </span>
+                        <span className="ml-2 text-sm text-slate-800">
+                          {activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : '01/04/2024'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-slate-600">Expected Harvest:</span>
+                        <span className="ml-2 text-sm text-slate-800">
+                          {new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : isLoadingVarieties ? (
                 <div className="flex items-center justify-center py-8">
@@ -478,6 +498,35 @@ export default function CropCycleManagementScreen({
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Climate Data Cards */}
+        {isCycleSaved && activeCycle && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Solar Radiation Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <SolarRadiationCard
+                plantingDate={activeCycle.plantingDate || '2024-04-01'}
+                harvestDate={activeCycle.plannedHarvestDate}
+              />
+            </motion.div>
+
+            {/* Precipitation Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <PrecipitationCard
+                plantingDate={activeCycle.plantingDate || '2024-04-01'}
+                harvestDate={activeCycle.plannedHarvestDate}
+              />
+            </motion.div>
+          </div>
+        )}
 
         {/* Crop Cycle History */}
         <motion.div

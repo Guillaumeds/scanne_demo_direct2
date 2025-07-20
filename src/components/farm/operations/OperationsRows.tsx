@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { ChevronDown, ChevronRight, Calendar, MapPin, Users, Truck, Clock, Edit, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Calendar, MapPin, Users, Truck, Clock, Edit, Plus, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'

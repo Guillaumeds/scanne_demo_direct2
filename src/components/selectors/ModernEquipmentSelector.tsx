@@ -30,6 +30,7 @@ interface ModernEquipmentSelectorProps {
   existingEquipment?: SelectedEquipment
   title?: string
   subtitle?: string
+  mode?: 'estimated' | 'actual' // New prop to control estimated vs actual mode
 }
 
 
@@ -39,12 +40,15 @@ export default function ModernEquipmentSelector({
   onClose,
   existingEquipment,
   title = "Select Equipment",
-  subtitle = "Choose equipment for this operation"
+  subtitle = "Choose equipment for this operation",
+  mode = 'estimated'
 }: ModernEquipmentSelectorProps) {
-  const [selectedEquipment, setSelectedEquipment] = useState<any | null>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
+  const [duration, setDuration] = useState<number>(0)
   const [costPerHour, setCostPerHour] = useState<number>(0)
+  const [operator, setOperator] = useState<string>('')
+  const [notes, setNotes] = useState<string>('')
 
 
   // Fetch resources (equipment) using TanStack Query

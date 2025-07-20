@@ -52,6 +52,8 @@ import TaskManager from '@/components/tasks/TaskManager'
 import FileUploader from '@/components/attachments/FileUploader'
 import { useProducts, useResources } from '@/hooks/useConfigurationData'
 import { useOperationConfig } from '@/hooks/useOperationConfig'
+import { useDemoCreateFieldOperation } from '@/hooks/useDemoFarmData'
+import type { CreateFieldOperationRequest } from '@/schemas/apiSchemas'
 
 // Product schema using SelectedProduct type
 const selectedProductSchema = z.object({
@@ -186,7 +188,7 @@ const operationSchema = z.object({
 type OperationFormData = z.infer<typeof operationSchema>
 
 export function OperationForm() {
-  const { bloc, setCurrentScreen, currentOperationId } = useBlocContext()
+  const { bloc, setCurrentScreen, currentOperationId, cropCycles } = useBlocContext()
   const [activeTab, setActiveTab] = useState('basic')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     products: false,
@@ -229,6 +231,9 @@ export function OperationForm() {
   // Fetch operation configuration from database
   const { operationTypes: dbOperationTypes, operationMethods: dbOperationMethods, isLoading: configLoading } = useOperationConfig()
 
+  // Demo mutation hook for creating field operations
+  const createFieldOperationMutation = useDemoCreateFieldOperation()
+
   // Watch operation type for conditional rendering
   const operationType = form.watch('operationType')
   const isHarvestOperation = operationType === 'Harvest'
@@ -256,10 +261,40 @@ export function OperationForm() {
     }))
   }
 
-  const onSubmit = (data: OperationFormData) => {
-    console.log('Saving operation:', data)
-    // TODO: Implement save logic with TanStack Query mutation
-    setCurrentScreen('operations')
+  const onSubmit = async (data: OperationFormData) => {
+    try {
+      // Get the active crop cycle from context
+      const activeCropCycle = cropCycles.data.find(cycle => cycle.status === 'active')
+
+      if (!activeCropCycle) {
+        console.error('No active crop cycle found. Cannot create field operation.')
+        return
+      }
+
+      // Map form data to CreateFieldOperationRequest schema
+      const operationRequest: CreateFieldOperationRequest = {
+        cropCycleUuid: activeCropCycle.id,
+        operationName: `${data.operationType} - ${data.method}`,
+        operationType: data.operationType,
+        method: data.method,
+        priority: data.priority === 'critical' ? 'high' : data.priority,
+        plannedStartDate: data.plannedStartDate,
+        plannedEndDate: data.plannedEndDate,
+        plannedAreaHectares: null,
+        plannedQuantity: null,
+        estimatedTotalCost: data.estimatedTotalCost
+      }
+
+      console.log('Creating field operation:', operationRequest)
+
+      // Use the demo mutation to create the operation
+      await createFieldOperationMutation.mutateAsync(operationRequest)
+
+      console.log('✅ Field operation created successfully')
+      setCurrentScreen('operations')
+    } catch (error) {
+      console.error('❌ Failed to create field operation:', error)
+    }
   }
 
   const handleCancel = () => {

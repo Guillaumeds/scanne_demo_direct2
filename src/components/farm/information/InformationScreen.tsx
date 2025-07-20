@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { motion } from 'motion/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,28 +14,42 @@ import { GrowthStageChart } from './GrowthStageChart'
 // Charts removed for demo mode
 
 export function InformationScreen() {
-  const { bloc } = useBlocContext()
+  const { bloc, cropCycles, fieldOperations, workPackages } = useBlocContext()
 
-  // Mock data - in real app, this would come from TanStack Query
-  const cropCycleData = {
-    currentCycle: {
-      id: '1',
-      cycleNumber: 1,
-      variety: 'NCo 376',
-      plantingDate: '2024-03-15',
-      expectedHarvestDate: '2025-02-15',
-      growthStage: 'Tillering',
-      daysSincePlanting: 142,
-      progress: 65
-    },
-    metrics: {
-      totalOperations: 12,
-      completedOperations: 8,
-      totalCost: 45000,
-      actualCost: 32000,
-      expectedYield: 85.2
+  // Calculate real data from BlocContext
+  const cropCycleData = useMemo(() => {
+    // Get active crop cycle
+    const activeCycle = cropCycles.data.find((cycle: any) => cycle.status === 'active')
+
+    // Calculate metrics from real operations and work packages
+    const totalOperations = fieldOperations.data.length
+    const completedOperations = fieldOperations.data.filter((op: any) => op.status === 'completed').length
+    const totalCost = fieldOperations.data.reduce((sum: number, op: any) => sum + (op.estimated_total_cost || 0), 0)
+    const actualCost = fieldOperations.data.reduce((sum: number, op: any) => sum + (op.actual_total_cost || 0), 0)
+
+    // Calculate progress based on operations
+    const progress = totalOperations > 0 ? Math.round((completedOperations / totalOperations) * 100) : 0
+
+    return {
+      currentCycle: activeCycle ? {
+        id: activeCycle.id,
+        cycleNumber: activeCycle.cycleNumber || 1,
+        variety: activeCycle.sugarcaneVarietyName || 'Unknown Variety',
+        plantingDate: activeCycle.sugarcaneePlantingDate || activeCycle.ratoonPlantingDate || 'Not set',
+        expectedHarvestDate: activeCycle.sugarcaneePlannedHarvestDate || 'Not set',
+        growthStage: activeCycle.growthStage || 'Unknown',
+        daysSincePlanting: activeCycle.daysSincePlanting || 0,
+        progress
+      } : null,
+      metrics: {
+        totalOperations,
+        completedOperations,
+        totalCost,
+        actualCost,
+        expectedYield: activeCycle?.sugarcaneExpectedYieldTonsHa || 0
+      }
     }
-  }
+  }, [cropCycles.data, fieldOperations.data, workPackages.data])
 
   return (
     <div className="h-full overflow-auto">
@@ -61,17 +75,17 @@ export function InformationScreen() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Sprout className="h-4 w-4" />
-                        {cropCycleData.currentCycle.variety}
+                        {cropCycleData.currentCycle?.variety || 'No active cycle'}
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        Cycle {cropCycleData.currentCycle.cycleNumber}
+                        Cycle {cropCycleData.currentCycle?.cycleNumber || 'N/A'}
                       </span>
                     </div>
                   </CardDescription>
                 </div>
                 <Badge variant="secondary" className="text-lg px-4 py-2">
-                  {cropCycleData.currentCycle.growthStage}
+                  {cropCycleData.currentCycle?.growthStage || 'Unknown'}
                 </Badge>
               </div>
             </CardHeader>
@@ -84,7 +98,9 @@ export function InformationScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <CropCycleSelector currentCycle={cropCycleData.currentCycle} />
+          {cropCycleData.currentCycle && (
+            <CropCycleSelector currentCycle={cropCycleData.currentCycle} />
+          )}
         </motion.div>
 
         {/* Key Metrics Grid */}
@@ -93,7 +109,7 @@ export function InformationScreen() {
             {
               title: "Days Since Planting",
               icon: Clock,
-              value: cropCycleData.currentCycle.daysSincePlanting,
+              value: cropCycleData.currentCycle?.daysSincePlanting || 0,
               subtitle: "Expected harvest in 89 days",
               delay: 0.2
             },
