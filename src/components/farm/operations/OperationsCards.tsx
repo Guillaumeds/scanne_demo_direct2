@@ -87,7 +87,7 @@ export function OperationsCards({ data, perspective, searchQuery }: OperationsCa
 
   // Filter data based on search query
   const filteredData = data.filter(operation =>
-    operation.type.toLowerCase().includes(searchQuery.toLowerCase())
+    operation.type?.toLowerCase().includes(searchQuery.toLowerCase()) || false
   )
 
   const renderOperationCard = (operation: Operation) => {
@@ -206,7 +206,7 @@ export function OperationsCards({ data, perspective, searchQuery }: OperationsCa
       >
         {filteredData.map((operation, index) => (
           <motion.div
-            key={operation.id}
+            key={operation.id || `operation-${index}`}
             initial={{ opacity: 0, y: 30, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{

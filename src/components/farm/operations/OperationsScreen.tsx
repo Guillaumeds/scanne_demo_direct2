@@ -75,8 +75,8 @@ export function OperationsScreen() {
 
       return {
         id: operation.uuid,
-        type: operation.operation_type,
-        status: operation.status,
+        type: operation.operation_type || 'Unknown Operation',
+        status: operation.status || 'planned',
         plannedStartDate: operation.planned_start_date,
         plannedEndDate: operation.planned_end_date,
         actualStartDate: operation.actual_start_date || null,

@@ -97,7 +97,7 @@ export function OperationsRows({ data, perspective, searchQuery }: OperationsRow
 
   // Filter data based on search query
   const filteredData = data.filter(operation =>
-    operation.type.toLowerCase().includes(searchQuery.toLowerCase())
+    operation.type?.toLowerCase().includes(searchQuery.toLowerCase()) || false
   )
 
   const renderOperationContent = (operation: Operation) => {
@@ -227,7 +227,7 @@ export function OperationsRows({ data, perspective, searchQuery }: OperationsRow
       <div className="space-y-1">
         {filteredData.map((operation, index) => (
           <motion.div
-            key={operation.id}
+            key={operation.id || `operation-${index}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2, delay: index * 0.05 }}
