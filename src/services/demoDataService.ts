@@ -396,6 +396,48 @@ const INITIAL_DEMO_DATA: DemoDataStore = {
       active: true,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'product-6',
+      product_id: 'KCL-60',
+      name: 'Potassium Chloride',
+      category: 'fertilizer',
+      subcategory: 'potassium',
+      unit: 'kg',
+      cost_per_unit: 22.00,
+      supplier: 'FertCorp',
+      description: 'High potassium fertilizer for root development',
+      active: true,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'product-7',
+      product_id: 'LIME-CAL',
+      name: 'Agricultural Lime',
+      category: 'soil_amendment',
+      subcategory: 'ph_adjustment',
+      unit: 'kg',
+      cost_per_unit: 8.50,
+      supplier: 'SoilCare Ltd',
+      description: 'Calcium carbonate for soil pH adjustment',
+      active: true,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'product-8',
+      product_id: 'COMP-ORG',
+      name: 'Organic Compost',
+      category: 'organic',
+      subcategory: 'soil_conditioner',
+      unit: 'kg',
+      cost_per_unit: 12.00,
+      supplier: 'GreenGrow Co',
+      description: 'Organic matter for soil improvement',
+      active: true,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     }
   ],
   labour: [
@@ -428,8 +470,90 @@ const INITIAL_DEMO_DATA: DemoDataStore = {
     {
       id: 'equipment-1',
       name: 'John Deere 6120M Tractor',
-      category: 'tractor',
-      hourly_rate: 85.00,
+      category: 'Tractors',
+      type: 'Agricultural Vehicle',
+      cost_per_hour: 85.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-2',
+      name: 'Case IH Magnum 340 Tractor',
+      category: 'Tractors',
+      type: 'Agricultural Vehicle',
+      cost_per_hour: 95.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-3',
+      name: 'Disc Plough',
+      category: 'Tillage',
+      type: 'Implement',
+      cost_per_hour: 25.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-4',
+      name: 'Field Cultivator',
+      category: 'Tillage',
+      type: 'Implement',
+      cost_per_hour: 20.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-5',
+      name: 'Sugarcane Planter',
+      category: 'Planting',
+      type: 'Implement',
+      cost_per_hour: 35.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-6',
+      name: 'Boom Sprayer',
+      category: 'Spraying',
+      type: 'Implement',
+      cost_per_hour: 30.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-7',
+      name: 'Sugarcane Harvester',
+      category: 'Harvesting',
+      type: 'Self-Propelled',
+      cost_per_hour: 120.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-8',
+      name: 'Farm Trailer 10T',
+      category: 'Transport',
+      type: 'Trailer',
+      cost_per_hour: 15.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-9',
+      name: 'Irrigation Pump',
+      category: 'Irrigation',
+      type: 'Pump',
+      cost_per_hour: 25.00,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 'equipment-10',
+      name: 'Fertilizer Spreader',
+      category: 'Fertilizing',
+      type: 'Implement',
+      cost_per_hour: 20.00,
       active: true,
       created_at: '2024-01-01T00:00:00Z'
     }
@@ -439,38 +563,38 @@ const INITIAL_DEMO_DATA: DemoDataStore = {
       id: '550e8400-e29b-41d4-a716-446655440030',
       name: 'R579',
       description: 'High-yielding variety with excellent disease resistance',
-      created_at: '2024-01-01T00:00:00.000Z',
-      updated_at: '2024-01-01T00:00:00.000Z'
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440031',
       name: 'M1176/77',
       description: 'Medium maturity variety suitable for various soil types',
-      created_at: '2024-01-01T00:00:00.000Z',
-      updated_at: '2024-01-01T00:00:00.000Z'
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440032',
       name: 'R570',
       description: 'Premium variety with exceptional yield potential',
-      created_at: '2024-01-01T00:00:00.000Z',
-      updated_at: '2024-01-01T00:00:00.000Z'
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440033',
       name: 'M2593/92',
       description: 'Fast-growing variety ideal for quick turnaround',
-      created_at: '2024-01-01T00:00:00.000Z',
-      updated_at: '2024-01-01T00:00:00.000Z'
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     }
   ],
   intercropVarieties: [
     {
-      id: '550e8400-e29b-41d4-a716-446655440040',
+      id: 'intercrop-1',
       name: 'Sweet Potato',
       description: 'Root vegetable suitable for intercropping with sugarcane',
-      created_at: '2024-01-01T00:00:00.000Z',
-      updated_at: '2024-01-01T00:00:00.000Z'
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
     }
   ],
   lastUpdated: new Date().toISOString()
@@ -603,23 +727,27 @@ export class DemoDataService {
    * Fetch configuration data
    */
   static async fetchProducts() {
-    const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.products.filter(p => p.active), 0)
+    // Load from master data file
+    const { PRODUCTS } = await import('@/data/master/products')
+    return this.simulateApiCall(PRODUCTS.filter(p => p.active), 0)
   }
 
   static async fetchLabour() {
-    const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.labour.filter(l => l.active), 0)
+    // Load from master data file
+    const { LABOUR_TYPES } = await import('@/data/master/labour')
+    return this.simulateApiCall(LABOUR_TYPES.filter(l => l.active), 0)
   }
 
   static async fetchEquipment() {
-    const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.equipment.filter(e => e.active), 0)
+    // Load from master data file
+    const { EQUIPMENT_TYPES } = await import('@/data/master/equipment')
+    return this.simulateApiCall(EQUIPMENT_TYPES.filter(e => e.active), 0)
   }
 
   static async fetchSugarcaneVarieties() {
-    const demoData = this.getDemoData()
-    return this.simulateApiCall(demoData.sugarcaneVarieties, 0)
+    // Load from master data file
+    const { SUGARCANE_VARIETIES } = await import('@/data/master/sugarcaneVarieties')
+    return this.simulateApiCall(SUGARCANE_VARIETIES.filter(v => v.active !== false), 0)
   }
 
   static async fetchIntercropVarieties() {

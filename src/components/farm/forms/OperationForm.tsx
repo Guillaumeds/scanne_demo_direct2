@@ -6,9 +6,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Save, X, Calendar, MapPin, DollarSign, Sprout, Plus, Trash2,
-  Settings, Users, Package, TrendingUp, Cloud, Star, Camera,
-  ChevronRight, ChevronDown, Info, AlertCircle
+  Save, X, Calendar, MapPin, Sprout, Plus, Trash2,
+  Settings, Users, Package, TrendingUp, Cloud, Camera,
+  ChevronRight, ChevronDown, Info, AlertCircle, FileText, CheckSquare, Paperclip
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
@@ -43,49 +44,14 @@ import {
 import { useBlocContext } from '../contexts/BlocContext'
 import ProductSelectionManager from '@/components/selectors/ProductSelectionManager'
 import EquipmentSelectionManager from '@/components/selectors/EquipmentSelectionManager'
+import LabourSelectionManager, { LabourTableEntry } from '@/components/selectors/LabourSelectionManager'
 import { SelectedProduct } from '@/components/selectors/ModernProductSelector'
 import { SelectedEquipment } from '@/components/selectors/ModernEquipmentSelector'
+import NotesEditor from '@/components/notes/NotesEditor'
+import TaskManager from '@/components/tasks/TaskManager'
+import FileUploader from '@/components/attachments/FileUploader'
 import { useProducts, useResources } from '@/hooks/useConfigurationData'
 import { useOperationConfig } from '@/hooks/useOperationConfig'
-
-// Simple types for demo mode (clean schemas)
-interface SimpleProduct {
-  id: string
-  name: string
-  category: string
-  unit: string
-  cost?: number
-  defaultRate?: number
-  description?: string
-}
-
-interface SimpleEquipment {
-  id: string
-  name: string
-  category: string
-  unit: string
-  hourlyRate?: number
-  description?: string
-}
-
-interface SelectedProduct {
-  product: SimpleProduct
-  quantity: number
-  rate: number
-  estimatedCost: number
-  actualCost?: number
-}
-
-interface SelectedEquipment {
-  equipment: SimpleEquipment
-  estimatedDuration?: number
-  actualDuration?: number
-  costPerHour?: number
-  totalEstimatedCost?: number
-  totalActualCost?: number
-  operator?: string
-  notes?: string
-}
 
 // Product schema using SelectedProduct type
 const selectedProductSchema = z.object({
@@ -135,16 +101,24 @@ const selectedEquipmentSchema = z.object({
   notes: z.string().optional()
 }) as z.ZodType<SelectedEquipment>
 
-// Resource schema for labor
-const resourceSchema = z.object({
-  id: z.string(),
-  type: z.enum(['supervisor', 'operator', 'laborer', 'specialist']),
-  name: z.string().min(1, 'Resource name is required'),
+// Labour schema using LabourTableEntry type
+const labourTableEntrySchema = z.object({
+  labour: z.object({
+    id: z.string(),
+    labour_id: z.string(),
+    name: z.string(),
+    category: z.string().nullable(),
+    unit: z.string().nullable(),
+    cost_per_unit: z.number().nullable(),
+    description: z.string().nullable(),
+    active: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string()
+  }),
   estimatedHours: z.number().min(0, 'Hours must be positive'),
-  actualHours: z.number().min(0, 'Hours must be positive').optional(),
   ratePerHour: z.number().min(0, 'Rate per hour must be positive'),
-  notes: z.string().optional()
-})
+  totalEstimatedCost: z.number().min(0, 'Cost must be positive')
+}) as z.ZodType<LabourTableEntry>
 
 // Weather conditions schema
 const weatherSchema = z.object({
@@ -178,11 +152,10 @@ const operationSchema = z.object({
   actualStartDate: z.string().optional(),
   actualEndDate: z.string().optional(),
 
-  // Products, Equipment, Resources
+  // Products, Equipment, Labour
   products: z.array(selectedProductSchema).default([]),
   equipment: z.array(selectedEquipmentSchema).default([]),
-  resources: z.array(resourceSchema).default([]),
-
+  labour: z.array(labourTableEntrySchema).default([]),
   // Financial
   estimatedTotalCost: z.number().min(0, 'Cost must be positive'),
   actualTotalCost: z.number().min(0).optional(),
@@ -223,19 +196,20 @@ export function OperationForm() {
     quality: false
   })
 
-  const form = useForm({
+  const form = useForm<OperationFormData>({
     resolver: zodResolver(operationSchema),
     defaultValues: {
       operationType: '',
       method: '',
       description: '',
-      priority: 'normal' as const,
-      status: 'planned' as const,
+      priority: 'normal',
+      status: 'planned',
       plannedStartDate: '',
       plannedEndDate: '',
+
       products: [],
       equipment: [],
-      resources: [],
+      labour: [],
       estimatedTotalCost: 0,
       actualTotalCost: undefined,
       actualRevenue: undefined,
@@ -295,38 +269,30 @@ export function OperationForm() {
   // Handlers for modern selectors
   const handleProductsChange = (products: SelectedProduct[]) => {
     form.setValue('products', products as any)
-    // Update estimated total cost
-    const totalProductCost = products.reduce((sum, p) => sum + p.estimatedCost, 0)
-    const equipmentData = form.getValues('equipment') as SelectedEquipment[] || []
-    const equipmentCost = equipmentData.reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0)
-    form.setValue('estimatedTotalCost', totalProductCost + equipmentCost)
+    updateTotalCost()
   }
 
   const handleEquipmentChange = (equipment: SelectedEquipment[]) => {
     form.setValue('equipment', equipment as any)
-    // Update estimated total cost
-    const totalEquipmentCost = equipment.reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0)
+    updateTotalCost()
+  }
+
+  const handleLabourChange = (labour: LabourTableEntry[]) => {
+    form.setValue('labour', labour as any)
+    updateTotalCost()
+  }
+
+  // Update total cost calculation to include labour
+  const updateTotalCost = () => {
     const productData = form.getValues('products') as SelectedProduct[] || []
-    const productCost = productData.reduce((sum, p) => sum + p.estimatedCost, 0)
-    form.setValue('estimatedTotalCost', totalEquipmentCost + productCost)
-  }
+    const equipmentData = form.getValues('equipment') as SelectedEquipment[] || []
+    const labourData = form.getValues('labour') as LabourTableEntry[] || []
 
-  const addResource = () => {
-    const newResource = {
-      id: `resource-${Date.now()}`,
-      type: 'laborer' as const,
-      name: '',
-      estimatedHours: 0,
-      ratePerHour: 0,
-      notes: ''
-    }
-    const currentResources = form.getValues('resources') || []
-    form.setValue('resources', [...currentResources, newResource])
-  }
+    const totalProductCost = productData.reduce((sum, p) => sum + (p.estimatedCost || 0), 0)
+    const totalEquipmentCost = equipmentData.reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0)
+    const totalLabourCost = labourData.reduce((sum, l) => sum + (l.totalEstimatedCost || 0), 0)
 
-  const removeResource = (index: number) => {
-    const resources = form.getValues('resources') || []
-    form.setValue('resources', resources.filter((_, i) => i !== index))
+    form.setValue('estimatedTotalCost', totalProductCost + totalEquipmentCost + totalLabourCost)
   }
 
   return (
@@ -351,55 +317,40 @@ export function OperationForm() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                >
-                  <TabsList className="grid w-full grid-cols-4 bg-muted/80 bg-white/95">
-                    {[
-                      { value: 'basic', icon: Settings, label: 'Basic Info' },
-                      { value: 'resources', icon: Users, label: 'Resources' },
-                      { value: 'financial', icon: DollarSign, label: 'Financial' },
-                      { value: 'additional', icon: Star, label: 'Additional' }
-                    ].map((tab, index) => {
-                      const Icon = tab.icon
-                      return (
-                        <motion.div
-                          key={tab.value}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2, delay: 0.3 + index * 0.1 }}
-                        >
-                          <TabsTrigger
-                            value={tab.value}
-                            className="flex items-center gap-2 relative overflow-hidden"
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                  >
+                    <TabsList className="grid w-full grid-cols-4 bg-muted/80 bg-white/95">
+                      {[
+                        { value: 'basic', icon: Settings, label: 'Basic Info' },
+                        { value: 'resources', icon: Users, label: 'Products & Resources' },
+                        { value: 'notes-tasks', icon: CheckSquare, label: 'Notes & Tasks' },
+                        { value: 'attachments', icon: Paperclip, label: 'Attachments' }
+                      ].map((tab, index) => {
+                        const Icon = tab.icon
+                        return (
+                          <motion.div
+                            key={tab.value}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2, delay: 0.3 + index * 0.1 }}
                           >
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              transition={{ duration: 0.2 }}
+                            <TabsTrigger
+                              value={tab.value}
+                              className="flex items-center gap-2 relative overflow-hidden"
                             >
                               <Icon className="h-4 w-4" />
-                            </motion.div>
-                            <span className="hidden sm:inline">{tab.label}</span>
-
-                            {/* Active tab indicator */}
-                            {activeTab === tab.value && (
-                              <motion.div
-                                layoutId="activeTabIndicator"
-                                className="absolute inset-0 bg-background rounded-md border border-border/50"
-                                style={{ zIndex: -1 }}
-                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                              />
-                            )}
-                          </TabsTrigger>
-                        </motion.div>
-                      )
-                    })}
-                  </TabsList>
-                </motion.div>
+                              <span className="font-medium">{tab.label}</span>
+                            </TabsTrigger>
+                          </motion.div>
+                        )
+                      })}
+                    </TabsList>
+                  </motion.div>
 
                 {/* Basic Information Tab */}
                 <TabsContent value="basic" className="space-y-6 mt-6">
@@ -410,175 +361,158 @@ export function OperationForm() {
                         Operation Details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Operation Type Selection */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="operationType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Operation Type</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select operation type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {operationTypes.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      <div className="flex items-center gap-2">
-                                        <span>{type.icon}</span>
-                                        {type.label}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="method"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Method</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select method" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {methods.map((method) => (
-                                    <SelectItem key={method.value} value={method.value}>
-                                      <div>
-                                        <div className="font-medium">{method.label}</div>
-                                        <div className="text-xs text-muted-foreground">{method.description}</div>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Priority */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Priority</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="normal">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                                      Normal
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="high">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-orange-500" />
-                                      High
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="critical">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                                      Critical
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Describe the operation details, objectives, and special considerations..."
-                                className="min-h-20"
-                                {...field}
+                          <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={form.control}
+                                name="operationType"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Operation Type *</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select operation type" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="land_preparation">Land Preparation</SelectItem>
+                                        <SelectItem value="planting">Planting</SelectItem>
+                                        <SelectItem value="fertilizing">Fertilizing</SelectItem>
+                                        <SelectItem value="irrigation">Irrigation</SelectItem>
+                                        <SelectItem value="pest_control">Pest Control</SelectItem>
+                                        <SelectItem value="weed_control">Weed Control</SelectItem>
+                                        <SelectItem value="harvesting">Harvesting</SelectItem>
+                                        <SelectItem value="ratoon_management">Ratoon Management</SelectItem>
+                                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
 
-                  {/* Timing Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        Timing & Schedule
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="plannedStartDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Planned Start Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                When do you plan to start this operation?
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                              <FormField
+                                control={form.control}
+                                name="method"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Operation Method *</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select method" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="manual">Manual</SelectItem>
+                                        <SelectItem value="mechanical">Mechanical</SelectItem>
+                                        <SelectItem value="chemical">Chemical</SelectItem>
+                                        <SelectItem value="biological">Biological</SelectItem>
+                                        <SelectItem value="integrated">Integrated</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
-                        <FormField
-                          control={form.control}
-                          name="plannedEndDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Planned End Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                When do you expect to complete this operation?
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                              <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Progress Status</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="not_started">Not Started</SelectItem>
+                                        <SelectItem value="in_progress">In Progress</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="on_hold">On Hold</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
+                              <FormField
+                                control={form.control}
+                                name="priority"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Priority</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="low">Low</SelectItem>
+                                        <SelectItem value="medium">Medium</SelectItem>
+                                        <SelectItem value="high">High</SelectItem>
+                                        <SelectItem value="urgent">Urgent</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
+                              <FormField
+                                control={form.control}
+                                name="plannedStartDate"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Planned Start Date *</FormLabel>
+                                    <FormControl>
+                                      <Input type="date" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="plannedEndDate"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Planned End Date</FormLabel>
+                                    <FormControl>
+                                      <Input type="date" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="description"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Description</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Describe the operation details, objectives, and special considerations..."
+                                      className="min-h-24"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </CardContent>
+                        </Card>
                 </TabsContent>
 
                 {/* Resources Tab */}
@@ -589,7 +523,7 @@ export function OperationForm() {
                     onProductsChange={handleProductsChange}
                     blocArea={bloc.area}
                     title="Products & Materials"
-                    subtitle="Select products for this operation"
+                    subtitle="Estimate rates and costs for products and materials"
                     isLoading={productsLoading}
                     error={productsError?.message || null}
                   />
@@ -598,181 +532,114 @@ export function OperationForm() {
                   <EquipmentSelectionManager
                     selectedEquipment={(form.watch('equipment') as SelectedEquipment[]) || []}
                     onEquipmentChange={handleEquipmentChange}
+                    blocArea={bloc.area}
                     title="Equipment & Machinery"
-                    subtitle="Select equipment for this operation"
+                    subtitle="Estimate effort and costs for equipment and machinery"
                     isLoading={resourcesLoading}
                     error={resourcesError?.message || null}
                   />
-                </TabsContent>
 
-                {/* Financial Tab */}
-                <TabsContent value="financial" className="space-y-6 mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-primary" />
-                        Financial Planning
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="estimatedTotalCost"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Estimated Total Cost ($)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Total estimated cost for this operation
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                  {/* Labour Section */}
+                  <LabourSelectionManager
+                    selectedLabour={(form.watch('labour') as LabourTableEntry[]) || []}
+                    onLabourChange={handleLabourChange}
+                    title="Labour & Human Resources"
+                    subtitle="Estimate effort and costs for labour resources"
+                    isLoading={resourcesLoading}
+                    error={resourcesError?.message || null}
+                  />
 
-                        {isHarvestOperation && (
-                          <FormField
-                            control={form.control}
-                            name="actualRevenue"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Expected Revenue ($)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Expected revenue from harvest
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </div>
-
-                      {isHarvestOperation && (
-                        <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                          <h4 className="font-medium mb-4">Yield Expectations</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="totalYield"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Expected Total Yield (tons)</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      step="0.1"
-                                      min="0"
-                                      {...field}
-                                      onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="yieldPerHectare"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Yield per Hectare (t/ha)</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      step="0.1"
-                                      min="0"
-                                      {...field}
-                                      onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                  {/* Compact Totals Summary */}
+                  <Card className="bg-slate-50 border-slate-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="text-sm text-slate-600">
+                            <span className="font-medium">Products:</span> Rs {((form.watch('products') as SelectedProduct[]) || []).reduce((sum, p) => sum + (p.estimatedCost || 0), 0).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-slate-600">
+                            <span className="font-medium">Equipment:</span> Rs {((form.watch('equipment') as SelectedEquipment[]) || []).reduce((sum, e) => sum + (e.totalEstimatedCost || 0), 0).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-slate-600">
+                            <span className="font-medium">Labour:</span> Rs {((form.watch('labour') as LabourTableEntry[]) || []).reduce((sum, l) => sum + (l.totalEstimatedCost || 0), 0).toLocaleString()}
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Additional Tab */}
-                <TabsContent value="additional" className="space-y-6 mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Star className="h-5 w-5 text-primary" />
-                        Additional Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notes & Instructions</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Add any additional notes, special instructions, or observations..."
-                                className="min-h-32"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Photo Upload Section */}
-                      <div className="space-y-4">
-                        <Label>Attachments & Photos</Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                          <Camera className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Upload planning documents, photos, or reference materials
-                          </p>
-                          <Button variant="outline" size="sm" type="button">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Choose Files
-                          </Button>
+                        <div className="text-right">
+                          <div className="text-sm text-slate-600">Total Estimated Cost</div>
+                          <div className="text-lg font-bold text-emerald-700">
+                            Rs {(form.watch('estimatedTotalCost') || 0).toLocaleString()}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                {/* Notes & Tasks Tab */}
+                <TabsContent value="notes-tasks" className="space-y-6 mt-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <NotesEditor
+                      initialNotes={[]}
+                      onNotesChange={(notes) => {
+                        // In real app, save to form state or backend
+                        console.log('Notes updated:', notes)
+                      }}
+                    />
+                    <TaskManager
+                      initialTasks={[]}
+                      onTasksChange={(tasks) => {
+                        // In real app, save to form state or backend
+                        console.log('Tasks updated:', tasks)
+                      }}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Attachments Tab */}
+                <TabsContent value="attachments" className="space-y-6 mt-6">
+                  <FileUploader
+                    initialFiles={[]}
+                    onFilesChange={(files) => {
+                      // In real app, save to form state or backend
+                      console.log('Files updated:', files)
+                    }}
+                    maxFileSize={10}
+                    maxFiles={10}
+                    allowedTypes={[
+                      'image/*',
+                      'application/pdf',
+                      'text/*',
+                      '.doc',
+                      '.docx',
+                      '.xls',
+                      '.xlsx'
+                    ]}
+                  />
                 </TabsContent>
               </Tabs>
 
               {/* Form Actions */}
-              <div className="flex gap-3 pt-6 border-t border-border">
-                <Button type="submit" className="flex-1" size="lg">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Operation
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCancel} size="lg" className="bg-background/90 hover:bg-background">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.6 }}
+                className="flex justify-between items-center pt-6 border-t border-border/20"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-              </div>
+                <div className="flex gap-3">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90">
+                    <Save className="h-4 w-4 mr-2" />
+                    {currentOperationId ? 'Update Operation' : 'Create Operation'}
+                  </Button>
+                </div>
+              </motion.div>
             </form>
           </Form>
         </motion.div>

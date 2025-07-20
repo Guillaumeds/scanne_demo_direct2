@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeft, X, Search, Calculator, DollarSign, Package } from 'lucide-react'
+import { ArrowLeft, X, Search, Calculator, Package } from 'lucide-react'
 import { useProducts } from '@/hooks/useConfigurationData'
 import { Product, PRODUCT_CATEGORIES } from '@/types/products'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,7 +19,6 @@ export interface SelectedProduct {
   quantity: number
   rate: number
   estimatedCost: number
-  actualCost?: number
 }
 
 interface ModernProductSelectorProps {
@@ -37,14 +36,14 @@ export default function ModernProductSelector({
   blocArea,
   existingProduct,
   title = "Select Product",
-  subtitle = "Choose from our product catalog"
+  subtitle = "Choose products for this operation"
 }: ModernProductSelectorProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [quantity, setQuantity] = useState<number>(0)
   const [rate, setRate] = useState<number>(0)
-  const [actualCost, setActualCost] = useState<number | undefined>(undefined)
+
   const [isUpdatingFromRate, setIsUpdatingFromRate] = useState(false)
 
   // Fetch products using TanStack Query
@@ -52,7 +51,7 @@ export default function ModernProductSelector({
 
   // Convert categories to card options
   const categoryOptions: CardOption[] = PRODUCT_CATEGORIES.map(category => {
-    const productCount = (products || []).filter(p => (p as any).category === category.id).length
+    const productCount = (products || []).filter(p => p.subcategory === category.id).length
     return {
       id: category.id,
       name: category.name,
@@ -65,7 +64,7 @@ export default function ModernProductSelector({
 
   // Filter products by category and fuzzy search
   const categoryFilteredProducts = (products || []).filter(product =>
-    !selectedCategory || product.category === selectedCategory
+    !selectedCategory || product.subcategory === selectedCategory
   )
 
   const filteredProducts = searchTerm
@@ -85,7 +84,7 @@ export default function ModernProductSelector({
         setSelectedProduct(product as any)
         setQuantity(existingProduct.quantity)
         setRate(existingProduct.rate)
-        setActualCost(existingProduct.actualCost)
+
       }
     }
   }, [existingProduct, products])
@@ -127,13 +126,13 @@ export default function ModernProductSelector({
 
   const handleConfirm = () => {
     if (selectedProduct && quantity > 0 && rate > 0) {
-      const estimatedCost = selectedProduct.cost ? quantity * selectedProduct.cost : 0
+      const unitCost = selectedProduct.cost || selectedProduct.cost_per_unit || 0
+      const estimatedCost = unitCost * quantity
       onSelect({
         product: selectedProduct,
         quantity,
         rate,
-        estimatedCost,
-        actualCost
+        estimatedCost
       })
       onClose()
     }
@@ -147,7 +146,8 @@ export default function ModernProductSelector({
     }
   }
 
-  const estimatedCost = selectedProduct?.cost ? quantity * selectedProduct.cost : 0
+  const unitCost = selectedProduct?.cost || selectedProduct?.cost_per_unit || 0
+  const estimatedCost = unitCost * quantity
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -207,37 +207,28 @@ export default function ModernProductSelector({
             </div>
           ) : selectedProduct ? (
             /* Product Configuration */
-            <ScrollArea className="flex-1 p-6">
-              <div className="max-w-2xl mx-auto space-y-6">
-                {/* Product Info */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-emerald-100 rounded-lg">
-                        <span className="text-2xl">
+            <ScrollArea className="h-[calc(90vh-80px)] p-6">
+              <div className="max-w-2xl mx-auto space-y-6 pb-6">
+                {/* Selected Product Info */}
+                <Card className="border-l-4 border-l-emerald-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <span className="text-lg">
                           {PRODUCT_CATEGORIES.find(c => c.id === selectedProduct.category)?.icon || '📦'}
                         </span>
                       </div>
                       <div>
-                        <CardTitle className="text-xl">{selectedProduct.name}</CardTitle>
-                        <p className="text-slate-600 mt-1">
+                        <h3 className="font-semibold text-lg">{selectedProduct.name}</h3>
+                        <p className="text-sm text-muted-foreground">
                           {PRODUCT_CATEGORIES.find(c => c.id === selectedProduct.category)?.name}
                         </p>
                       </div>
                     </div>
-                  </CardHeader>
-                </Card>
-
-                {/* Bloc Area Display */}
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 text-sm">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        Bloc Area: {blocArea.toFixed(2)} ha
-                      </Badge>
-                    </div>
                   </CardContent>
                 </Card>
+
+
 
                 {/* Calculation Display */}
                 <Card>
@@ -248,18 +239,6 @@ export default function ModernProductSelector({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm flex-wrap">
-                      <Badge variant="outline">Rate: {rate.toFixed(1)} {selectedProduct.unit}/ha</Badge>
-                      <span className="text-slate-500">×</span>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {blocArea.toFixed(2)} ha
-                      </Badge>
-                      <span className="text-slate-500">=</span>
-                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                        {quantity.toFixed(1)} {selectedProduct.unit}
-                      </Badge>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -288,74 +267,42 @@ export default function ModernProductSelector({
                           placeholder="0"
                         />
                       </div>
+                    </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Actual Cost (Optional)
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={actualCost || ''}
-                          onChange={(e) => setActualCost(parseFloat(e.target.value) || undefined)}
-                          placeholder="Enter actual cost"
-                        />
+                    {/* Visual Calculations */}
+                    <div className="space-y-3 mt-6">
+                      {/* Quantity Calculation */}
+                      <div className="flex items-center justify-center gap-2 p-3 bg-slate-50 rounded-lg text-sm">
+                        <Badge variant="outline">Rate: {rate.toFixed(1)} {selectedProduct.unit}/ha</Badge>
+                        <span className="text-slate-500">×</span>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {blocArea.toFixed(2)} ha
+                        </Badge>
+                        <span className="text-slate-500">=</span>
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                          {quantity.toFixed(1)} {selectedProduct.unit}
+                        </Badge>
                       </div>
+
+                      {/* Cost Calculation */}
+                      {(selectedProduct.cost || selectedProduct.cost_per_unit) && (
+                        <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 rounded-lg text-sm">
+                          <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                            {quantity.toFixed(1)} {selectedProduct.unit}
+                          </Badge>
+                          <span className="text-slate-500">×</span>
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                            Rs {unitCost}/{selectedProduct.unit}
+                          </Badge>
+                          <span className="text-slate-500">=</span>
+                          <Badge className="bg-green-100 text-green-700 border-green-200 font-semibold">
+                            Rs {estimatedCost.toLocaleString()}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Cost Summary */}
-                {selectedProduct.cost && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <DollarSign className="w-5 h-5" />
-                        Cost Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Unit Cost:</span>
-                          <span className="font-medium">Rs {selectedProduct.cost}/{selectedProduct.unit}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Estimated Total:</span>
-                          <span className="text-lg font-bold text-emerald-700">
-                            Rs {estimatedCost.toLocaleString()}
-                          </span>
-                        </div>
-                        {actualCost && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Actual Cost:</span>
-                            <span className="text-lg font-bold text-blue-700">
-                              Rs {actualCost.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedProduct(null)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleConfirm}
-                    disabled={!quantity || !rate}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    Add Product
-                  </Button>
-                </div>
               </div>
             </ScrollArea>
           ) : selectedCategory ? (
@@ -427,6 +374,29 @@ export default function ModernProductSelector({
             </div>
           )}
         </div>
+
+        {/* Footer */}
+        {selectedProduct && (
+          <div className="border-t border-slate-200 p-6 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                Total: Rs {estimatedCost.toLocaleString()}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setSelectedProduct(null)}>
+                  Back
+                </Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!quantity || !rate}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Confirm Product
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   )

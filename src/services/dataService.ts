@@ -9,11 +9,13 @@ import type {
   SugarcaneVariety,
   InterCropPlant as InterCropVariety
 } from '@/types/varieties'
+import type { Product } from '@/types/products'
 
 // Service interface for type safety
 interface IDataService {
   getSugarcaneVarieties(): Promise<SugarcaneVariety[]>
   getInterCropVarieties(): Promise<InterCropVariety[]>
+  getProducts(): Promise<Product[]>
   searchSugarcaneVarieties(searchTerm: string): Promise<SugarcaneVariety[]>
 }
 
@@ -40,6 +42,19 @@ class ProductionDataService implements IDataService {
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: Failed to fetch intercrop varieties`)
+    }
+
+    return response.json()
+  }
+
+  async getProducts(): Promise<Product[]> {
+    const response = await fetch('/api/products', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Failed to fetch products`)
     }
 
     return response.json()
@@ -89,11 +104,24 @@ class DemoDataService implements IDataService {
     }
   }
 
+  async getProducts(): Promise<Product[]> {
+    console.log('🎭 Demo Mode: Using mock products')
+
+    try {
+      const response = await MockApiService.getProducts()
+      return response.data
+    } catch (error) {
+      console.error('Demo service error:', error)
+      // Fallback to empty array in demo mode
+      return []
+    }
+  }
+
   async searchSugarcaneVarieties(searchTerm: string): Promise<SugarcaneVariety[]> {
     const varieties = await this.getSugarcaneVarieties()
     const lowercaseSearch = searchTerm.toLowerCase()
-    
-    return varieties.filter(variety => 
+
+    return varieties.filter(variety =>
       variety.name.toLowerCase().includes(lowercaseSearch) ||
       (variety.description && variety.description.toLowerCase().includes(lowercaseSearch))
     )

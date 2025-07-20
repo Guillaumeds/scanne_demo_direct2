@@ -230,11 +230,11 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
       ...baseColumns,
       columnHelper.accessor('estimatedCost', {
         header: 'Estimated Cost',
-        cell: ({ getValue }) => `$${(getValue() || 0).toLocaleString()}`
+        cell: ({ getValue }) => `Rs ${(getValue() || 0).toLocaleString()}`
       }),
       columnHelper.accessor('actualCost', {
         header: 'Actual Cost',
-        cell: ({ getValue }) => `$${(getValue() || 0).toLocaleString()}`
+        cell: ({ getValue }) => `Rs ${(getValue() || 0).toLocaleString()}`
       }),
       columnHelper.display({
         id: 'variance',
@@ -246,7 +246,7 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
           const isOver = variance > 0
           return (
             <div className={`text-sm ${isOver ? 'text-red-600' : 'text-green-600'}`}>
-              {isOver ? '+' : ''}${variance.toLocaleString()}
+              {isOver ? '+' : ''}Rs {variance.toLocaleString()}
             </div>
           )
         }

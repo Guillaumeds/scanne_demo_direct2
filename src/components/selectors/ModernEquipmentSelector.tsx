@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { ArrowLeft, X, Search, Tractor, Wrench, Clock, DollarSign, User } from 'lucide-react'
+import { ArrowLeft, X, Search, Tractor, Wrench, Clock, User } from 'lucide-react'
 import { useEquipment } from '@/hooks/useConfigurationData'
 // Equipment type now comes from demo data
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
+
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { fuzzySearch } from '@/utils/fuzzySearch'
 import ModernCardSelector from '@/components/selectors/ModernCardSelector'
@@ -18,10 +18,8 @@ import ModernCardSelector from '@/components/selectors/ModernCardSelector'
 export interface SelectedEquipment {
   equipment: any // Using any for demo mode
   estimatedDuration?: number
-  actualDuration?: number
   costPerHour?: number
   totalEstimatedCost?: number
-  totalActualCost?: number
   operator?: string
   notes?: string
 }
@@ -47,8 +45,7 @@ export default function ModernEquipmentSelector({
   const [searchTerm, setSearchTerm] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
   const [costPerHour, setCostPerHour] = useState<number>(0)
-  const [operator, setOperator] = useState<string>('')
-  const [notes, setNotes] = useState<string>('')
+
 
   // Fetch resources (equipment) using TanStack Query
   const { data: equipment, isLoading, error } = useEquipment()
@@ -63,8 +60,7 @@ export default function ModernEquipmentSelector({
         setSelectedEquipment(equipmentItem)
         setEstimatedDuration(existingEquipment.estimatedDuration || 0)
         setCostPerHour(existingEquipment.costPerHour || equipmentItem.operationalCosts?.hourlyRate || 0)
-        setOperator(existingEquipment.operator || '')
-        setNotes(existingEquipment.notes || '')
+
       }
     }
   }, [existingEquipment, equipment])
@@ -97,9 +93,7 @@ export default function ModernEquipmentSelector({
         equipment: selectedEquipment,
         estimatedDuration,
         costPerHour,
-        totalEstimatedCost,
-        operator: operator || undefined,
-        notes: notes || undefined
+        totalEstimatedCost
       })
       onClose()
     }
@@ -167,8 +161,8 @@ export default function ModernEquipmentSelector({
             </div>
           ) : selectedEquipment ? (
             // Equipment calculation form
-            <ScrollArea className="flex-1 p-6">
-              <div className="max-w-2xl mx-auto space-y-6">
+            <ScrollArea className="h-[calc(90vh-80px)] p-6">
+              <div className="max-w-2xl mx-auto space-y-6 pb-6">
                 {/* Selected Equipment Info */}
                 <Card className="border-l-4 border-l-blue-500">
                   <CardContent className="p-4">
@@ -187,72 +181,38 @@ export default function ModernEquipmentSelector({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Clock className="h-5 w-5" />
-                      Equipment Details
+                      Calculation
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="max-w-md">
                       <div>
-                        <Label htmlFor="duration">Estimated Duration (hours)</Label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Estimated Duration (hours) *
+                        </label>
                         <Input
-                          id="duration"
                           type="number"
                           step="0.5"
                           min="0"
-                          value={estimatedDuration}
+                          value={estimatedDuration === 0 ? '' : estimatedDuration}
                           onChange={(e) => setEstimatedDuration(parseFloat(e.target.value) || 0)}
-                          placeholder="e.g., 8"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="costPerHour">Cost per Hour (Rs)</Label>
-                        <Input
-                          id="costPerHour"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={costPerHour}
-                          onChange={(e) => setCostPerHour(parseFloat(e.target.value) || 0)}
-                          placeholder="e.g., 500"
+                          placeholder="0"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="operator">Operator (optional)</Label>
-                      <Input
-                        id="operator"
-                        value={operator}
-                        onChange={(e) => setOperator(e.target.value)}
-                        placeholder="e.g., John Doe"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="notes">Notes (optional)</Label>
-                      <Input
-                        id="notes"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Additional notes..."
-                      />
-                    </div>
-
-                    <Separator />
-
-                    {/* Cost Summary */}
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5 text-blue-600" />
-                          <span className="font-medium">Total Estimated Cost</span>
-                        </div>
-                        <span className="text-xl font-bold text-blue-600">
+                    {/* Visual Calculation */}
+                    <div className="mt-6">
+                      <div className="flex items-center justify-center gap-2 p-3 bg-slate-50 rounded-lg text-sm">
+                        <Badge variant="outline">Rate: Rs {costPerHour.toFixed(2)}/hour</Badge>
+                        <span className="text-slate-500">×</span>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {estimatedDuration.toFixed(1)} hours
+                        </Badge>
+                        <span className="text-slate-500">=</span>
+                        <Badge className="bg-green-100 text-green-700 border-green-200 font-semibold">
                           Rs {(estimatedDuration * costPerHour).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="text-sm text-blue-600 mt-1">
-                        {estimatedDuration} hours × Rs {costPerHour}/hour
+                        </Badge>
                       </div>
                     </div>
                   </CardContent>

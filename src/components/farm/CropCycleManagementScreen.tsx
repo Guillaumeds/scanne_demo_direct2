@@ -24,6 +24,7 @@ import { Leaf, Clock, CheckCircle, AlertCircle, MapPin } from 'lucide-react'
 // Types and Services
 import { CropCycle, CropCycleFormData, CreateCropCycleRequest } from '@/types/cropCycleManagement'
 import { useSugarcaneVarietiesForSelect } from '@/hooks/useVarieties'
+import VarietySelectionManager from '@/components/selectors/VarietySelectionManager'
 
 // Form validation schema
 const cropCycleFormSchema = z.object({
@@ -266,11 +267,12 @@ export default function CropCycleManagementScreen({
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.4, delay: 0.2 }}
                     >
-                      {/* Sugarcane Variety with Enhanced Animation */}
+                      {/* Sugarcane Variety with Modern Selector */}
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: 0.3 }}
+                        className="md:col-span-2"
                       >
                         <FormField
                           control={form.control}
@@ -280,46 +282,28 @@ export default function CropCycleManagementScreen({
                               <FormLabel className="text-sm font-medium text-slate-700">
                                 Sugarcane Variety *
                               </FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value)
-                                  const variety = sugarcaneVarieties.find((v) => v.id === value)
-                                  if (variety) {
-                                    form.setValue('sugarcaneVarietyName', variety.name)
-                                  }
-                                }}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className={`transition-all duration-200 ${
-                                    fieldState.error
-                                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
-                                      : 'border-slate-300 focus:border-primary focus:ring-primary/20'
-                                  }`}>
-                                    <SelectValue placeholder="Select sugarcane variety..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {varietySelectOptions.map((option, index) => (
-                                    <motion.div
-                                      key={option.value}
-                                      initial={{ opacity: 0, y: -10 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={{ duration: 0.2, delay: index * 0.05 }}
-                                    >
-                                      <SelectItem value={option.value}>
-                                        <div>
-                                          <div className="font-medium">{option.label}</div>
-                                          {option.description && (
-                                            <div className="text-sm text-slate-500">{option.description}</div>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    </motion.div>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-xs" />
+                              <div className="mt-2">
+                                <VarietySelectionManager
+                                  selectedVariety={field.value ? {
+                                    variety: sugarcaneVarieties.find(v => v.id === field.value) || sugarcaneVarieties[0]
+                                  } : null}
+                                  onVarietyChange={(selectedVariety) => {
+                                    if (selectedVariety) {
+                                      field.onChange(selectedVariety.variety.id)
+                                      form.setValue('sugarcaneVarietyName', selectedVariety.variety.name)
+                                    } else {
+                                      field.onChange('')
+                                      form.setValue('sugarcaneVarietyName', '')
+                                    }
+                                  }}
+                                  cycleType="plantation"
+                                  title="Select Sugarcane Variety"
+                                  subtitle="Choose the variety for this crop cycle with harvest period labels"
+                                />
+                              </div>
+                              {fieldState.error && (
+                                <p className="text-sm text-red-600 mt-1">{fieldState.error.message}</p>
+                              )}
                             </FormItem>
                           )}
                         />

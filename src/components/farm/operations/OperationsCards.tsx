@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'motion/react'
-import { Calendar, MapPin, Users, Truck, DollarSign, Clock, Edit, Plus } from 'lucide-react'
+import { Calendar, MapPin, Users, Truck, Clock, Edit, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -170,22 +170,22 @@ export function OperationsCards({ data, perspective, searchQuery }: OperationsCa
           <div>
             <div className="text-sm font-medium">Estimated</div>
             <div className="text-lg font-bold text-primary">
-              ${operation.estimatedCost.toLocaleString()}
+              Rs {operation.estimatedCost.toLocaleString()}
             </div>
           </div>
           <div>
             <div className="text-sm font-medium">Actual</div>
             <div className="text-lg font-bold">
-              ${operation.actualCost.toLocaleString()}
+              Rs {operation.actualCost.toLocaleString()}
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Rs</span>
           <span className="text-sm">Variance: </span>
           <span className={`text-sm font-medium ${isOver ? 'text-red-600' : 'text-green-600'}`}>
-            {isOver ? '+' : ''}${variance.toLocaleString()}
+            {isOver ? '+' : ''}Rs {variance.toLocaleString()}
           </span>
         </div>
 

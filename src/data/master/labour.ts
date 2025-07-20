@@ -3,21 +3,28 @@
  * Exact data from CSV: labour_md.csv
  */
 
-export interface LabourType {
+export interface Labour {
   id: string
   labour_id: string
   name: string
   category: string
   unit: string
   cost_per_unit: number
-  description: string | null
+  description?: string
   active: boolean
-  created_at: string | null
-  updated_at: string | null
+  created_at?: string
+  updated_at?: string
+  // Legacy fields for backward compatibility
+  cost_per_hour?: number
+  hourly_rate?: number
+  daily_rate?: number
+  skills?: string[]
+  skill_level?: string
+  responsibilities?: string[]
 }
 
-export const LABOUR_TYPES: LabourType[] = [
-  // Exact data from CSV: labour_md.csv - ALL 6 LABOUR TYPES
+// Labour data from labour_md.csv
+export const LABOUR_TYPES: Labour[] = [
   {
     id: 'supervisor',
     labour_id: 'supervisor',
@@ -25,10 +32,11 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 60,
-    description: null,
+    cost_per_hour: 60,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 'field-worker_m',
@@ -37,10 +45,11 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 25,
-    description: null,
+    cost_per_hour: 25,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 'field-worker_fm',
@@ -49,10 +58,11 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 35,
-    description: null,
+    cost_per_hour: 35,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 'machine_operator',
@@ -61,10 +71,11 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 45,
-    description: null,
+    cost_per_hour: 45,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 'parttime_worker_m',
@@ -73,10 +84,11 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 30,
-    description: null,
+    cost_per_hour: 30,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 'parttime_worker_fm',
@@ -85,24 +97,10 @@ export const LABOUR_TYPES: LabourType[] = [
     category: 'labour',
     unit: 'hours',
     cost_per_unit: 40,
-    description: null,
+    cost_per_hour: 40,
+    description: '',
     active: true,
-    created_at: null,
-    updated_at: null
+    created_at: '',
+    updated_at: ''
   }
 ]
-
-// Utility functions for labour data
-export const labourUtils = {
-  getById: (id: string) => LABOUR_TYPES.find(l => l.id === id),
-  getByLabourId: (labour_id: string) => LABOUR_TYPES.find(l => l.labour_id === labour_id),
-  getByCategory: (category: string) => LABOUR_TYPES.filter(l => l.category === category),
-  getActive: () => LABOUR_TYPES.filter(l => l.active === true),
-  getSupervisors: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('supervisor')),
-  getFieldWorkers: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('field worker')),
-  getMachineOperators: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('machine operator')),
-  getPartTimeWorkers: () => LABOUR_TYPES.filter(l => l.name.toLowerCase().includes('part time')),
-  searchByName: (query: string) => LABOUR_TYPES.filter(l => 
-    l.name.toLowerCase().includes(query.toLowerCase())
-  ),
-}

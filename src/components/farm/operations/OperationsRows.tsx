@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { ChevronDown, ChevronRight, Calendar, MapPin, Users, Truck, DollarSign, Clock, Edit, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Calendar, MapPin, Users, Truck, Clock, Edit, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -152,15 +152,15 @@ export function OperationsRows({ data, perspective, searchQuery }: OperationsRow
     return (
       <div className="flex items-center gap-4 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm">Est: ${operation.estimatedCost.toLocaleString()}</span>
+          <span className="text-sm">Est: Rs {operation.estimatedCost.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm">Actual: ${operation.actualCost.toLocaleString()}</span>
+          <span className="text-sm">Actual: Rs {operation.actualCost.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Rs</span>
           <span className={`text-sm ${isOver ? 'text-red-600' : 'text-green-600'}`}>
-            {isOver ? '+' : ''}${variance.toLocaleString()}
+            {isOver ? '+' : ''}Rs {variance.toLocaleString()}
           </span>
         </div>
       </div>

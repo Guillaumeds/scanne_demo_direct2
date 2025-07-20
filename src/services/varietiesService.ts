@@ -7,22 +7,27 @@ import { z } from 'zod'
 import { dataService } from './dataService'
 import { isDemoMode } from '@/utils/demoMode'
 
-// Zod schemas for API responses (matching the demo data structure)
+// Zod schemas for API responses (matching the actual CSV data structure)
 export const SugarcaneVarietySchema = z.object({
   id: z.string(),
-  variety_id: z.string(),
+  variety_id: z.string().optional(),
   name: z.string(),
-  category: z.string(),
-  description: z.string().nullable(),
-  maturity_period_months: z.number(),
-  yield_potential_tons_per_ha: z.number(),
-  sugar_content_percentage: z.number(),
-  disease_resistance: z.string().nullable(),
-  climate_suitability: z.string().nullable(),
-  planting_season: z.string().nullable(),
-  active: z.boolean(),
-  created_at: z.string().nullable(),
-  updated_at: z.string().nullable(),
+  description: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  // Additional fields from CSV
+  category: z.string().optional(),
+  category_enum: z.string().optional(),
+  harvest_start_month: z.string().optional(),
+  harvest_end_month: z.string().optional(),
+  seasons: z.string().optional(),
+  soil_types: z.string().optional(),
+  sugar_content_percent: z.string().optional(),
+  characteristics: z.string().optional(),
+  icon: z.string().optional(),
+  image_url: z.string().optional(),
+  information_leaflet_url: z.string().optional(),
+  active: z.boolean().optional(),
 })
 
 export const SugarcaneVarietiesResponseSchema = z.array(SugarcaneVarietySchema)

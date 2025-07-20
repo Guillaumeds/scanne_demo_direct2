@@ -108,8 +108,8 @@ export function InformationScreen() {
             {
               title: "Budget Status",
               icon: DollarSign,
-              value: `$${cropCycleData.metrics.actualCost.toLocaleString()}`,
-              subtitle: `of $${cropCycleData.metrics.totalCost.toLocaleString()} budget`,
+              value: `Rs ${cropCycleData.metrics.actualCost.toLocaleString()}`,
+              subtitle: `of Rs ${cropCycleData.metrics.totalCost.toLocaleString()} budget`,
               progress: 71,
               delay: 0.4
             },

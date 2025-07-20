@@ -2,13 +2,11 @@
 
 import { useState } from 'react'
 import { motion } from 'motion/react'
-import { X, Search, Leaf, ExternalLink, DollarSign } from 'lucide-react'
-import { useSugarcaneVarieties } from '@/hooks/useConfigurationData'
+import { X, Search, Leaf, ExternalLink } from 'lucide-react'
+import { useSugarcaneVarieties } from '@/hooks/useVarieties'
 import { SugarcaneVariety } from '@/types/varieties'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { fuzzySearch } from '@/utils/fuzzySearch'
 import ModernCardSelector from '@/components/selectors/ModernCardSelector'
@@ -143,15 +141,40 @@ export default function ModernVarietySelector({
                 <div className="pb-6">
                   <ModernCardSelector
                     options={filteredVarieties.map((variety) => {
-                      const seasonTags = (variety as any).seasons?.map((season: any) =>
-                        season.charAt(0).toUpperCase() + season.slice(1)
-                      ).join(', ') || 'All seasons'
+                      // Determine harvest period labels
+                      const getHarvestPeriodLabel = (variety: SugarcaneVariety) => {
+                        const harvestStart = (variety as any).harvestStart
+                        const harvestEnd = (variety as any).harvestEnd
+
+                        if (!harvestStart || !harvestEnd) return 'All Season'
+
+                        // Parse months (assuming format like "May" or "05")
+                        const startMonth = isNaN(Number(harvestStart))
+                          ? new Date(`${harvestStart} 1, 2000`).getMonth() + 1
+                          : Number(harvestStart)
+                        const endMonth = isNaN(Number(harvestEnd))
+                          ? new Date(`${harvestEnd} 1, 2000`).getMonth() + 1
+                          : Number(harvestEnd)
+
+                        // Determine period based on months
+                        const periods = []
+                        if (startMonth >= 4 && startMonth <= 7) periods.push('Early')
+                        if ((startMonth >= 6 && startMonth <= 9) || (endMonth >= 6 && endMonth <= 9)) periods.push('Mid')
+                        if (endMonth >= 8 && endMonth <= 11) periods.push('Late')
+
+                        return periods.length > 0 ? periods.join('/') : 'All Season'
+                      }
+
+                      const harvestPeriod = getHarvestPeriodLabel(variety as any)
+
                       return {
                         id: variety.id,
                         name: variety.name,
-                        description: variety.description || `Harvest: ${(variety as any).harvestStart} - ${(variety as any).harvestEnd}`,
-                        badge: seasonTags,
-                        color: 'bg-green-50',
+                        description: variety.description || `Harvest: ${(variety as any).harvestStart || 'N/A'} - ${(variety as any).harvestEnd || 'N/A'}`,
+                        badge: `${harvestPeriod} Season`,
+                        color: harvestPeriod.includes('Early') ? 'bg-green-50' :
+                               harvestPeriod.includes('Mid') ? 'bg-yellow-50' :
+                               harvestPeriod.includes('Late') ? 'bg-orange-50' : 'bg-blue-50',
                         icon: Leaf,
                         sugarContent: (variety as any).sugarContentPercent,
                         soilTypes: (variety as any).soilTypes

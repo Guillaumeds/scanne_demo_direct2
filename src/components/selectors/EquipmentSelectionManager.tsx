@@ -13,6 +13,7 @@ import { Resource } from '@/types/resources'
 interface EquipmentSelectionManagerProps {
   selectedEquipment: SelectedEquipment[]
   onEquipmentChange: (equipment: SelectedEquipment[]) => void
+  blocArea: number
   title?: string
   subtitle?: string
   maxEquipment?: number
@@ -23,6 +24,7 @@ interface EquipmentSelectionManagerProps {
 export default function EquipmentSelectionManager({
   selectedEquipment,
   onEquipmentChange,
+  blocArea,
   title = "Equipment & Machinery",
   subtitle = "Select equipment for this operation",
   maxEquipment,
@@ -155,15 +157,18 @@ export default function EquipmentSelectionManager({
                               <div>
                                 <span>Rate: Rs {selectedEquip.costPerHour || 0}/hr</span>
                               </div>
-                              {selectedEquip.operator && (
-                                <div>
-                                  <span>Operator: {selectedEquip.operator}</span>
-                                </div>
-                              )}
+                              <div>
+                                <span>Area: {blocArea.toFixed(1)} ha</span>
+                              </div>
                               <div className="font-medium text-blue-600">
                                 <span>Cost: Rs {selectedEquip.totalEstimatedCost?.toFixed(2) || '0.00'}</span>
                               </div>
                             </div>
+                            {selectedEquip.operator && (
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                <span>Operator: {selectedEquip.operator}</span>
+                              </div>
+                            )}
                           </div>
                           
                           <Button

@@ -96,8 +96,8 @@ export function BlocMetrics() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: any) => [`$${value.toLocaleString()}`, 'Cost']}
+                <Tooltip
+                  formatter={(value: any) => [`Rs ${value.toLocaleString()}`, 'Cost']}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -109,7 +109,7 @@ export function BlocMetrics() {
                   className="w-3 h-3 rounded-full" 
                   style={{ backgroundColor: item.color }}
                 />
-                <span>{item.name}: ${item.value.toLocaleString()}</span>
+                <span>{item.name}: Rs {item.value.toLocaleString()}</span>
               </div>
             ))}
           </div>

@@ -460,7 +460,7 @@ export function WorkPackageForm() {
                   {[
                     { value: 'basic', icon: Clock, label: 'Basic', fullLabel: 'Basic Info' },
                     { value: 'location', icon: MapPin, label: 'Location', fullLabel: 'Location & GPS' },
-                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Resources' },
+                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Products & Resources' },
                     { value: 'quality', icon: Star, label: 'Quality', fullLabel: 'Quality & Issues' },
                     { value: 'documentation', icon: Camera, label: 'Docs', fullLabel: 'Documentation' }
                   ].map((tab, index) => {
@@ -1120,7 +1120,7 @@ export function WorkPackageForm() {
                             name="costBreakdown.labor"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Labor Cost ($)</FormLabel>
+                                <FormLabel>Labor Cost (Rs)</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -1162,7 +1162,7 @@ export function WorkPackageForm() {
                             name="costBreakdown.materials"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Materials Cost ($)</FormLabel>
+                                <FormLabel>Materials Cost (Rs)</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -1183,7 +1183,7 @@ export function WorkPackageForm() {
                             name="costBreakdown.other"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Other Costs ($)</FormLabel>
+                                <FormLabel>Other Costs (Rs)</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
