@@ -6,11 +6,12 @@
 
 import { DemoStorage } from './demoStorage'
 import type { Farm, Company } from '../data/transactional/farms'
-import type { Bloc, CropCycle, FieldOperation, WorkPackage } from '../data/transactional/blocs'
+import type { Bloc } from '../data/transactional/blocs'
 import type { SugarcaneVariety } from '../data/master/sugarcaneVarieties'
 import type { Product } from '../data/master/products'
-import type { LabourType } from '../data/master/labour'
-import type { EquipmentType } from '../data/master/equipment'
+import type { Labour } from '../data/master/labour'
+import type { Equipment } from '../data/master/equipment'
+import type { CropCycle, FieldOperation, WorkPackage } from '@/schemas/apiSchemas'
 
 // Storage keys for different data types
 const STORAGE_KEYS = {
@@ -50,8 +51,8 @@ export interface FarmGISInitialData {
   fieldOperations: FieldOperation[]
   workPackages: WorkPackage[]
   products: Product[]
-  labour: LabourType[]
-  equipment: EquipmentType[]
+  labour: Labour[]
+  equipment: Equipment[]
   varieties: SugarcaneVariety[]
   lastUpdated: string
 }
@@ -129,12 +130,12 @@ export class MockApiService {
     return this.simulateResponse(PRODUCTS.filter(p => p.active))
   }
 
-  static async getLabourTypes(): Promise<ApiResponse<LabourType[]>> {
+  static async getLabourTypes(): Promise<ApiResponse<Labour[]>> {
     const { LABOUR_TYPES } = await import('../data/master/labour')
     return this.simulateResponse(LABOUR_TYPES.filter(l => l.active))
   }
 
-  static async getEquipmentTypes(): Promise<ApiResponse<EquipmentType[]>> {
+  static async getEquipmentTypes(): Promise<ApiResponse<Equipment[]>> {
     const { EQUIPMENT_TYPES } = await import('../data/master/equipment')
     return this.simulateResponse(EQUIPMENT_TYPES.filter(e => e.active))
   }
@@ -273,10 +274,7 @@ export class MockApiService {
       productsResponse,
       labourResponse,
       equipmentResponse,
-      varietiesResponse,
-      cropCycles,
-      fieldOperations,
-      workPackages
+      varietiesResponse
     ] = await Promise.all([
       this.getCompanies(),
       this.getFarms(),
@@ -284,11 +282,13 @@ export class MockApiService {
       this.getProducts(),
       this.getLabourTypes(),
       this.getEquipmentTypes(),
-      this.getSugarcaneVarieties(),
-      DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || [],
-      DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || [],
-      DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
+      this.getSugarcaneVarieties()
     ])
+
+    // Get demo data directly from storage
+    const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
+    const fieldOperations = DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || []
+    const workPackages = DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
 
     const activeCropCycles = cropCycles.filter(c => c.status === 'active')
 
