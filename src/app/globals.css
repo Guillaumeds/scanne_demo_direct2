@@ -300,12 +300,12 @@ main {
   /* Make fields non-clickable */
   pointer-events: none !important;
 
-  /* Darker, more visible background */
-  fill-opacity: 0.3 !important; /* Increased from 0.1 to 0.3 */
-  fill: #8B5A2B !important; /* Darker brown instead of gray */
+  /* Slate palette background - less transparent */
+  fill-opacity: 0.4 !important; /* Increased from 0.1 to 0.4 for better visibility */
+  fill: #475569 !important; /* Slate-600 color */
 
-  /* Thicker, more visible borders */
-  stroke: #654321 !important; /* Dark brown border */
+  /* Thicker, more visible borders with slate palette */
+  stroke: #334155 !important; /* Slate-700 border */
   stroke-width: 3 !important; /* Increased from 2 to 3 */
   stroke-opacity: 1 !important; /* Full opacity for borders */
 }
@@ -315,12 +315,12 @@ main {
   /* Make fields non-clickable */
   pointer-events: none !important;
 
-  /* Darker, more visible background */
-  fill-opacity: 0.3 !important;
-  fill: #8B5A2B !important;
+  /* Slate palette background - less transparent */
+  fill-opacity: 0.4 !important;
+  fill: #475569 !important; /* Slate-600 color */
 
-  /* Thicker, more visible borders */
-  stroke: #654321 !important;
+  /* Thicker, more visible borders with slate palette */
+  stroke: #334155 !important; /* Slate-700 border */
   stroke-width: 3 !important;
   stroke-opacity: 1 !important;
 }

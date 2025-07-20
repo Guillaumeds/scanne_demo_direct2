@@ -274,10 +274,10 @@ export default function DrawingManager({
       svgElement.classList.remove('leaflet-interactive')
       svgElement.style.pointerEvents = 'none'
 
-      // Apply field styling
-      svgElement.setAttribute('fill', '#8B5A2B')
-      svgElement.setAttribute('fill-opacity', '0.3')
-      svgElement.setAttribute('stroke', '#654321')
+      // Apply field styling with slate palette
+      svgElement.setAttribute('fill', '#475569') // Slate-600
+      svgElement.setAttribute('fill-opacity', '0.4') // Less transparent
+      svgElement.setAttribute('stroke', '#334155') // Slate-700
       svgElement.setAttribute('stroke-width', '3')
       svgElement.setAttribute('stroke-opacity', '1')
     })
