@@ -155,7 +155,7 @@ export default function VarietySelectionManager({
                           <div>
                             <span>Harvest: {selectedVariety.variety.harvestStart} - {selectedVariety.variety.harvestEnd}</span>
                           </div>
-                          {selectedVariety.variety.seasons && selectedVariety.variety.seasons.length > 0 && (
+                          {selectedVariety.variety.seasons && Array.isArray(selectedVariety.variety.seasons) && selectedVariety.variety.seasons.length > 0 && (
                             <div>
                               <span>Seasons: {selectedVariety.variety.seasons.join(', ')}</span>
                             </div>
