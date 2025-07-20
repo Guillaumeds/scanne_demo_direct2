@@ -293,6 +293,66 @@ main {
   touch-action: manipulation;
 }
 
+/* Field polygon styling - make fields non-clickable background elements */
+.leaflet-interactive[stroke="#64748b"],
+.leaflet-interactive[fill="#64748b"],
+.leaflet-interactive[stroke*="64748b"] {
+  /* Make fields non-clickable */
+  pointer-events: none !important;
+
+  /* Darker, more visible background */
+  fill-opacity: 0.3 !important; /* Increased from 0.1 to 0.3 */
+  fill: #8B5A2B !important; /* Darker brown instead of gray */
+
+  /* Thicker, more visible borders */
+  stroke: #654321 !important; /* Dark brown border */
+  stroke-width: 3 !important; /* Increased from 2 to 3 */
+  stroke-opacity: 1 !important; /* Full opacity for borders */
+}
+
+/* Additional field polygon targeting - catch any field polygons */
+.leaflet-interactive[fill-opacity="0.1"] {
+  /* Make fields non-clickable */
+  pointer-events: none !important;
+
+  /* Darker, more visible background */
+  fill-opacity: 0.3 !important;
+  fill: #8B5A2B !important;
+
+  /* Thicker, more visible borders */
+  stroke: #654321 !important;
+  stroke-width: 3 !important;
+  stroke-opacity: 1 !important;
+}
+
+/* Field labels - remove white backgrounds and make text fill polygon area */
+.leaflet-marker-icon[style*="background"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Field label text styling */
+.leaflet-marker-icon {
+  color: #333 !important;
+  font-weight: bold !important;
+  font-size: 12px !important;
+  text-shadow: 1px 1px 2px rgba(255,255,255,0.8) !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  pointer-events: none !important; /* Make labels non-clickable */
+}
+
+/* Hide white block backgrounds on field labels */
+.leaflet-marker-icon > div,
+.leaflet-marker-icon > span {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 /* Basic mobile improvements */
 @media screen and (max-width: 768px) {
   /* Prevent horizontal scrolling */

@@ -242,12 +242,48 @@ export default function DrawingManager({
     const drawnLayers = drawnLayersRef.current
     map.addLayer(drawnLayers)
 
+    // Make field polygons non-interactive after map loads
+    setTimeout(() => {
+      makeFieldPolygonsNonInteractive()
+    }, 1000) // Wait for field polygons to load
+
+    // Periodic check to ensure field polygons remain non-interactive
+    const fieldPolygonInterval = setInterval(() => {
+      makeFieldPolygonsNonInteractive()
+    }, 5000) // Check every 5 seconds
+
     return () => {
       if (map) {
         map.removeLayer(drawnLayers)
       }
+      clearInterval(fieldPolygonInterval)
     }
   }, [map])
+
+  // Function to make field polygons non-interactive
+  const makeFieldPolygonsNonInteractive = () => {
+    if (!map) return
+
+    // Find all field polygons in the DOM and make them non-interactive
+    const mapContainer = map.getContainer()
+    const fieldPolygons = mapContainer.querySelectorAll('.leaflet-interactive[stroke="#64748b"], .leaflet-interactive[fill="#64748b"], .leaflet-interactive[fill-opacity="0.1"]')
+
+    fieldPolygons.forEach((polygon: Element) => {
+      const svgElement = polygon as SVGElement
+      // Remove interactive class and add non-interactive styling
+      svgElement.classList.remove('leaflet-interactive')
+      svgElement.style.pointerEvents = 'none'
+
+      // Apply field styling
+      svgElement.setAttribute('fill', '#8B5A2B')
+      svgElement.setAttribute('fill-opacity', '0.3')
+      svgElement.setAttribute('stroke', '#654321')
+      svgElement.setAttribute('stroke-width', '3')
+      svgElement.setAttribute('stroke-opacity', '1')
+    })
+
+    console.log(`🏞️ Made ${fieldPolygons.length} field polygons non-interactive`)
+  }
 
   // MOVED: Tool activation useEffect moved after event handlers to fix hoisting
 
