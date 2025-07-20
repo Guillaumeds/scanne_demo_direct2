@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Demo Storage</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        .coords { max-height: 200px; overflow-y: auto; background: #f5f5f5; padding: 10px; }
+        button { padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Demo Storage Debug</h1>
+    
+    <button onclick="clearStorage()">Clear Storage</button>
+    <button onclick="loadData()">Load Data</button>
+    <button onclick="checkBlocs()">Check Blocs</button>
+    
+    <div class="section">
+        <h2>Storage Keys</h2>
+        <div id="keys"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Blocs Data</h2>
+        <div id="blocs"></div>
+    </div>
+    
+    <div class="section">
+        <h2>First Bloc Coordinates</h2>
+        <div id="coords" class="coords"></div>
+    </div>
+
+    <script>
+        function clearStorage() {
+            localStorage.clear()
+            console.log('✅ Storage cleared')
+            loadData()
+        }
+        
+        function loadData() {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('demo_'))
+            document.getElementById('keys').innerHTML = keys.length > 0 ? keys.join('<br>') : 'No demo keys found'
+            
+            checkBlocs()
+        }
+        
+        function checkBlocs() {
+            const blocsData = localStorage.getItem('demo_blocs')
+            
+            if (!blocsData) {
+                document.getElementById('blocs').innerHTML = '❌ No blocs data found'
+                document.getElementById('coords').innerHTML = '❌ No coordinates to display'
+                return
+            }
+            
+            try {
+                const blocs = JSON.parse(blocsData)
+                document.getElementById('blocs').innerHTML = `✅ Found ${blocs.length} blocs`
+                
+                if (blocs.length > 0) {
+                    const firstBloc = blocs[0]
+                    console.log('🔍 First bloc:', firstBloc)
+                    
+                    let coordsHtml = `<strong>Bloc: ${firstBloc.name}</strong><br>`
+                    coordsHtml += `Area: ${firstBloc.area_hectares} hectares<br>`
+                    coordsHtml += `Coordinates count: ${firstBloc.coordinates?.length || 0}<br><br>`
+                    
+                    if (firstBloc.coordinates && firstBloc.coordinates.length > 0) {
+                        coordsHtml += '<strong>Coordinates:</strong><br>'
+                        firstBloc.coordinates.forEach((coord, i) => {
+                            coordsHtml += `${i}: [${coord[0]}, ${coord[1]}]<br>`
+                        })
+                        
+                        // Check if it's a square
+                        const coords = firstBloc.coordinates
+                        const isSquare = coords.length === 5 && 
+                                         coords[0] && coords[1] && coords[2] && coords[3] &&
+                                         Math.abs(coords[0][0] - coords[3][0]) < 0.001 &&
+                                         Math.abs(coords[1][1] - coords[2][1]) < 0.001
+                        
+                        coordsHtml += `<br><strong>Is Square: ${isSquare}</strong><br>`
+                        
+                        // Calculate bounds
+                        const lngs = coords.map(c => c[0])
+                        const lats = coords.map(c => c[1])
+                        const bounds = {
+                            minLng: Math.min(...lngs),
+                            maxLng: Math.max(...lngs),
+                            minLat: Math.min(...lats),
+                            maxLat: Math.max(...lats)
+                        }
+                        coordsHtml += `<strong>Bounds:</strong><br>`
+                        coordsHtml += `Lng: ${bounds.minLng} to ${bounds.maxLng}<br>`
+                        coordsHtml += `Lat: ${bounds.minLat} to ${bounds.maxLat}<br>`
+                    } else {
+                        coordsHtml += '❌ No coordinates found'
+                    }
+                    
+                    document.getElementById('coords').innerHTML = coordsHtml
+                } else {
+                    document.getElementById('coords').innerHTML = '❌ No blocs to display'
+                }
+            } catch (error) {
+                document.getElementById('blocs').innerHTML = `❌ Error parsing blocs: ${error.message}`
+                document.getElementById('coords').innerHTML = '❌ Error parsing coordinates'
+            }
+        }
+        
+        // Load data on page load
+        loadData()
+    </script>
+</body>
+</html>

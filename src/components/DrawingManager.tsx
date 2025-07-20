@@ -619,6 +619,19 @@ export default function DrawingManager({
         // Our coordinates are [lng, lat], but Leaflet expects [lat, lng]
         const leafletCoords = area.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
 
+        // Debug logging for coordinate transformation
+        if (area.name && (area.name.includes('5316') || area.name.includes('5660'))) {
+          console.log(`🔍 DrawingManager: Creating polygon for ${area.name}:`, {
+            originalCoords: area.coordinates.slice(0, 3),
+            leafletCoords: leafletCoords.slice(0, 3),
+            totalCoords: area.coordinates.length,
+            isSquare: area.coordinates.length === 5 &&
+                      area.coordinates[0] && area.coordinates[1] && area.coordinates[2] && area.coordinates[3] &&
+                      Math.abs(area.coordinates[0][0] - area.coordinates[3][0]) < 0.001 &&
+                      Math.abs(area.coordinates[1][1] - area.coordinates[2][1]) < 0.001
+          })
+        }
+
         const polygon = L.polygon(leafletCoords, {
           color,
           fillColor,
@@ -727,6 +740,19 @@ export default function DrawingManager({
 
         // Our coordinates are [lng, lat], but Leaflet expects [lat, lng]
         const leafletCoords = area.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+
+        // Debug logging for coordinate transformation (robust recreation)
+        if (area.name && (area.name.includes('5316') || area.name.includes('5660'))) {
+          console.log(`🔍 DrawingManager (robust): Creating polygon for ${area.name}:`, {
+            originalCoords: area.coordinates.slice(0, 3),
+            leafletCoords: leafletCoords.slice(0, 3),
+            totalCoords: area.coordinates.length,
+            isSquare: area.coordinates.length === 5 &&
+                      area.coordinates[0] && area.coordinates[1] && area.coordinates[2] && area.coordinates[3] &&
+                      Math.abs(area.coordinates[0][0] - area.coordinates[3][0]) < 0.001 &&
+                      Math.abs(area.coordinates[1][1] - area.coordinates[2][1]) < 0.001
+          })
+        }
 
         const polygon = L.polygon(leafletCoords, {
           color,

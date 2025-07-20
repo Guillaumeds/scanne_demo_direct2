@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Storage Debug - Detailed Analysis</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        .coords { max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; }
+        button { padding: 10px; margin: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Storage Debug - Detailed Analysis</h1>
+    
+    <button onclick="analyzeStorage()">Analyze Storage</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <button onclick="testCoordinates()">Test Coordinate Integrity</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results')
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : ''
+            resultsDiv.innerHTML += `<div class="${className}">${message}</div>`
+            console.log(message)
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+        }
+        
+        function clearStorage() {
+            localStorage.clear()
+            log('✅ Storage cleared', 'success')
+            analyzeStorage()
+        }
+        
+        function analyzeStorage() {
+            clearResults()
+            log('🔍 Analyzing localStorage...')
+            
+            // Find all demo keys
+            const demoKeys = Object.keys(localStorage).filter(k => k.startsWith('scanne_demo_'))
+            log(`Found ${demoKeys.length} demo storage keys:`)
+            demoKeys.forEach(key => log(`  - ${key}`))
+            
+            // Check blocs specifically
+            const blocsKey = 'scanne_demo_blocs'
+            const blocsData = localStorage.getItem(blocsKey)
+            
+            if (!blocsData) {
+                log('❌ No blocs data found in storage', 'error')
+                return
+            }
+            
+            try {
+                const parsed = JSON.parse(blocsData)
+                log(`✅ Blocs data parsed successfully`, 'success')
+                log(`Storage structure: ${Object.keys(parsed).join(', ')}`)
+                
+                const blocs = parsed.data || parsed
+                if (!Array.isArray(blocs)) {
+                    log(`❌ Blocs data is not an array: ${typeof blocs}`, 'error')
+                    return
+                }
+                
+                log(`📍 Found ${blocs.length} blocs in storage`, 'success')
+                
+                // Analyze first few blocs
+                for (let i = 0; i < Math.min(3, blocs.length); i++) {
+                    const bloc = blocs[i]
+                    log(`\n=== BLOC ${i + 1}: ${bloc.name || 'Unknown'} ===`)
+                    log(`  ID: ${bloc.id}`)
+                    log(`  Area: ${bloc.area_hectares} hectares`)
+                    log(`  Status: ${bloc.status}`)
+                    log(`  Has WKT: ${!!bloc.coordinates_wkt}`)
+                    log(`  Has pre-parsed coords: ${!!bloc.coordinates}`)
+                    
+                    if (bloc.coordinates_wkt) {
+                        log(`  WKT preview: ${bloc.coordinates_wkt.substring(0, 80)}...`)
+                    }
+                    
+                    if (bloc.coordinates) {
+                        if (Array.isArray(bloc.coordinates)) {
+                            log(`  Coordinates count: ${bloc.coordinates.length}`)
+                            if (bloc.coordinates.length > 0) {
+                                log(`  First coord: [${bloc.coordinates[0][0]}, ${bloc.coordinates[0][1]}]`)
+                                log(`  Last coord: [${bloc.coordinates[bloc.coordinates.length-1][0]}, ${bloc.coordinates[bloc.coordinates.length-1][1]}]`)
+                                
+                                // Check if it's a square
+                                const coords = bloc.coordinates
+                                const isSquare = coords.length === 5 && 
+                                                 coords[0] && coords[1] && coords[2] && coords[3] &&
+                                                 Math.abs(coords[0][0] - coords[3][0]) < 0.001 &&
+                                                 Math.abs(coords[1][1] - coords[2][1]) < 0.001
+                                
+                                if (isSquare) {
+                                    log(`  ❌ IS SQUARE: This bloc appears to be a square!`, 'error')
+                                    log(`    Coord 0: [${coords[0][0]}, ${coords[0][1]}]`)
+                                    log(`    Coord 1: [${coords[1][0]}, ${coords[1][1]}]`)
+                                    log(`    Coord 2: [${coords[2][0]}, ${coords[2][1]}]`)
+                                    log(`    Coord 3: [${coords[3][0]}, ${coords[3][1]}]`)
+                                    log(`    Coord 4: [${coords[4][0]}, ${coords[4][1]}]`)
+                                } else {
+                                    log(`  ✅ Not a square (irregular polygon)`, 'success')
+                                }
+                                
+                                // Check coordinate bounds
+                                const lngs = coords.map(c => c[0])
+                                const lats = coords.map(c => c[1])
+                                const bounds = {
+                                    minLng: Math.min(...lngs),
+                                    maxLng: Math.max(...lngs),
+                                    minLat: Math.min(...lats),
+                                    maxLat: Math.max(...lats)
+                                }
+                                
+                                // Check if bounds are reasonable for Mauritius
+                                const validMauritius = bounds.minLng >= 57 && bounds.maxLng <= 58 && 
+                                                       bounds.minLat >= -21 && bounds.maxLat <= -19
+                                
+                                if (validMauritius) {
+                                    log(`  ✅ Coordinates are within Mauritius bounds`, 'success')
+                                } else {
+                                    log(`  ❌ Coordinates are outside Mauritius bounds!`, 'error')
+                                    log(`    Lng: ${bounds.minLng} to ${bounds.maxLng} (should be 57-58)`)
+                                    log(`    Lat: ${bounds.minLat} to ${bounds.maxLat} (should be -21 to -19)`)
+                                }
+                            }
+                        } else {
+                            log(`  ❌ Coordinates is not an array: ${typeof bloc.coordinates}`, 'error')
+                        }
+                    } else {
+                        log(`  ⚠️ No pre-parsed coordinates`, 'warning')
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error parsing blocs data: ${error.message}`, 'error')
+            }
+        }
+        
+        function testCoordinates() {
+            clearResults()
+            log('🧪 Testing coordinate integrity...')
+            
+            // Test WKT parsing
+            const testWKT = 'POLYGON((57.652557 -20.437995, 57.652613 -20.437931, 57.653302 -20.438374, 57.653312 -20.438430, 57.650887 -20.441820, 57.650671 -20.441689, 57.650561 -20.441772, 57.650404 -20.441767, 57.650022 -20.441545, 57.652557 -20.437995))'
+            
+            function parseWKTToCoordinates(wkt) {
+                try {
+                    const coordsMatch = wkt.match(/POLYGON\(\(([^)]+)\)\)/)
+                    if (!coordsMatch) return []
+
+                    const coordPairs = coordsMatch[1].split(',').map(pair => pair.trim())
+                    return coordPairs.map(pair => {
+                        const [lng, lat] = pair.split(' ').map(Number)
+                        return [lng, lat]
+                    }).filter(coord => coord !== null)
+                } catch (error) {
+                    console.error('Error parsing WKT:', error)
+                    return []
+                }
+            }
+            
+            const parsed = parseWKTToCoordinates(testWKT)
+            log(`✅ Test WKT parsed: ${parsed.length} coordinates`)
+            log(`  First: [${parsed[0][0]}, ${parsed[0][1]}]`)
+            log(`  Last: [${parsed[parsed.length-1][0]}, ${parsed[parsed.length-1][1]}]`)
+            
+            // Test JSON round-trip
+            const jsonString = JSON.stringify(parsed)
+            const roundTrip = JSON.parse(jsonString)
+            
+            const identical = JSON.stringify(parsed) === JSON.stringify(roundTrip)
+            if (identical) {
+                log(`✅ JSON round-trip successful`, 'success')
+            } else {
+                log(`❌ JSON round-trip failed!`, 'error')
+            }
+            
+            log('\n🔍 Now analyze storage to compare...')
+        }
+        
+        // Auto-analyze on load
+        analyzeStorage()
+    </script>
+</body>
+</html>

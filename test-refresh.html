@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Data Refresh</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        button { padding: 10px; margin: 5px; font-size: 16px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Test Data Refresh</h1>
+    
+    <button onclick="clearAndRefresh()">Clear Storage & Refresh Data</button>
+    <button onclick="checkCurrentData()">Check Current Data</button>
+    <button onclick="openMainApp()">Open Main App</button>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        function log(message) {
+            const resultDiv = document.getElementById('result')
+            resultDiv.innerHTML += message + '<br>'
+            console.log(message)
+        }
+        
+        function clearAndRefresh() {
+            log('🔄 Clearing localStorage...')
+            localStorage.clear()
+            
+            log('✅ Storage cleared')
+            log('📍 Storage should be empty now')
+            
+            // Check if storage is actually empty
+            const keys = Object.keys(localStorage)
+            log(`Storage keys after clear: ${keys.length}`)
+            
+            log('🔄 Now open the main app to trigger data regeneration')
+        }
+        
+        function checkCurrentData() {
+            const resultDiv = document.getElementById('result')
+            resultDiv.innerHTML = ''
+            
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('demo_'))
+            log(`Found ${keys.length} demo storage keys:`)
+            keys.forEach(key => log(`  - ${key}`))
+            
+            const blocsData = localStorage.getItem('demo_blocs')
+            if (blocsData) {
+                try {
+                    const blocs = JSON.parse(blocsData)
+                    log(`📍 Found ${blocs.length} blocs in storage`)
+                    
+                    if (blocs.length > 0) {
+                        const firstBloc = blocs[0]
+                        log(`First bloc: ${firstBloc.name}`)
+                        log(`  Coordinates: ${firstBloc.coordinates?.length || 0}`)
+                        
+                        if (firstBloc.coordinates && firstBloc.coordinates.length > 0) {
+                            const coords = firstBloc.coordinates
+                            log(`  First coord: [${coords[0][0]}, ${coords[0][1]}]`)
+                            
+                            // Check if square
+                            const isSquare = coords.length === 5 && 
+                                             coords[0] && coords[1] && coords[2] && coords[3] &&
+                                             Math.abs(coords[0][0] - coords[3][0]) < 0.001 &&
+                                             Math.abs(coords[1][1] - coords[2][1]) < 0.001
+                            
+                            log(`  Is square: ${isSquare}`)
+                            
+                            if (isSquare) {
+                                log('❌ PROBLEM: Bloc is a square! This should not happen.')
+                            } else {
+                                log('✅ Good: Bloc is not a square (irregular polygon)')
+                            }
+                        }
+                    }
+                } catch (error) {
+                    log(`❌ Error parsing blocs: ${error.message}`)
+                }
+            } else {
+                log('❌ No blocs data found in storage')
+            }
+        }
+        
+        function openMainApp() {
+            window.open('http://localhost:3000', '_blank')
+        }
+        
+        // Check data on load
+        checkCurrentData()
+    </script>
+</body>
+</html>

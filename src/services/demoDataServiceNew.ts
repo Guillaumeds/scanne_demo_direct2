@@ -13,7 +13,7 @@ import type {
 // Demo data keys
 const DEMO_DATA_KEY = 'scanne_demo_data'
 const DEMO_VERSION_KEY = 'scanne_demo_version'
-const CURRENT_DEMO_VERSION = '3.0.0' // Updated to force cache refresh with CSV coordinates
+const CURRENT_DEMO_VERSION = '2.0.0'
 
 // Demo data structure
 interface DemoDataStore {

@@ -89,33 +89,109 @@ export class MockApiService {
    */
   static async initializeData(): Promise<void> {
     try {
-      // Check if data already exists
+      // Check if data already exists - but also check if blocs have valid coordinates
       const existingFarms = DemoStorage.get<Farm[]>(STORAGE_KEYS.FARMS)
-      
-      if (!existingFarms) {
-        console.log('Initializing demo data...')
-        
-        // Load initial data - use new comprehensive Mauritius demo data
-        const [
-          { DEMO_COMPANIES },
-          { DEMO_FARMS },
-          { generateCompleteMauritiusDemoData }
-        ] = await Promise.all([
-          import('../data/transactional/farms'),
-          import('../data/transactional/farms'),
-          import('../services/mauritiusDemoDataGenerator')
-        ])
+      const existingBlocs = DemoStorage.get<any[]>(STORAGE_KEYS.BLOCS)
 
-        // Generate comprehensive Mauritius demo data
-        const comprehensiveData = generateCompleteMauritiusDemoData()
+      // Check if existing blocs have valid coordinates
+      const blocsHaveValidCoords = existingBlocs && existingBlocs.length > 0 &&
+                                   existingBlocs.some(bloc =>
+                                     bloc.coordinates &&
+                                     Array.isArray(bloc.coordinates) &&
+                                     bloc.coordinates.length > 0
+                                   )
+
+      console.log('🔍 Checking existing data:', {
+        existingFarms: existingFarms?.length || 0,
+        existingBlocs: existingBlocs?.length || 0,
+        farmsExists: !!existingFarms,
+        blocsExists: !!existingBlocs,
+        blocsHaveValidCoords,
+        willInitialize: !existingFarms || !blocsHaveValidCoords
+      })
+
+      // Initialize if no farms OR if blocs don't have valid coordinates
+      if (!existingFarms || !blocsHaveValidCoords) {
+        if (!existingFarms) {
+          console.log('🔄 No existing farms found - initializing demo data...')
+        } else {
+          console.log('🔄 Existing blocs have invalid coordinates - reinitializing demo data...')
+        }
+        console.log('🔄 Initializing demo data...')
+
+        try {
+          // Load initial data - use new comprehensive Mauritius demo data
+          console.log('📦 Loading demo data modules...')
+          const [
+            { DEMO_COMPANIES },
+            { DEMO_FARMS },
+            { generateCompleteMauritiusDemoData }
+          ] = await Promise.all([
+            import('../data/transactional/farms'),
+            import('../data/transactional/farms'),
+            import('../services/mauritiusDemoDataGenerator')
+          ])
+          console.log('✅ Demo data modules loaded successfully')
+
+          // Generate comprehensive Mauritius demo data
+          console.log('🏭 Generating comprehensive Mauritius demo data...')
+          const comprehensiveData = generateCompleteMauritiusDemoData()
+          console.log('✅ Demo data generated:', {
+            blocs: comprehensiveData.blocs?.length || 0,
+            cropCycles: comprehensiveData.cropCycles?.length || 0,
+            fieldOperations: comprehensiveData.fieldOperations?.length || 0,
+            workPackages: comprehensiveData.workPackages?.length || 0
+          })
+
+        // Debug: Check first bloc coordinates before storage
+        if (comprehensiveData.blocs && comprehensiveData.blocs.length > 0) {
+          const firstBloc = comprehensiveData.blocs[0]
+          console.log('🔍 First bloc before storage:', {
+            name: firstBloc.name,
+            coordinatesCount: firstBloc.coordinates?.length || 0,
+            firstCoord: firstBloc.coordinates?.[0],
+            hasWKT: !!firstBloc.coordinates_wkt,
+            wktPreview: firstBloc.coordinates_wkt?.substring(0, 50) + '...'
+          })
+        }
 
         // Store initial data with new comprehensive data
-        DemoStorage.set(STORAGE_KEYS.COMPANIES, DEMO_COMPANIES)
-        DemoStorage.set(STORAGE_KEYS.FARMS, DEMO_FARMS)
-        DemoStorage.set(STORAGE_KEYS.BLOCS, comprehensiveData.blocs)
-        DemoStorage.set(STORAGE_KEYS.CROP_CYCLES, comprehensiveData.cropCycles)
-        DemoStorage.set(STORAGE_KEYS.FIELD_OPERATIONS, comprehensiveData.fieldOperations)
-        DemoStorage.set(STORAGE_KEYS.WORK_PACKAGES, comprehensiveData.workPackages)
+        console.log('💾 Storing demo data to localStorage...')
+        try {
+          DemoStorage.set(STORAGE_KEYS.COMPANIES, DEMO_COMPANIES)
+          console.log(`✅ Stored ${DEMO_COMPANIES.length} companies`)
+
+          DemoStorage.set(STORAGE_KEYS.FARMS, DEMO_FARMS)
+          console.log(`✅ Stored ${DEMO_FARMS.length} farms`)
+
+          DemoStorage.set(STORAGE_KEYS.BLOCS, comprehensiveData.blocs)
+          console.log(`✅ Stored ${comprehensiveData.blocs?.length || 0} blocs`)
+
+          DemoStorage.set(STORAGE_KEYS.CROP_CYCLES, comprehensiveData.cropCycles)
+          console.log(`✅ Stored ${comprehensiveData.cropCycles?.length || 0} crop cycles`)
+
+          DemoStorage.set(STORAGE_KEYS.FIELD_OPERATIONS, comprehensiveData.fieldOperations)
+          console.log(`✅ Stored ${comprehensiveData.fieldOperations?.length || 0} field operations`)
+
+          DemoStorage.set(STORAGE_KEYS.WORK_PACKAGES, comprehensiveData.workPackages)
+          console.log(`✅ Stored ${comprehensiveData.workPackages?.length || 0} work packages`)
+        } catch (storageError) {
+          console.error('❌ Error storing demo data:', storageError)
+          throw storageError
+        }
+
+        // Debug: Check first bloc coordinates after storage
+        const storedBlocs = DemoStorage.get<any[]>(STORAGE_KEYS.BLOCS)
+        if (storedBlocs && storedBlocs.length > 0) {
+          const firstStoredBloc = storedBlocs[0]
+          console.log('🔍 First bloc after storage:', {
+            name: firstStoredBloc.name,
+            coordinatesCount: firstStoredBloc.coordinates?.length || 0,
+            firstCoord: firstStoredBloc.coordinates?.[0],
+            hasWKT: !!firstStoredBloc.coordinates_wkt,
+            wktPreview: firstStoredBloc.coordinates_wkt?.substring(0, 50) + '...'
+          })
+        }
 
         console.log('✅ Comprehensive Mauritius demo data initialized successfully:', {
           blocs: comprehensiveData.blocs?.length || 0,
@@ -123,6 +199,12 @@ export class MockApiService {
           fieldOperations: comprehensiveData.fieldOperations?.length || 0,
           workPackages: comprehensiveData.workPackages?.length || 0
         })
+
+        } catch (initError) {
+          console.error('❌ Error during demo data initialization:', initError)
+          console.error('Stack trace:', initError.stack)
+          throw initError
+        }
       }
     } catch (error) {
       console.error('Failed to initialize demo data:', error)
@@ -194,7 +276,26 @@ export class MockApiService {
     await this.initializeData()
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
 
-    return this.simulateResponse(blocs.filter(b => b.status === 'active'))
+    // Debug: Check first bloc coordinates when retrieved
+    if (blocs.length > 0) {
+      const firstBloc = blocs[0]
+      console.log('🔍 First bloc when retrieved from storage:', {
+        name: firstBloc.name,
+        coordinatesCount: firstBloc.coordinates?.length || 0,
+        firstCoord: firstBloc.coordinates?.[0],
+        hasWKT: !!firstBloc.coordinates_wkt,
+        wktPreview: firstBloc.coordinates_wkt?.substring(0, 50) + '...',
+        isSquare: firstBloc.coordinates?.length === 5 &&
+                  firstBloc.coordinates[0] && firstBloc.coordinates[1] && firstBloc.coordinates[2] && firstBloc.coordinates[3] &&
+                  Math.abs(firstBloc.coordinates[0][0] - firstBloc.coordinates[3][0]) < 0.001 &&
+                  Math.abs(firstBloc.coordinates[1][1] - firstBloc.coordinates[2][1]) < 0.001
+      })
+    }
+
+    const activeBlocs = blocs.filter(b => b.status === 'active')
+    console.log(`📍 Returning ${activeBlocs.length} active blocs`)
+
+    return this.simulateResponse(activeBlocs)
   }
 
   static async getBlocById(blocId: string): Promise<ApiResponse<Bloc>> {
@@ -253,10 +354,21 @@ export class MockApiService {
 
     const blocCropCycles = cropCycles.filter(c => c.bloc_id === blocId)
     const activeCropCycle = blocCropCycles.find(c => c.status === 'active') || null
-    const blocFieldOperations = fieldOperations.filter(o => o.crop_cycle_uuid === blocId)
+
+    // Fix: Filter operations by crop cycle IDs, not bloc ID directly
+    const cropCycleIds = blocCropCycles.map(c => c.id)
+    const blocFieldOperations = fieldOperations.filter(o => cropCycleIds.includes(o.crop_cycle_uuid))
     const blocWorkPackages = workPackages.filter(p =>
       blocFieldOperations.some(o => o.uuid === p.field_operation_uuid)
     )
+
+    console.log('🔍 Operations filtering debug:', {
+      blocId,
+      cropCyclesFound: blocCropCycles.length,
+      cropCycleIds,
+      operationsFound: blocFieldOperations.length,
+      workPackagesFound: blocWorkPackages.length
+    })
 
     const data: BlocData = {
       bloc: blocResponse.data,

@@ -17,6 +17,7 @@ import { GlobalLoadingIndicator } from '@/components/global/GlobalLoadingIndicat
 import { GlobalErrorHandler } from '@/components/global/GlobalErrorHandler'
 import { CacheManagementDashboard } from '@/components/dev/CacheManagementDashboard'
 import { FIELDS } from '@/data/master/fields'
+import { forceRegenerateData } from '@/services/mauritiusDemoDataGenerator'
 
 export default function FarmGISLayout() {
   // Field functionality removed - blocs are the primary entities
@@ -213,6 +214,17 @@ export default function FarmGISLayout() {
     }
   }, [farmDataLoading, farmDataError, farmData])
 
+  // Expose force regenerate function globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).forceRegenerateFieldData = () => {
+        console.log('🔄 Force regenerating field data with new polygons...')
+        forceRegenerateData()
+        window.location.reload()
+      }
+    }
+  }, [])
+
   // Field selection handlers removed - parcelles are background only
   // const handleFieldSelect = (fieldId: string) => {
   //   setSelectedField(fieldId === selectedField ? null : fieldId)
@@ -369,6 +381,18 @@ export default function FarmGISLayout() {
       FIELDS.forEach((field, index) => {
         try {
           if (field.active && field.polygon && field.polygon.length > 0) {
+
+          // Debug field coordinates
+          if (index < 2) { // Only log first 2 fields
+            console.log(`🔍 Field ${field.name} coordinates:`, {
+              firstCoord: field.polygon[0],
+              center: field.center,
+              leafletFormat: [field.polygon[0].lat, field.polygon[0].lng],
+              labelPosition: [field.center.lat, field.center.lng],
+              totalCoords: field.polygon.length
+            })
+          }
+
           // Create polygon with slate styling
           const polygon = L.polygon(
             field.polygon.map(coord => [coord.lat, coord.lng]),
@@ -788,6 +812,24 @@ export default function FarmGISLayout() {
     setSelectedAreaId(null)
   }
 
+  // Debug function to force refresh demo data
+  const handleForceRefresh = async () => {
+    try {
+      console.log('🔄 Force refreshing demo data...')
+
+      // Clear all localStorage to force complete regeneration
+      console.log('🧹 Clearing localStorage...')
+      localStorage.clear()
+
+      const { MockApiService } = await import('@/services/mockApiService')
+      await MockApiService.refreshWithNewData()
+      console.log('✅ Demo data refreshed, reloading page...')
+      window.location.reload()
+    } catch (error) {
+      console.error('❌ Error refreshing demo data:', error)
+    }
+  }
+
   const handleBlocPopOut = (areaKey: string) => {
     // Find the bloc in either drawn or saved areas
     const bloc = [...drawnAreas, ...savedAreas].find(area => DrawnAreaUtils.getEntityKey(area) === areaKey)
@@ -963,6 +1005,8 @@ export default function FarmGISLayout() {
         <GlobalLoadingIndicator />
         <GlobalErrorHandler />
         <CacheManagementDashboard />
+
+
       </div>
     </div>
   )

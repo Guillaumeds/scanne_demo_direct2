@@ -111,8 +111,46 @@ export class DrawnAreaUtils {
    * Create drawn area from database bloc
    */
   static fromDatabaseBloc(bloc: any): DrawnArea {
-    // Parse PostGIS WKT coordinates from the database
-    const coordinates = this.parseWKTToCoordinates(bloc.coordinates_wkt || '')
+    // Use pre-parsed coordinates if available (for performance), otherwise parse WKT
+    let coordinates: [number, number][]
+
+    if (bloc.coordinates && Array.isArray(bloc.coordinates) && bloc.coordinates.length > 0) {
+      console.log(`🔍 Using pre-parsed coordinates for ${bloc.name}`)
+      coordinates = bloc.coordinates
+    } else {
+      console.log(`⚠️ No pre-parsed coordinates for ${bloc.name}, parsing WKT...`)
+      coordinates = this.parseWKTToCoordinates(bloc.coordinates_wkt || '')
+
+      if (coordinates.length === 0) {
+        console.error(`❌ Failed to parse coordinates for ${bloc.name}!`)
+        console.error(`   WKT: ${bloc.coordinates_wkt}`)
+        console.error(`   Pre-parsed: ${bloc.coordinates}`)
+      }
+    }
+
+    // Debug logging to trace coordinate issues
+    const isSquare = coordinates.length === 5 &&
+                     coordinates[0] && coordinates[1] && coordinates[2] && coordinates[3] &&
+                     Math.abs(coordinates[0][0] - coordinates[3][0]) < 0.001 &&
+                     Math.abs(coordinates[1][1] - coordinates[2][1]) < 0.001
+
+    console.log(`🔍 fromDatabaseBloc for ${bloc.name}:`, {
+      hasPreParsedCoords: !!bloc.coordinates,
+      preParsedCount: bloc.coordinates?.length || 0,
+      hasWKT: !!bloc.coordinates_wkt,
+      wktPreview: bloc.coordinates_wkt?.substring(0, 50) + '...',
+      finalCoordCount: coordinates.length,
+      firstCoord: coordinates[0],
+      lastCoord: coordinates[coordinates.length - 1],
+      isSquare,
+      allCoords: coordinates.slice(0, 5) // Show first 5 coordinates
+    })
+
+    if (isSquare) {
+      console.error(`❌ SQUARE DETECTED for ${bloc.name}! This should not happen with real CSV data.`)
+      console.error('   Bloc data:', bloc)
+      console.error('   All coordinates:', coordinates)
+    }
 
     return {
       localId: `bloc-${bloc.name?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'unknown'}`,

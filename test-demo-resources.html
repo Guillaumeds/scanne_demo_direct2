@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo Resources Analysis</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        .resource { background: #f5f5f5; padding: 5px; margin: 5px 0; }
+        button { padding: 10px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Demo Resources Analysis</h1>
+    
+    <button onclick="analyzeResources()">Analyze Resources</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results')
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : ''
+            resultsDiv.innerHTML += `<div class="${className}">${message}</div>`
+            console.log(message)
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+        }
+        
+        function analyzeResources() {
+            clearResults()
+            log('🔍 Analyzing demo resources and linkages...')
+
+            // First, let's find ALL localStorage keys
+            log('=== ALL LOCALSTORAGE KEYS ===')
+            const allKeys = Object.keys(localStorage)
+            log(`Total localStorage keys: ${allKeys.length}`)
+
+            if (allKeys.length === 0) {
+                log('❌ localStorage is completely empty!', 'error')
+                log('This means demo data has not been generated or stored.', 'warning')
+                return
+            }
+
+            // Show ALL keys to understand the storage structure
+            log('All keys:')
+            allKeys.forEach(key => {
+                const data = localStorage.getItem(key)
+                const size = data ? data.length : 0
+                log(`  - ${key} (${size} chars)`)
+            })
+
+            // Filter for potential demo keys
+            const demoKeys = allKeys.filter(key =>
+                key.toLowerCase().includes('demo') ||
+                key.toLowerCase().includes('scanne') ||
+                key.toLowerCase().includes('farm') ||
+                key.toLowerCase().includes('bloc') ||
+                key.toLowerCase().includes('operation') ||
+                key.toLowerCase().includes('crop') ||
+                key.toLowerCase().includes('work')
+            )
+
+            log(`\n=== POTENTIAL DEMO KEYS ===`)
+            log(`Found ${demoKeys.length} potential demo keys:`)
+            demoKeys.forEach(key => {
+                const data = localStorage.getItem(key)
+                const size = data ? data.length : 0
+                log(`  - ${key} (${size} chars)`)
+            })
+
+            // Try multiple possible field operations keys (based on DemoStorage prefix + STORAGE_KEYS)
+            const possibleKeys = [
+                'scanne_demo_field_operations',  // Correct key based on DemoStorage
+                'scanne_demo_fieldOperations',
+                'demo_fieldOperations',
+                'fieldOperations',
+                'farm_operations',
+                'operations'
+            ]
+
+            let fieldOperationsData = null
+            let usedKey = null
+
+            for (const key of possibleKeys) {
+                const data = localStorage.getItem(key)
+                if (data) {
+                    fieldOperationsData = data
+                    usedKey = key
+                    log(`✅ Found field operations data using key: ${key}`, 'success')
+                    break
+                }
+            }
+
+            if (!fieldOperationsData) {
+                log('❌ No field operations data found with any key', 'error')
+                log('Trying to find any key with "operation" in the name...')
+
+                const operationKeys = allKeys.filter(key => key.toLowerCase().includes('operation'))
+                if (operationKeys.length > 0) {
+                    log(`Found operation-related keys: ${operationKeys.join(', ')}`)
+                    // Try the first one
+                    fieldOperationsData = localStorage.getItem(operationKeys[0])
+                    usedKey = operationKeys[0]
+                    log(`Trying key: ${operationKeys[0]}`)
+                } else {
+                    return
+                }
+            }
+            
+            try {
+                log(`\n=== PARSING DATA FROM KEY: ${usedKey} ===`)
+                const parsed = JSON.parse(fieldOperationsData)
+                const fieldOperations = parsed.data || parsed
+
+                log(`Data structure: ${Object.keys(parsed).join(', ')}`)
+                log(`✅ Found ${fieldOperations.length} field operations`, 'success')
+                
+                // Analyze first few operations for resource linkages
+                let totalProducts = 0
+                let totalEquipment = 0
+                let totalLabour = 0
+                
+                fieldOperations.slice(0, 5).forEach((operation, index) => {
+                    log(`\n=== OPERATION ${index + 1}: ${operation.operation_type} ===`)
+                    log(`  Bloc: ${operation.bloc_name || 'Unknown'}`)
+                    log(`  Status: ${operation.status}`)
+                    log(`  Date: ${operation.planned_date}`)
+                    
+                    // Check products
+                    if (operation.products && operation.products.length > 0) {
+                        log(`  📦 Products (${operation.products.length}):`)
+                        operation.products.forEach(product => {
+                            log(`    - ${product.name}: ${product.planned_quantity} ${product.unit} (Rs ${product.planned_cost})`)
+                            totalProducts++
+                        })
+                    } else {
+                        log(`  📦 Products: None`)
+                    }
+                    
+                    // Check equipment
+                    if (operation.equipment && operation.equipment.length > 0) {
+                        log(`  🚜 Equipment (${operation.equipment.length}):`)
+                        operation.equipment.forEach(equipment => {
+                            log(`    - ${equipment.name}: ${equipment.planned_hours}h (Rs ${equipment.planned_cost})`)
+                            totalEquipment++
+                        })
+                    } else {
+                        log(`  🚜 Equipment: None`)
+                    }
+                    
+                    // Check labour
+                    if (operation.labour && operation.labour.length > 0) {
+                        log(`  👷 Labour (${operation.labour.length}):`)
+                        operation.labour.forEach(labour => {
+                            log(`    - ${labour.name}: ${labour.planned_hours}h @ Rs ${labour.rate_per_hour}/h`)
+                            totalLabour++
+                        })
+                    } else {
+                        log(`  👷 Labour: None`)
+                    }
+                })
+                
+                log(`\n=== RESOURCE SUMMARY ===`)
+                log(`📦 Total Product Entries: ${totalProducts}`, totalProducts > 0 ? 'success' : 'warning')
+                log(`🚜 Total Equipment Entries: ${totalEquipment}`, totalEquipment > 0 ? 'success' : 'warning')
+                log(`👷 Total Labour Entries: ${totalLabour}`, totalLabour > 0 ? 'success' : 'warning')
+                
+                // Check work packages
+                log(`\n=== WORK PACKAGES ===`)
+                const workPackagesData = localStorage.getItem('scanne_demo_work_packages')  // Correct key
+                if (workPackagesData) {
+                    const workPackagesParsed = JSON.parse(workPackagesData)
+                    const workPackages = workPackagesParsed.data || workPackagesParsed
+                    log(`✅ Found ${workPackages.length} work packages`, 'success')
+
+                    // Check first work package for resources
+                    if (workPackages.length > 0) {
+                        const wp = workPackages[0]
+                        log(`Sample Work Package: ${wp.operation_type}`)
+                        log(`  Products: ${wp.products?.length || 0}`)
+                        log(`  Equipment: ${wp.equipment?.length || 0}`)
+                        log(`  Labour: ${wp.labour?.length || 0}`)
+                    }
+                } else {
+                    log('❌ No work packages data found', 'error')
+                }
+
+                // Check master data (these are loaded separately, not stored with scanne_demo prefix)
+                log(`\n=== MASTER DATA ===`)
+                // Master data might be stored differently - let's check both ways
+                let productsData = localStorage.getItem('scanne_demo_products') || localStorage.getItem('products')
+                let labourData = localStorage.getItem('scanne_demo_labour') || localStorage.getItem('labour')
+                let equipmentData = localStorage.getItem('scanne_demo_equipment') || localStorage.getItem('equipment')
+                
+                if (productsData) {
+                    const products = JSON.parse(productsData)
+                    log(`✅ Master Products: ${(products.data || products).length}`, 'success')
+                } else {
+                    log('❌ No master products data', 'error')
+                }
+                
+                if (labourData) {
+                    const labour = JSON.parse(labourData)
+                    log(`✅ Master Labour: ${(labour.data || labour).length}`, 'success')
+                } else {
+                    log('❌ No master labour data', 'error')
+                }
+                
+                if (equipmentData) {
+                    const equipment = JSON.parse(equipmentData)
+                    log(`✅ Master Equipment: ${(equipment.data || equipment).length}`, 'success')
+                } else {
+                    log('❌ No master equipment data', 'error')
+                }
+                
+            } catch (error) {
+                log(`❌ Error analyzing resources: ${error.message}`, 'error')
+            }
+        }
+        
+        // Auto-analyze on load
+        analyzeResources()
+    </script>
+</body>
+</html>

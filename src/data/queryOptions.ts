@@ -266,8 +266,15 @@ export const legacyQueries = {
   farmGISInitial: () => queryOptions({
     queryKey: queryKeys.farmGIS.initial(),
     queryFn: async () => {
+      console.log('🔍 farmGISInitial query executing...')
       const { MockApiService } = await import('../services/mockApiService')
+      console.log('📦 MockApiService imported, calling getFarmGISInitialData...')
       const response = await MockApiService.getFarmGISInitialData()
+      console.log('✅ getFarmGISInitialData response:', {
+        success: response.success,
+        dataKeys: Object.keys(response.data),
+        blocsCount: response.data.blocs?.length || 0
+      })
       return response.data
     },
     staleTime: CACHE_TIMES.TRANSACTIONAL_STALE,

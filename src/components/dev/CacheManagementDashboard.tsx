@@ -225,6 +225,20 @@ export function CacheManagementDashboard() {
                         <Bug className="h-3 w-3 mr-1" />
                         Log Cache State
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          console.log('🔄 Force refreshing demo data...')
+                          localStorage.clear()
+                          const { MockApiService } = await import('@/services/mockApiService')
+                          await MockApiService.refreshWithNewData()
+                          window.location.reload()
+                        }}
+                        className="w-full text-xs justify-start text-red-600 hover:text-red-700"
+                      >
+                        🔄 Refresh Demo Data
+                      </Button>
                     </div>
                   </div>
                 )}

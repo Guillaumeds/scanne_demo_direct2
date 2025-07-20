@@ -4,6 +4,48 @@
  * Based on actual Mauritius sugarcane farming practices and data
  */
 
+
+
+/**
+ * Parse WKT coordinates to [lng, lat] array format
+ */
+function parseWKTToCoordinates(wkt: string): [number, number][] {
+  try {
+    const coordsMatch = wkt.match(/POLYGON\(\(([^)]+)\)\)/)
+    if (!coordsMatch) {
+      console.error('❌ WKT parsing failed - no POLYGON match:', wkt.substring(0, 50))
+      return []
+    }
+
+    const coordPairs = coordsMatch[1].split(',').map(pair => pair.trim())
+    const coordinates = coordPairs.map(pair => {
+      const [lng, lat] = pair.split(' ').map(Number)
+
+      // Validate Mauritius coordinates
+      if (isNaN(lng) || isNaN(lat)) {
+        console.error('❌ Invalid coordinate pair:', pair, '-> lng:', lng, 'lat:', lat)
+        return null
+      }
+
+      if (lng < 57 || lng > 58 || lat < -21 || lat > -19) {
+        console.error('❌ Coordinate outside Mauritius bounds:', pair, '-> lng:', lng, 'lat:', lat)
+        return null
+      }
+
+      return [lng, lat] as [number, number]
+    }).filter(coord => coord !== null) as [number, number][]
+
+    console.log(`✅ WKT parsed successfully: ${coordinates.length} coordinates from "${wkt.substring(0, 30)}..."`)
+    console.log(`   First coord: [${coordinates[0]?.[0]}, ${coordinates[0]?.[1]}]`)
+    console.log(`   Last coord: [${coordinates[coordinates.length-1]?.[0]}, ${coordinates[coordinates.length-1]?.[1]}]`)
+
+    return coordinates
+  } catch (error) {
+    console.error('❌ Error parsing WKT:', error, 'WKT:', wkt.substring(0, 50))
+    return []
+  }
+}
+
 // Mauritius sugarcane varieties with realistic data
 export const MAURITIUS_VARIETIES = [
   {
@@ -54,17 +96,28 @@ export const MAURITIUS_VARIETIES = [
 ]
 
 // Field polygons from CSV data (first 40 fields with realistic Mauritius coordinates)
-// Real field polygons from estate_fields.csv - all 40 different realistic irregular shapes
-export const FIELD_POLYGONS = [
+// Exact polygon coordinates from estate_fields.csv (first 40 rows)
+// Each bloc gets the exact same polygon as the corresponding CSV row
+export const CSV_FIELD_POLYGONS = [
+  // Row 1: FLD00022
   { id: 'field1', name: 'Bloc 5316', area: 57.59, wkt: 'POLYGON((57.652557 -20.437995, 57.652613 -20.437931, 57.653302 -20.438374, 57.653312 -20.438430, 57.650887 -20.441820, 57.650671 -20.441689, 57.650561 -20.441772, 57.650404 -20.441767, 57.650022 -20.441545, 57.652557 -20.437995))' },
+  // Row 2: FLD00023
   { id: 'field2', name: 'Bloc 5660', area: 17.34, wkt: 'POLYGON((57.643608 -20.427913, 57.643671 -20.427759, 57.646925 -20.425527, 57.648953 -20.424132, 57.649125 -20.424039, 57.649191 -20.424865, 57.649337 -20.425374, 57.649314 -20.425663, 57.648536 -20.426457, 57.648383 -20.426595, 57.648315 -20.426669, 57.648320 -20.426749, 57.648343 -20.426850, 57.648587 -20.427121, 57.647799 -20.427536, 57.647637 -20.427732, 57.647112 -20.428035, 57.646886 -20.428173, 57.646551 -20.428232, 57.646098 -20.428311, 57.645581 -20.428279, 57.645462 -20.428285, 57.644952 -20.427605, 57.644572 -20.427812, 57.644929 -20.428248, 57.643620 -20.428125, 57.643569 -20.428019, 57.643608 -20.427913))' },
+  // Row 3: FLD00024
   { id: 'field3', name: 'Bloc 5216', area: 20.17, wkt: 'POLYGON((57.628588 -20.486595, 57.628700 -20.486871, 57.629105 -20.486987, 57.629551 -20.487170, 57.629543 -20.486881, 57.629567 -20.486538, 57.629608 -20.486249, 57.629661 -20.485968, 57.629730 -20.485634, 57.629803 -20.485443, 57.629925 -20.485187, 57.629897 -20.485154, 57.629829 -20.485130, 57.629797 -20.485148, 57.629774 -20.485214, 57.629709 -20.485383, 57.629667 -20.485437, 57.629616 -20.485454, 57.629457 -20.485499, 57.629394 -20.485515, 57.629397 -20.485568, 57.629397 -20.485645, 57.629311 -20.485898, 57.629203 -20.486023, 57.628980 -20.486224, 57.628782 -20.486394, 57.628630 -20.486506, 57.628594 -20.486552, 57.628588 -20.486595))' },
+  // Row 4: FLD00025
   { id: 'field4', name: 'Bloc 5555', area: 14.42, wkt: 'POLYGON((57.629750 -20.488677, 57.629727 -20.488709, 57.629679 -20.488729, 57.628878 -20.488850, 57.628841 -20.488847, 57.628843 -20.488812, 57.628895 -20.488731, 57.628946 -20.488624, 57.628960 -20.488552, 57.628924 -20.488410, 57.628879 -20.488187, 57.628863 -20.488031, 57.628866 -20.487963, 57.628858 -20.487807, 57.628830 -20.487700, 57.628826 -20.487577, 57.628820 -20.487412, 57.628849 -20.487325, 57.628816 -20.487155, 57.628772 -20.487068, 57.628739 -20.486957, 57.628779 -20.486953, 57.629330 -20.487155, 57.629559 -20.487253, 57.629636 -20.487986, 57.629668 -20.488096, 57.629750 -20.488677))' },
+  // Row 5: FLD00026
   { id: 'field5', name: 'Bloc 5727', area: 7.02, wkt: 'POLYGON((57.629732 -20.488171, 57.629821 -20.488685, 57.629884 -20.488700, 57.629956 -20.488683, 57.629966 -20.488668, 57.629732 -20.488171))' },
+  // Row 6: FLD00027
   { id: 'field6', name: 'Bloc 5980', area: 6.32, wkt: 'POLYGON((57.628878 -20.488916, 57.628849 -20.488979, 57.628846 -20.489075, 57.628870 -20.489170, 57.628926 -20.489286, 57.629039 -20.489419, 57.629141 -20.489517, 57.629197 -20.489600, 57.629197 -20.489680, 57.629176 -20.489771, 57.629128 -20.489879, 57.629034 -20.490153, 57.629291 -20.490251, 57.629503 -20.490308, 57.629621 -20.490329, 57.629790 -20.490394, 57.629956 -20.490442, 57.629986 -20.490419, 57.629989 -20.490371, 57.629779 -20.488771, 57.628878 -20.488916))' },
+  // Row 7: FLD00028
   { id: 'field7', name: 'Bloc 5123', area: 12.45, wkt: 'POLYGON((57.636721 -20.480994, 57.636650 -20.480983, 57.636627 -20.481116, 57.636481 -20.481566, 57.636199 -20.482284, 57.636038 -20.482661, 57.635983 -20.482821, 57.636057 -20.482864, 57.636351 -20.482959, 57.636575 -20.483075, 57.636741 -20.483160, 57.636930 -20.483287, 57.636958 -20.483292, 57.637298 -20.482403, 57.637574 -20.481592, 57.637657 -20.481337, 57.637662 -20.481288, 57.637622 -20.481267, 57.637043 -20.481087, 57.636721 -20.480994))' },
+  // Row 8: FLD00029
   { id: 'field8', name: 'Bloc 5789', area: 23.67, wkt: 'POLYGON((57.635734 -20.480744, 57.635669 -20.480782, 57.635086 -20.482512, 57.635107 -20.482563, 57.635187 -20.482590, 57.635655 -20.482705, 57.635908 -20.482803, 57.636528 -20.481251, 57.636569 -20.481065, 57.636569 -20.480983, 57.635734 -20.480744))' },
+  // Row 9: FLD00030
   { id: 'field9', name: 'Bloc 5432', area: 18.90, wkt: 'POLYGON((57.634614 -20.480346, 57.634562 -20.480364, 57.634020 -20.482487, 57.634028 -20.482518, 57.634981 -20.482575, 57.635016 -20.482555, 57.635600 -20.480774, 57.635589 -20.480705, 57.634614 -20.480346))' },
+  // Row 10: FLD00031
   { id: 'field10', name: 'Bloc 5876', area: 31.25, wkt: 'POLYGON((57.632968 -20.482281, 57.633953 -20.482509, 57.634508 -20.480316, 57.633730 -20.480052, 57.633690 -20.480060, 57.632964 -20.482235, 57.632968 -20.482281))' },
   { id: 'field11', name: 'Bloc 5234', area: 15.78, wkt: 'POLYGON((57.636964 -20.483391, 57.636921 -20.483480, 57.636935 -20.483595, 57.637153 -20.484668, 57.637433 -20.486286, 57.637467 -20.486373, 57.637574 -20.486362, 57.637996 -20.486281, 57.638306 -20.486259, 57.638480 -20.486261, 57.639866 -20.486064, 57.639893 -20.486040, 57.639876 -20.486007, 57.639420 -20.485606, 57.639264 -20.485439, 57.639184 -20.485364, 57.638837 -20.485138, 57.638539 -20.484973, 57.638337 -20.484845, 57.638154 -20.484704, 57.637996 -20.484503, 57.637791 -20.484238, 57.637636 -20.484016, 57.637534 -20.483879, 57.637421 -20.483756, 57.637201 -20.483567, 57.636992 -20.483405, 57.636964 -20.483391))' },
   { id: 'field12', name: 'Bloc 5567', area: 28.43, wkt: 'POLYGON((57.633946 -20.484767, 57.633639 -20.482776, 57.633626 -20.482629, 57.633973 -20.482572, 57.634340 -20.482596, 57.634688 -20.482620, 57.635038 -20.482641, 57.635399 -20.482705, 57.635743 -20.482807, 57.636080 -20.482925, 57.636270 -20.482998, 57.636510 -20.483135, 57.636788 -20.483287, 57.636854 -20.483340, 57.636863 -20.483447, 57.637017 -20.484268, 57.637019 -20.484293, 57.636887 -20.484317, 57.635881 -20.484471, 57.633946 -20.484767))' },
@@ -459,22 +512,59 @@ export function generateCompleteMauritiusDemoData() {
   const workPackages: any[] = []
 
   // Generate 40 blocs with complete data
-  FIELD_POLYGONS.forEach((field, index) => {
+  CSV_FIELD_POLYGONS.forEach((field, index) => {
     const blocId = `550e8400-e29b-41d4-a716-44665544${String(index + 10).padStart(4, '0')}`
     const farmId = index < 20 ? farms[0].id : farms[1].id
     const variety = MAURITIUS_VARIETIES[index % MAURITIUS_VARIETIES.length]
 
-    // Create bloc
-    blocs.push({
+    // Create bloc with exact polygon coordinates from CSV
+    // 1st bloc gets CSV row 1 polygon, 2nd bloc gets CSV row 2 polygon, etc.
+    const parsedCoordinates = parseWKTToCoordinates(field.wkt)
+
+    console.log(`🔍 Creating bloc ${field.name}:`)
+    console.log(`   WKT: ${field.wkt.substring(0, 80)}...`)
+    console.log(`   Parsed coordinates count: ${parsedCoordinates.length}`)
+    console.log(`   First coordinate: [${parsedCoordinates[0]?.[0]}, ${parsedCoordinates[0]?.[1]}]`)
+
+    // Validate coordinates
+    if (parsedCoordinates.length === 0) {
+      console.error(`❌ CRITICAL: No coordinates parsed for ${field.name}!`)
+      console.error(`   WKT: ${field.wkt}`)
+    } else {
+      const isSquare = parsedCoordinates.length === 5 &&
+                       parsedCoordinates[0] && parsedCoordinates[1] && parsedCoordinates[2] && parsedCoordinates[3] &&
+                       Math.abs(parsedCoordinates[0][0] - parsedCoordinates[3][0]) < 0.001 &&
+                       Math.abs(parsedCoordinates[1][1] - parsedCoordinates[2][1]) < 0.001
+
+      console.log(`   Is square: ${isSquare}`)
+
+      if (isSquare) {
+        console.error(`❌ CRITICAL: ${field.name} parsed as square! This should not happen with real CSV data.`)
+      } else {
+        console.log(`   ✅ ${field.name} parsed as irregular polygon (correct)`)
+      }
+    }
+
+    const bloc = {
       id: blocId,
-      name: field.name,
+      name: field.name, // Bloc name (e.g., "Bloc 5316")
       area_hectares: field.area,
-      coordinates_wkt: field.wkt,
+      coordinates_wkt: field.wkt, // Exact WKT from CSV
+      coordinates: parsedCoordinates, // Pre-parsed coordinates for performance
       status: 'active',
       farm_id: farmId,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z'
-    })
+    }
+
+    // Validate bloc object before adding
+    if (!bloc.coordinates || bloc.coordinates.length === 0) {
+      console.error(`❌ CRITICAL: Bloc ${field.name} has no coordinates!`, bloc)
+    } else {
+      console.log(`   ✅ Bloc ${field.name} created successfully with ${bloc.coordinates.length} coordinates`)
+    }
+
+    blocs.push(bloc)
 
     // Generate crop cycles (current + historical)
     const currentCycleType = Math.random() > 0.3 ? 'ratoon' : 'plantation'
@@ -535,4 +625,25 @@ export function generateCompleteMauritiusDemoData() {
     intercropVarieties: [],
     lastUpdated: new Date().toISOString()
   }
+}
+
+/**
+ * Force regenerate all demo data and clear cache
+ * Use this when field polygon data has been updated
+ */
+export function forceRegenerateData() {
+  // Clear all cached data
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('mauritius-demo-farms')
+    localStorage.removeItem('mauritius-demo-blocs')
+    localStorage.removeItem('mauritius-demo-crop-cycles')
+    localStorage.removeItem('mauritius-demo-field-operations')
+    localStorage.removeItem('mauritius-demo-work-packages')
+    localStorage.removeItem('demo-data-timestamp')
+
+    console.log('🔄 Cleared all cached demo data - will regenerate with new field polygons')
+  }
+
+  // Generate fresh data
+  return generateCompleteMauritiusDemoData()
 }
