@@ -333,7 +333,7 @@ main {
   pointer-events: none !important; /* Make labels non-clickable */
 }
 
-/* Field label text styling - responsive and clean */
+/* Field label text styling - responsive and properly centered */
 .leaflet-marker-icon,
 .leaflet-marker-icon > div,
 .leaflet-marker-icon > span {
@@ -348,6 +348,14 @@ main {
   white-space: nowrap !important;
   text-align: center !important;
   font-family: system-ui, -apple-system, sans-serif !important;
+
+  /* Center the text properly - both horizontally and vertically */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  /* Transform to center the element at its anchor point */
+  transform: translate(-50%, -50%) !important;
 }
 
 /* Specific targeting for field labels with white backgrounds */

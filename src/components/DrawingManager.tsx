@@ -306,6 +306,8 @@ export default function DrawingManager({
     // Find all field labels (Leaflet marker icons)
     const fieldLabels = mapContainer.querySelectorAll('.leaflet-marker-icon')
 
+
+
     fieldLabels.forEach((label: Element) => {
       const labelElement = label as HTMLElement
 
@@ -328,8 +330,6 @@ export default function DrawingManager({
         childElement.style.boxShadow = 'none'
       })
     })
-
-    console.log(`📏 Updated ${fieldLabels.length} field label sizes for zoom level ${currentZoom}`)
   }
 
   // MOVED: Tool activation useEffect moved after event handlers to fix hoisting
@@ -1430,6 +1430,45 @@ export default function DrawingManager({
     }
   }
 
+  // Helper function to estimate text dimensions
+  const estimateTextDimensions = (text: string, fontSize: number): { width: number, height: number } => {
+    // More accurate estimation: each character is about 0.5-0.7 * fontSize wide depending on font
+    // Height is fontSize * number of lines * line-height
+    const lines = text.split('<br/>').length
+    const longestLine = text.split('<br/>').reduce((longest, line) => {
+      const cleanLine = line.replace(/<[^>]*>/g, '') // Remove HTML tags
+      return cleanLine.length > longest.length ? cleanLine : longest
+    }, '')
+
+    // Use more conservative estimates - Arial/sans-serif is typically 0.5-0.6 * fontSize per character
+    return {
+      width: longestLine.length * fontSize * 0.5, // More conservative width estimate
+      height: lines * fontSize * 1.1 // Slightly tighter line height
+    }
+  }
+
+  // Helper function to check if text fits within polygon bounds
+  const doesTextFitInPolygon = (polygon: L.Polygon, textWidth: number, textHeight: number): boolean => {
+    const bounds = polygon.getBounds()
+    const currentZoom = map!.getZoom()
+
+    // Convert polygon bounds to pixel dimensions on screen
+    const southWest = map!.latLngToContainerPoint(bounds.getSouthWest())
+    const northEast = map!.latLngToContainerPoint(bounds.getNorthEast())
+    const boundsWidthPixels = Math.abs(northEast.x - southWest.x)
+    const boundsHeightPixels = Math.abs(southWest.y - northEast.y)
+
+    // Be more permissive - allow text if it fits within 90% of polygon bounds
+    // and ensure minimum reasonable size thresholds
+    const minWidth = 60  // Minimum 60px width to show any label
+    const minHeight = 20 // Minimum 20px height to show any label
+
+    const fitsWidth = textWidth < boundsWidthPixels * 0.9 && boundsWidthPixels >= minWidth
+    const fitsHeight = textHeight < boundsHeightPixels * 0.9 && boundsHeightPixels >= minHeight
+
+    return fitsWidth && fitsHeight
+  }
+
   // Function to update polygon label with current dimensions
   const updatePolygonLabel = (polygon: L.Polygon, latlngs: L.LatLng[]) => {
     if (!map) return
@@ -1449,6 +1488,25 @@ export default function DrawingManager({
     const shapeWidthInPixels = map.distance(bounds.getSouthWest(), bounds.getSouthEast()) * Math.pow(2, currentZoom - 10) / 100
     const maxFontSize = Math.max(8, Math.min(14, shapeWidthInPixels / 15))
 
+    // Create label text
+    const labelText = `${dimensions.area.toFixed(2)} ha<br/>${dimensions.width}m × ${dimensions.length}m`
+
+    // Check if text fits within polygon
+    const textDimensions = estimateTextDimensions(labelText, maxFontSize)
+
+    // Check if text fits within polygon
+    const isSmallText = maxFontSize <= 10 || textDimensions.width <= 80
+    const fitsInPolygon = doesTextFitInPolygon(polygon, textDimensions.width, textDimensions.height)
+
+    if (!isSmallText && !fitsInPolygon) {
+      // Text doesn't fit, don't show the label
+      return
+    }
+
+    // Ensure minimum dimensions and avoid zero/negative values
+    const safeWidth = Math.max(textDimensions.width, 20)
+    const safeHeight = Math.max(textDimensions.height, 16)
+
     const updatedLabel = L.divIcon({
       html: `<div style="
         font-family: Arial, sans-serif;
@@ -1460,17 +1518,15 @@ export default function DrawingManager({
         pointer-events: none;
         white-space: nowrap;
         line-height: 1.2;
-        position: absolute;
-        transform: translate(-50%, -50%);
-        top: 0;
-        left: 0;
-        max-width: ${shapeWidthInPixels * 0.9}px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      ">${dimensions.area.toFixed(2)} ha<br/>${dimensions.width}m × ${dimensions.length}m</div>`,
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: ${safeWidth}px;
+        height: ${safeHeight}px;
+      ">${labelText}</div>`,
       className: 'area-label',
-      iconSize: [1, 1],
-      iconAnchor: [0, 0]
+      iconSize: [safeWidth, safeHeight],
+      iconAnchor: [safeWidth / 2, safeHeight / 2]
     })
 
     const labelMarker = L.marker(center, { icon: updatedLabel })
@@ -1590,36 +1646,53 @@ export default function DrawingManager({
     const shapeWidthInPixels = map.distance(bounds.getSouthWest(), bounds.getSouthEast()) * Math.pow(2, currentZoom - 10) / 100
     const maxFontSize = Math.max(8, Math.min(14, shapeWidthInPixels / 15))
 
-    const areaLabel = L.divIcon({
-      html: `<div style="
-        font-family: Arial, sans-serif;
-        font-size: ${maxFontSize}px;
-        font-weight: bold;
-        color: #000000;
-        text-align: center;
-        text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8), 1px -1px 2px rgba(255,255,255,0.8), -1px 1px 2px rgba(255,255,255,0.8);
-        pointer-events: none;
-        white-space: nowrap;
-        line-height: 1.2;
-        position: absolute;
-        transform: translate(-50%, -50%);
-        top: 0;
-        left: 0;
-        max-width: ${shapeWidthInPixels * 0.9}px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      ">${dimensions.area.toFixed(2)} ha<br/>${dimensions.width}m × ${dimensions.length}m</div>`,
-      className: 'area-label',
-      iconSize: [1, 1],
-      iconAnchor: [0, 0]
-    })
+    // Create label text
+    const labelText = `${dimensions.area.toFixed(2)} ha<br/>${dimensions.width}m × ${dimensions.length}m`
 
-    const labelMarker = L.marker(center, { icon: areaLabel })
-    if (map) {
-      labelMarker.addTo(map)
-      // Store label reference on polygon for cleanup and updates
-      ;(finalPolygon as any)._areaLabel = labelMarker
+    // Check if text fits within polygon
+    const textDimensions = estimateTextDimensions(labelText, maxFontSize)
+
+    // Check if text fits within polygon
+    const isSmallText = maxFontSize <= 10 || textDimensions.width <= 80
+
+    if (!isSmallText && !doesTextFitInPolygon(finalPolygon, textDimensions.width, textDimensions.height)) {
+      // Text doesn't fit, don't show the label
+      ;(finalPolygon as any)._areaLabel = null
       ;(finalPolygon as any)._cropCycleId = currentCropCycleId
+    } else {
+      // Ensure minimum dimensions and avoid zero/negative values
+      const safeWidth = Math.max(textDimensions.width, 20)
+      const safeHeight = Math.max(textDimensions.height, 16)
+
+    const areaLabel = L.divIcon({
+        html: `<div style="
+          font-family: Arial, sans-serif;
+          font-size: ${maxFontSize}px;
+          font-weight: bold;
+          color: #000000;
+          text-align: center;
+          text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8), 1px -1px 2px rgba(255,255,255,0.8), -1px 1px 2px rgba(255,255,255,0.8);
+          pointer-events: none;
+          white-space: nowrap;
+          line-height: 1.2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: ${safeWidth}px;
+          height: ${safeHeight}px;
+        ">${labelText}</div>`,
+        className: 'area-label',
+        iconSize: [safeWidth, safeHeight],
+        iconAnchor: [safeWidth / 2, safeHeight / 2]
+      })
+
+      const labelMarker = L.marker(center, { icon: areaLabel })
+      if (map) {
+        labelMarker.addTo(map)
+        // Store label reference on polygon for cleanup and updates
+        ;(finalPolygon as any)._areaLabel = labelMarker
+        ;(finalPolygon as any)._cropCycleId = currentCropCycleId
+      }
     }
 
     onAreaDrawn(drawnArea)
