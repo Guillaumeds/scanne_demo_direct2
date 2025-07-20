@@ -252,9 +252,17 @@ export default function DrawingManager({
       makeFieldPolygonsNonInteractive()
     }, 5000) // Check every 5 seconds
 
+    // Add zoom event listener to update field label sizes
+    const handleZoomEnd = () => {
+      updateFieldLabelSizes()
+    }
+
+    map.on('zoomend', handleZoomEnd)
+
     return () => {
       if (map) {
         map.removeLayer(drawnLayers)
+        map.off('zoomend', handleZoomEnd)
       }
       clearInterval(fieldPolygonInterval)
     }
@@ -282,7 +290,46 @@ export default function DrawingManager({
       svgElement.setAttribute('stroke-opacity', '1')
     })
 
+    // Update field label sizes based on zoom level
+    updateFieldLabelSizes()
+
     console.log(`🏞️ Made ${fieldPolygons.length} field polygons non-interactive`)
+  }
+
+  // Function to update field label sizes based on zoom level and polygon size
+  const updateFieldLabelSizes = () => {
+    if (!map) return
+
+    const currentZoom = map.getZoom()
+    const mapContainer = map.getContainer()
+
+    // Find all field labels (Leaflet marker icons)
+    const fieldLabels = mapContainer.querySelectorAll('.leaflet-marker-icon')
+
+    fieldLabels.forEach((label: Element) => {
+      const labelElement = label as HTMLElement
+
+      // Calculate responsive font size based on zoom level
+      // Base font size scales with zoom: 8px at zoom 10, up to 16px at zoom 18
+      const baseFontSize = Math.max(6, Math.min(18, (currentZoom - 8) * 1.5 + 8))
+
+      // Apply the calculated font size
+      labelElement.style.fontSize = `${baseFontSize}px`
+
+      // Also apply to child elements
+      const childElements = labelElement.querySelectorAll('div, span')
+      childElements.forEach((child: Element) => {
+        const childElement = child as HTMLElement
+        childElement.style.fontSize = `${baseFontSize}px`
+        // Remove any white backgrounds from child elements
+        childElement.style.background = 'transparent'
+        childElement.style.backgroundColor = 'transparent'
+        childElement.style.border = 'none'
+        childElement.style.boxShadow = 'none'
+      })
+    })
+
+    console.log(`📏 Updated ${fieldLabels.length} field label sizes for zoom level ${currentZoom}`)
   }
 
   // MOVED: Tool activation useEffect moved after event handlers to fix hoisting

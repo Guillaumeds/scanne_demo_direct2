@@ -325,25 +325,16 @@ main {
   stroke-opacity: 1 !important;
 }
 
-/* Field labels - remove white backgrounds and make text fill polygon area */
-.leaflet-marker-icon[style*="background"] {
+/* Field labels - remove ALL backgrounds and styling */
+.leaflet-marker-icon {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-}
-
-/* Field label text styling */
-.leaflet-marker-icon {
-  color: #333 !important;
-  font-weight: bold !important;
-  font-size: 12px !important;
-  text-shadow: 1px 1px 2px rgba(255,255,255,0.8) !important;
-  white-space: nowrap !important;
-  text-align: center !important;
   pointer-events: none !important; /* Make labels non-clickable */
 }
 
-/* Hide white block backgrounds on field labels */
+/* Field label text styling - responsive and clean */
+.leaflet-marker-icon,
 .leaflet-marker-icon > div,
 .leaflet-marker-icon > span {
   background: transparent !important;
@@ -351,6 +342,37 @@ main {
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
+  color: #1e293b !important; /* Slate-800 for good contrast */
+  font-weight: bold !important;
+  text-shadow: 1px 1px 3px rgba(255,255,255,0.9), -1px -1px 3px rgba(255,255,255,0.9) !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
+}
+
+/* Specific targeting for field labels with white backgrounds */
+.leaflet-marker-icon[style*="background-color"],
+.leaflet-marker-icon[style*="background:"],
+.leaflet-marker-icon div[style*="background"],
+.leaflet-marker-icon span[style*="background"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Aggressive removal of any white backgrounds on field labels */
+.leaflet-marker-pane .leaflet-marker-icon,
+.leaflet-marker-pane .leaflet-marker-icon *,
+.leaflet-marker-pane div,
+.leaflet-marker-pane span {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure field labels are always visible and properly styled */
+.leaflet-marker-pane .leaflet-marker-icon {
+  z-index: 1000 !important;
 }
 
 /* Basic mobile improvements */
