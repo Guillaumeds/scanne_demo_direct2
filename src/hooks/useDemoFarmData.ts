@@ -194,3 +194,29 @@ export function useDemoInterCropVarieties() {
     gcTime: 60 * 60 * 1000, // 1 hour
   })
 }
+
+/**
+ * Delete bloc mutation for demo mode
+ */
+export function useDemoDeleteBloc() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (blocId: string) => DemoApiService.deleteBloc(blocId),
+    onSuccess: (_, blocId) => {
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: demoQueryKeys.farmGIS.all })
+      queryClient.invalidateQueries({ queryKey: demoQueryKeys.farmGIS.bloc(blocId) })
+      queryClient.invalidateQueries({ queryKey: demoQueryKeys.cropCycles.byBloc(blocId) })
+      queryClient.invalidateQueries({ queryKey: demoQueryKeys.fieldOperations.all })
+      queryClient.invalidateQueries({ queryKey: demoQueryKeys.workPackages.all })
+
+      // Clear specific bloc data from cache
+      queryClient.removeQueries({ queryKey: demoQueryKeys.farmGIS.bloc(blocId) })
+      queryClient.removeQueries({ queryKey: demoQueryKeys.cropCycles.byBloc(blocId) })
+    },
+    onError: (error) => {
+      console.error('Failed to delete bloc:', error)
+    },
+  })
+}

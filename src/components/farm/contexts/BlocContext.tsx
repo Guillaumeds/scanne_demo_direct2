@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { DrawnArea } from '@/types/drawnArea'
 import { useBlocData, useCropCycles, useFieldOperations, useWorkPackages } from '@/hooks/useBlocData'
+import { useDemoDeleteBloc } from '@/hooks/useDemoFarmData'
 import { BlocData } from '@/services/blocDataService'
 
 type BlocScreen = 'information' | 'operations' | 'crop-cycle-management' | 'operation-form' | 'work-package-form'
@@ -64,6 +65,30 @@ export function BlocProvider({ bloc, onBack, onDelete, children }: BlocProviderP
   const fieldOperations = useFieldOperations(bloc.uuid!)
   const workPackages = useWorkPackages(bloc.uuid!)
 
+  // Demo delete functionality
+  const deleteBlocMutation = useDemoDeleteBloc()
+
+  // Enhanced delete handler that combines demo data cleanup with parent callback
+  const handleDelete = async () => {
+    if (!bloc.uuid) return
+
+    try {
+      // First, delete all demo data related to this bloc
+      await deleteBlocMutation.mutateAsync(bloc.uuid)
+
+      // Then call the parent's delete handler (which handles the main app state)
+      if (onDelete) {
+        onDelete()
+      }
+    } catch (error) {
+      console.error('Failed to delete bloc:', error)
+      // Still call parent delete even if demo data cleanup fails
+      if (onDelete) {
+        onDelete()
+      }
+    }
+  }
+
   // Generate breadcrumbs based on current screen
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const base = [
@@ -113,7 +138,7 @@ export function BlocProvider({ bloc, onBack, onDelete, children }: BlocProviderP
     currentWorkPackageId,
     setCurrentWorkPackageId,
     onBack,
-    onDelete,
+    onDelete: handleDelete, // Use enhanced delete handler
     farmName,
     breadcrumbs: generateBreadcrumbs(),
     // Comprehensive bloc data

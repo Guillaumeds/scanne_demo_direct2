@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, Filter, Download } from 'lucide-react'
+import { Search, Filter, Download, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
 import { ViewSwitcher } from './ViewSwitcher'
 import { PerspectiveSwitcher } from './PerspectiveSwitcher'
 import { OperationsTable } from './OperationsTable'
@@ -18,7 +19,7 @@ type ViewMode = 'table' | 'cards' | 'rows'
 type Perspective = 'operations' | 'resources' | 'financial'
 
 export function OperationsScreen() {
-  const { bloc, fieldOperations, workPackages, isLoadingBlocData } = useBlocContext()
+  const { bloc, fieldOperations, workPackages, isLoadingBlocData, setCurrentScreen } = useBlocContext()
   const [viewMode, setViewMode] = useState<ViewMode>('rows')
   const [perspective, setPerspective] = useState<Perspective>('operations')
   const [searchQuery, setSearchQuery] = useState('')
@@ -90,6 +91,49 @@ export function OperationsScreen() {
   }, [fieldOperations.data, workPackages.data, bloc.area])
 
   const renderView = () => {
+    // Show empty state if no operations exist
+    if (!operationsData || operationsData.length === 0) {
+      return (
+        <div className="h-full flex items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-center max-w-md"
+          >
+            <Card className="p-8 border-dashed border-2 border-muted-foreground/20">
+              <CardContent className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    No Field Operations Yet
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    No field operations exist for this bloc yet. Start creating field operations and daily work packages to manage your agricultural activities.
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="pt-2"
+                >
+                  <Button
+                    onClick={() => setCurrentScreen('operation-form')}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Field Operation
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      )
+    }
+
     const commonProps = {
       data: operationsData,
       perspective,
@@ -236,6 +280,21 @@ export function OperationsScreen() {
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Export
+              </Button>
+            </motion.div>
+
+            {/* Add Field Operation Button */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                size="sm"
+                onClick={() => setCurrentScreen('operation-form')}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Field Operation
               </Button>
             </motion.div>
           </motion.div>

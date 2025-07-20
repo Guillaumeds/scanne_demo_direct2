@@ -324,4 +324,34 @@ export class DemoApiService {
       throw new Error('Invalid JSON data for import')
     }
   }
+
+  /**
+   * Delete bloc and all related data (demo mode)
+   */
+  static async deleteBloc(blocId: string): Promise<void> {
+    // In demo mode, we don't actually delete blocs from localStorage
+    // since they're managed by the main app state
+    // Instead, we just clear all related data (crop cycles, operations, work packages)
+
+    const demoData = DemoDataService.getDemoData()
+
+    // Filter out all data related to this bloc
+    const filteredCropCycles = demoData.cropCycles.filter(c => c.bloc_id !== blocId)
+    const filteredFieldOperations = demoData.fieldOperations.filter(op => op.bloc_id !== blocId)
+    const filteredWorkPackages = demoData.workPackages.filter(wp => {
+      // Find the field operation this work package belongs to
+      const relatedOperation = demoData.fieldOperations.find(op => op.uuid === wp.field_operation_uuid)
+      return !relatedOperation || relatedOperation.bloc_id !== blocId
+    })
+
+    // Update demo data
+    DemoDataService.updateDemoData({
+      ...demoData,
+      cropCycles: filteredCropCycles,
+      fieldOperations: filteredFieldOperations,
+      workPackages: filteredWorkPackages
+    })
+
+    // No delay for demo performance
+  }
 }
