@@ -46,6 +46,7 @@ export type MonthlyClimateData = {
 /**
  * Generate realistic mock climatic data for Mauritius
  * Based on actual climate patterns for sugarcane farming in Mauritius
+ * Optimized for 12-month crop cycle demonstration
  */
 function generateMockClimateData(startDate: string, endDate: string): any[] {
   const start = new Date(startDate)
@@ -61,42 +62,83 @@ function generateMockClimateData(startDate: string, endDate: string): any[] {
 
     // Mauritius climate patterns (Southern Hemisphere)
     const month = currentDate.getMonth() + 1
-    
-    // Mauritius seasons: Summer (Nov-Apr), Winter (May-Oct)
-    // Peak summer: Dec-Feb, Peak winter: Jun-Aug
-    const isSummer = month >= 11 || month <= 4
-    const isWinter = month >= 5 && month <= 10
-    
-    // Temperature patterns for Mauritius coastal/lowland areas
+    const dayOfYear = Math.floor((currentDate.getTime() - new Date(currentDate.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
+
+    // More detailed seasonal patterns for Mauritius sugarcane farming
     let tempMin, tempMax, solarRadiation, precipitation, evapotranspiration
-    
-    if (isSummer) {
-      // Summer: Hot and humid with cyclone season (Nov-Apr)
-      tempMin = 22 + Math.random() * 4 // 22-26°C
-      tempMax = 29 + Math.random() * 4 // 29-33°C
-      solarRadiation = 20 + Math.random() * 8 // 20-28 MJ/m²
-      evapotranspiration = 5 + Math.random() * 3 // 5-8 mm
-      
-      // Higher precipitation in summer, with occasional heavy rainfall
-      if (Math.random() < 0.4) {
-        precipitation = Math.random() < 0.1 ? 20 + Math.random() * 80 : Math.random() * 25 // Occasional heavy rain
-      } else {
-        precipitation = 0
-      }
-    } else {
-      // Winter: Cooler and drier (May-Oct)
-      tempMin = 17 + Math.random() * 4 // 17-21°C
-      tempMax = 24 + Math.random() * 4 // 24-28°C
-      solarRadiation = 12 + Math.random() * 6 // 12-18 MJ/m²
-      evapotranspiration = 2 + Math.random() * 2 // 2-4 mm
-      
-      // Lower precipitation in winter
-      if (Math.random() < 0.2) {
-        precipitation = Math.random() * 15 // Light rainfall
-      } else {
-        precipitation = 0
-      }
+
+    // Monthly climate patterns for Mauritius
+    switch (month) {
+      case 12: case 1: case 2: // Peak summer - hot, humid, cyclone season
+        tempMin = 23 + Math.random() * 3 // 23-26°C
+        tempMax = 30 + Math.random() * 4 // 30-34°C
+        solarRadiation = 22 + Math.random() * 6 // 22-28 MJ/m²
+        evapotranspiration = 6 + Math.random() * 2 // 6-8 mm
+        // Heavy rainfall with cyclone risk
+        precipitation = Math.random() < 0.45 ? (Math.random() < 0.15 ? 30 + Math.random() * 70 : Math.random() * 30) : 0
+        break
+
+      case 3: case 4: // Late summer - still warm, decreasing rainfall
+        tempMin = 22 + Math.random() * 3 // 22-25°C
+        tempMax = 28 + Math.random() * 3 // 28-31°C
+        solarRadiation = 18 + Math.random() * 6 // 18-24 MJ/m²
+        evapotranspiration = 5 + Math.random() * 2 // 5-7 mm
+        precipitation = Math.random() < 0.35 ? Math.random() * 25 : 0
+        break
+
+      case 5: case 6: // Early winter - cooling down, dry season begins
+        tempMin = 19 + Math.random() * 3 // 19-22°C
+        tempMax = 25 + Math.random() * 3 // 25-28°C
+        solarRadiation = 14 + Math.random() * 4 // 14-18 MJ/m²
+        evapotranspiration = 3 + Math.random() * 2 // 3-5 mm
+        precipitation = Math.random() < 0.25 ? Math.random() * 15 : 0
+        break
+
+      case 7: case 8: // Peak winter - coolest, driest period
+        tempMin = 17 + Math.random() * 3 // 17-20°C
+        tempMax = 23 + Math.random() * 3 // 23-26°C
+        solarRadiation = 12 + Math.random() * 4 // 12-16 MJ/m²
+        evapotranspiration = 2 + Math.random() * 2 // 2-4 mm
+        precipitation = Math.random() < 0.15 ? Math.random() * 10 : 0
+        break
+
+      case 9: case 10: // Late winter/early spring - warming up
+        tempMin = 18 + Math.random() * 3 // 18-21°C
+        tempMax = 25 + Math.random() * 3 // 25-28°C
+        solarRadiation = 16 + Math.random() * 5 // 16-21 MJ/m²
+        evapotranspiration = 4 + Math.random() * 2 // 4-6 mm
+        precipitation = Math.random() < 0.20 ? Math.random() * 12 : 0
+        break
+
+      case 11: // Early summer - warming up, rainfall increasing
+        tempMin = 21 + Math.random() * 3 // 21-24°C
+        tempMax = 28 + Math.random() * 3 // 28-31°C
+        solarRadiation = 20 + Math.random() * 5 // 20-25 MJ/m²
+        evapotranspiration = 5 + Math.random() * 2 // 5-7 mm
+        precipitation = Math.random() < 0.30 ? Math.random() * 20 : 0
+        break
+
+      default:
+        tempMin = 20 + Math.random() * 4
+        tempMax = 27 + Math.random() * 4
+        solarRadiation = 18 + Math.random() * 6
+        evapotranspiration = 4 + Math.random() * 2
+        precipitation = Math.random() < 0.30 ? Math.random() * 20 : 0
     }
+
+    // Round values for realistic display
+    const roundedTempMin = Math.round(tempMin * 10) / 10
+    const roundedTempMax = Math.round(tempMax * 10) / 10
+    const roundedSolarRadiation = Math.round(solarRadiation * 10) / 10
+    const roundedPrecipitation = Math.round(precipitation * 10) / 10
+    const roundedEvapotranspiration = Math.round(evapotranspiration * 10) / 10
+
+    // Seasonal wind patterns (trade winds stronger in winter)
+    const windSpeed = month >= 5 && month <= 10 ? 3 + Math.random() * 4 : 2 + Math.random() * 3
+
+    // Humidity patterns (higher in summer)
+    const isSummer = month >= 11 || month <= 4
+    const vaporPressure = isSummer ? 1800 + Math.random() * 400 : 1400 + Math.random() * 300
 
     data.push({
       station_id: 'mauritius-demo-station',
@@ -104,13 +146,13 @@ function generateMockClimateData(startDate: string, endDate: string): any[] {
       observation_year: currentDate.getFullYear(),
       observation_month: month,
       observation_day: currentDate.getDate(),
-      temperature_min_celsius: tempMin,
-      temperature_max_celsius: tempMax,
-      solar_radiation_mj_per_m2: solarRadiation,
-      evapotranspiration_mm: evapotranspiration,
-      precipitation_mm: precipitation,
-      wind_speed_m_per_s: 2 + Math.random() * 4, // Trade winds 2-6 m/s
-      vapor_pressure_hpa: isSummer ? 1800 + Math.random() * 400 : 1400 + Math.random() * 300,
+      temperature_min_celsius: roundedTempMin,
+      temperature_max_celsius: roundedTempMax,
+      solar_radiation_mj_per_m2: roundedSolarRadiation,
+      evapotranspiration_mm: roundedEvapotranspiration,
+      precipitation_mm: roundedPrecipitation,
+      wind_speed_m_per_s: Math.round(windSpeed * 10) / 10,
+      vapor_pressure_hpa: Math.round(vaporPressure),
       co2_concentration_ppm: 415 + Math.random() * 5, // Current atmospheric levels
     })
 
