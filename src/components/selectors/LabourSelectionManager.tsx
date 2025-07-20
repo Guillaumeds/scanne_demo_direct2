@@ -46,7 +46,9 @@ export default function LabourSelectionManager({
       const initialLabourTable: LabourTableEntry[] = allLabour.map(labour => ({
         labour: {
           ...labour,
-          description: labour.description || null
+          description: labour.description || null,
+          created_at: labour.created_at || '',
+          updated_at: labour.updated_at || ''
         },
         estimatedHours: 0,
         ratePerHour: labour.cost_per_unit || 0,

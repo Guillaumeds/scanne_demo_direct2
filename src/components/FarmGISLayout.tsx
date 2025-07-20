@@ -169,7 +169,9 @@ export default function FarmGISLayout() {
         // Transform demo bloc objects to DrawnArea format
         const savedBlocs: DrawnArea[] = farmData.blocs.map(bloc => {
           // Demo blocs have coordinates as [lat, lng] pairs, convert to [lng, lat] for DrawnArea format
-          const coordinates: [number, number][] = bloc.coordinates.map(([lat, lng]) => [lng, lat])
+          const coordinates: [number, number][] = Array.isArray(bloc.coordinates)
+            ? bloc.coordinates.map(([lat, lng]) => [lng, lat])
+            : []
 
           // Ensure UUID is properly set - use bloc.uuid if available, fallback to bloc.id
           const blocUuid = bloc.uuid || bloc.id
@@ -179,7 +181,7 @@ export default function FarmGISLayout() {
             blocUuid: bloc.uuid,
             finalUuid: blocUuid,
             blocName: bloc.name,
-            originalCoords: bloc.coordinates.slice(0, 2), // First 2 coords
+            originalCoords: Array.isArray(bloc.coordinates) ? bloc.coordinates.slice(0, 2) : [], // First 2 coords
             convertedCoords: coordinates.slice(0, 2) // First 2 converted coords
           })
 
@@ -742,7 +744,7 @@ export default function FarmGISLayout() {
       const { MockApiService } = await import('@/services/mockApiService')
 
       // STEP 3: Save all drawn areas to demo storage with farm ID
-      const savedBlocs = []
+      const savedBlocs: any[] = []
       for (const drawnArea of drawnAreas) {
         try {
           const response = await MockApiService.createBloc({

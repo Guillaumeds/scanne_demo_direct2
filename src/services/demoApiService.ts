@@ -126,9 +126,18 @@ export class DemoApiService {
     // Validate input
     const validatedRequest = CreateCropCycleSchema.parse(request)
 
+    // Generate UUID helper
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
     // Generate new crop cycle
     const newCycle: CropCycle = {
-      id: `cycle-${Date.now()}`,
+      id: generateUUID(),
       bloc_id: validatedRequest.blocId,
       type: validatedRequest.type,
       cycle_number: 1,
@@ -169,12 +178,28 @@ export class DemoApiService {
   }
 
   static async createFieldOperation(request: CreateFieldOperationRequest): Promise<FieldOperation> {
+    // Generate a proper UUID for cropCycleUuid if it's not in UUID format
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    const processedRequest = {
+      ...request,
+      cropCycleUuid: request.cropCycleUuid.includes('-') && request.cropCycleUuid.length === 36
+        ? request.cropCycleUuid
+        : generateUUID()
+    }
+
     // Validate input
-    const validatedRequest = CreateFieldOperationSchema.parse(request)
+    const validatedRequest = CreateFieldOperationSchema.parse(processedRequest)
 
     // Generate new field operation
     const newOperation: FieldOperation = {
-      uuid: `op-${Date.now()}`,
+      uuid: generateUUID(),
       crop_cycle_uuid: validatedRequest.cropCycleUuid,
       operation_name: validatedRequest.operationName,
       operation_type: validatedRequest.operationType,

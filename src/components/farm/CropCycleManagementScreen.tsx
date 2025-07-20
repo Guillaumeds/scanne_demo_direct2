@@ -185,11 +185,11 @@ export default function CropCycleManagementScreen({
                       {/* Top Row */}
                       <div>
                         <span className="text-sm font-medium text-slate-600">Variety:</span>
-                        <span className="ml-2 text-sm text-slate-800">{activeCycle.sugarcaneVarietyName || 'R579'}</span>
+                        <span className="ml-2 text-sm text-slate-800">{activeCycle.sugarcane_variety_id || 'R579'}</span>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-slate-600">Expected Yield:</span>
-                        <span className="ml-2 text-sm text-slate-800">{activeCycle.expectedYield} tons/ha</span>
+                        <span className="ml-2 text-sm text-slate-800">{activeCycle.expected_yield_tons_ha || 'N/A'} tons/ha</span>
                       </div>
 
                       {/* Bottom Row */}
@@ -198,13 +198,13 @@ export default function CropCycleManagementScreen({
                           {activeCycle.type === 'ratoon' ? 'Previous Harvest:' : 'Planting Date:'}
                         </span>
                         <span className="ml-2 text-sm text-slate-800">
-                          {activeCycle.plantingDate ? new Date(activeCycle.plantingDate).toLocaleDateString() : '01/04/2024'}
+                          {activeCycle.planting_date ? new Date(activeCycle.planting_date).toLocaleDateString() : '01/04/2024'}
                         </span>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-slate-600">Expected Harvest:</span>
                         <span className="ml-2 text-sm text-slate-800">
-                          {new Date(activeCycle.plannedHarvestDate).toLocaleDateString()}
+                          {new Date(activeCycle.planned_harvest_date).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -509,8 +509,8 @@ export default function CropCycleManagementScreen({
               transition={{ duration: 0.3, delay: 0.1 }}
             >
               <SolarRadiationCard
-                plantingDate={activeCycle.plantingDate || '2024-04-01'}
-                harvestDate={activeCycle.plannedHarvestDate}
+                plantingDate={activeCycle.planting_date || '2024-04-01'}
+                harvestDate={activeCycle.planned_harvest_date}
               />
             </motion.div>
 
@@ -521,8 +521,8 @@ export default function CropCycleManagementScreen({
               transition={{ duration: 0.3, delay: 0.2 }}
             >
               <PrecipitationCard
-                plantingDate={activeCycle.plantingDate || '2024-04-01'}
-                harvestDate={activeCycle.plannedHarvestDate}
+                plantingDate={activeCycle.planting_date || '2024-04-01'}
+                harvestDate={activeCycle.planned_harvest_date}
               />
             </motion.div>
           </div>
@@ -569,7 +569,7 @@ export default function CropCycleManagementScreen({
                     <div key={cycle.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-slate-800">
-                          {cycle.type === 'plantation' ? 'Plantation' : `Ratoon ${cycle.cycleNumber - 1}`}
+                          {cycle.type === 'plantation' ? 'Plantation' : `Ratoon ${cycle.cycle_number - 1}`}
                         </h4>
                         <Badge variant="outline" className="text-slate-600 border-slate-300">
                           Closed
@@ -578,25 +578,25 @@ export default function CropCycleManagementScreen({
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <span className="text-slate-600">Variety:</span>
-                          <div className="font-medium text-slate-800">{cycle.sugarcaneVarietyName}</div>
+                          <div className="font-medium text-slate-800">{cycle.sugarcane_variety_id}</div>
                         </div>
                         <div>
                           <span className="text-slate-600">Harvest Date:</span>
                           <div className="font-medium text-slate-800">
-                            {cycle.actualHarvestDate
-                              ? new Date(cycle.actualHarvestDate).toLocaleDateString()
+                            {cycle.actual_harvest_date
+                              ? new Date(cycle.actual_harvest_date).toLocaleDateString()
                               : 'Not recorded'
                             }
                           </div>
                         </div>
                         <div>
                           <span className="text-slate-600">Expected Yield:</span>
-                          <div className="font-medium text-slate-800">{cycle.expectedYield} t/ha</div>
+                          <div className="font-medium text-slate-800">{cycle.expected_yield_tons_ha} t/ha</div>
                         </div>
                         <div>
                           <span className="text-slate-600">Actual Yield:</span>
                           <div className="font-medium text-slate-800">
-                            {cycle.actualYield ? `${cycle.actualYield} t/ha` : 'Not recorded'}
+                            {cycle.actual_yield_tons_ha ? `${cycle.actual_yield_tons_ha} t/ha` : 'Not recorded'}
                           </div>
                         </div>
                       </div>

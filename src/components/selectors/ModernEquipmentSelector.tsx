@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { ArrowLeft, X, Search, Tractor, Wrench, Clock, User } from 'lucide-react'
 import { useEquipment } from '@/hooks/useConfigurationData'
+import { Equipment } from '@/data/master/equipment'
 // Equipment type now comes from demo data
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,7 +46,7 @@ export default function ModernEquipmentSelector({
 }: ModernEquipmentSelectorProps) {
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [duration, setDuration] = useState<number>(0)
+  const [estimatedDuration, setEstimatedDuration] = useState<number>(0)
   const [costPerHour, setCostPerHour] = useState<number>(0)
   const [operator, setOperator] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
@@ -63,7 +64,7 @@ export default function ModernEquipmentSelector({
       if (equipmentItem) {
         setSelectedEquipment(equipmentItem)
         setEstimatedDuration(existingEquipment.estimatedDuration || 0)
-        setCostPerHour(existingEquipment.costPerHour || equipmentItem.operationalCosts?.hourlyRate || 0)
+        setCostPerHour(existingEquipment.costPerHour || equipmentItem.cost_per_hour || 0)
 
       }
     }
@@ -85,7 +86,7 @@ export default function ModernEquipmentSelector({
     const equipmentItem = (equipment || []).find(e => e.id === equipmentId)
     if (equipmentItem) {
       setSelectedEquipment(equipmentItem)
-      setCostPerHour(equipmentItem.operationalCosts?.hourlyRate || 0)
+      setCostPerHour(equipmentItem.cost_per_hour || 0)
       setEstimatedDuration(1) // Default to 1 hour
     }
   }
@@ -248,7 +249,7 @@ export default function ModernEquipmentSelector({
                       badge: equipmentItem.category || undefined,
                       color: 'bg-blue-50',
                       icon: Tractor,
-                      cost: equipmentItem.operationalCosts?.hourlyRate,
+                      cost: equipmentItem.cost_per_hour,
                       unit: 'hour',
                       skillLevel: 'Basic' // Equipment doesn't have skillLevel in DB
                     }))}

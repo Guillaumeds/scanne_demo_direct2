@@ -48,8 +48,8 @@ export function CropCycleProvider({
       const cycles = response.data
       console.log('📊 CropCycleContext: Fetched cycles from DB:', cycles.map(c => ({
         id: c.id.substring(0, 8) + '...',
-        estimatedCost: c.estimatedTotalCost,
-        actualCost: c.actualTotalCost,
+        estimatedCost: c.estimated_total_cost,
+        actualCost: c.actual_total_cost,
         lastUpdated: (c as any).lastUpdated || new Date().toISOString()
       })))
 

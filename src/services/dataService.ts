@@ -78,7 +78,7 @@ class DemoDataService implements IDataService {
     
     try {
       const response = await MockApiService.getSugarcaneVarieties()
-      return response.data
+      return response.data as SugarcaneVariety[]
     } catch (error) {
       console.error('Demo service error:', error)
       // Fallback to empty array in demo mode
@@ -92,7 +92,7 @@ class DemoDataService implements IDataService {
     try {
       // Check if MockApiService has this method, otherwise return empty array
       if ('getInterCropVarieties' in MockApiService) {
-        const response = await MockApiService.getInterCropVarieties()
+        const response = await (MockApiService as any).getInterCropVarieties()
         return response.data
       } else {
         console.warn('MockApiService.getInterCropVarieties not implemented yet')

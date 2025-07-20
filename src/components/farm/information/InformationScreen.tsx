@@ -33,12 +33,12 @@ export function InformationScreen() {
     return {
       currentCycle: activeCycle ? {
         id: activeCycle.id,
-        cycleNumber: activeCycle.cycleNumber || 1,
-        variety: activeCycle.sugarcaneVarietyName || 'Unknown Variety',
-        plantingDate: activeCycle.sugarcaneePlantingDate || activeCycle.ratoonPlantingDate || 'Not set',
-        expectedHarvestDate: activeCycle.sugarcaneePlannedHarvestDate || 'Not set',
-        growthStage: activeCycle.growthStage || 'Unknown',
-        daysSincePlanting: activeCycle.daysSincePlanting || 0,
+        cycleNumber: activeCycle.cycle_number || 1,
+        variety: activeCycle.sugarcane_variety_id || 'Unknown Variety',
+        plantingDate: activeCycle.planting_date || 'Not set',
+        expectedHarvestDate: activeCycle.planned_harvest_date || 'Not set',
+        growthStage: activeCycle.growth_stage || 'Unknown',
+        daysSincePlanting: activeCycle.days_since_planting || 0,
         progress
       } : null,
       metrics: {
@@ -46,7 +46,7 @@ export function InformationScreen() {
         completedOperations,
         totalCost,
         actualCost,
-        expectedYield: activeCycle?.sugarcaneExpectedYieldTonsHa || 0
+        expectedYield: activeCycle?.expected_yield_tons_ha || 0
       }
     }
   }, [cropCycles.data, fieldOperations.data, workPackages.data])

@@ -68,7 +68,7 @@ export function useFieldOperations(blocId: string, cropCycleId?: string) {
   
   // Filter by crop cycle if specified
   if (cropCycleId) {
-    operations = operations.filter(op => op.cropCycleId === cropCycleId)
+    operations = operations.filter(op => op.crop_cycle_uuid === cropCycleId)
   }
   
   return {
@@ -90,7 +90,7 @@ export function useWorkPackages(blocId: string, operationId?: string) {
   
   // Filter by operation if specified
   if (operationId) {
-    workPackages = workPackages.filter(wp => wp.fieldOperationId === operationId)
+    workPackages = workPackages.filter(wp => wp.field_operation_uuid === operationId)
   }
   
   return {
@@ -123,26 +123,30 @@ export function useCreateCropCycle(blocId: string) {
       if (previousData) {
         const optimisticCropCycle: CropCycle = {
           id: `temp-${Date.now()}`,
-          blocId: request.blocId || blocId,
+          bloc_id: request.bloc_id || blocId,
           type: request.type || 'plantation',
-          cycleNumber: previousData.cropCycles.length + 1,
+          cycle_number: previousData.cropCycles.length + 1,
           status: 'active',
-          sugarcaneVarietyId: request.sugarcaneVarietyId || '',
-          sugarcaneVarietyName: 'Loading...',
-          plantingDate: request.plantingDate || new Date().toISOString(),
-          plannedHarvestDate: request.plannedHarvestDate || new Date().toISOString(),
-          expectedYield: request.expectedYield || 0,
-          estimatedTotalCost: 0,
-          actualTotalCost: 0,
-          revenue: 0,
-          netProfit: 0,
-          profitPerHectare: 0,
-          profitMarginPercent: 0,
-          growthStage: 'planted',
-          growthStageUpdatedAt: new Date().toISOString(),
-          daysSincePlanting: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          sugarcane_variety_id: request.sugarcane_variety_id || '',
+          intercrop_variety_id: null,
+          planting_date: request.planting_date || new Date().toISOString(),
+          planned_harvest_date: request.planned_harvest_date || new Date().toISOString(),
+          // expectedYield: request.expected_yield || 0, // Property doesn't exist in schema
+          actual_harvest_date: null,
+          expected_yield_tons_ha: 80,
+          actual_yield_tons_ha: null,
+          estimated_total_cost: 0,
+          actual_total_cost: null,
+          total_revenue: null,
+          sugarcane_revenue: null,
+          intercrop_revenue: null,
+          net_profit: null,
+          profit_per_hectare: null,
+          profit_margin_percent: null,
+          growth_stage: 'germination',
+          days_since_planting: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
         
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
@@ -199,23 +203,26 @@ export function useCreateFieldOperation(blocId: string) {
       
       if (previousData) {
         const optimisticOperation: FieldOperation = {
-          id: `temp-operation-${Date.now()}`,
-          cropCycleId: operationData.cropCycleId || '',
-          blocId: operationData.blocId || blocId,
-          type: operationData.type || 'cultivation',
-          method: operationData.method || 'standard',
+          uuid: `temp-operation-${Date.now()}`,
+          crop_cycle_uuid: operationData.crop_cycle_uuid || '',
+          operation_name: operationData.operation_name || 'New Operation',
+          operation_type: operationData.operation_type || 'cultivation',
+          method: operationData.method || null,
+          priority: operationData.priority || 'normal',
+          planned_start_date: operationData.planned_start_date || new Date().toISOString(),
+          planned_end_date: operationData.planned_end_date || new Date().toISOString(),
+          planned_area_hectares: operationData.planned_area_hectares || 0,
+          actual_area_hectares: null,
+          actual_start_date: null,
+          actual_end_date: null,
+          planned_quantity: null,
+          actual_quantity: null,
           status: 'planned',
-          plannedStartDate: operationData.plannedStartDate || new Date().toISOString(),
-          plannedEndDate: operationData.plannedEndDate || new Date().toISOString(),
-          plannedArea: operationData.plannedArea || 0,
-          progress: 0,
-          estimatedCost: operationData.estimatedCost || 0,
-          actualCost: 0,
-          labourRequired: [],
-          equipmentRequired: [],
-          productsUsed: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          completion_percentage: 0,
+          estimated_total_cost: operationData.estimated_total_cost || 0,
+          actual_total_cost: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
         
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
@@ -235,7 +242,7 @@ export function useCreateFieldOperation(blocId: string) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...currentData,
           fieldOperations: currentData.fieldOperations.map(op =>
-            op.id.startsWith('temp-operation-') ? newOperation : op
+            op.uuid.startsWith('temp-operation-') ? newOperation : op
           ),
           lastUpdated: new Date().toISOString()
         })
@@ -269,17 +276,26 @@ export function useCreateWorkPackage(blocId: string) {
       
       if (previousData) {
         const optimisticWorkPackage: WorkPackage = {
-          id: `temp-wp-${Date.now()}`,
-          fieldOperationId: workPackageData.fieldOperationId || '',
-          date: workPackageData.date || new Date().toISOString(),
-          area: workPackageData.area || 0,
-          hours: workPackageData.hours || 0,
-          cost: workPackageData.cost || 0,
-          crew: workPackageData.crew || '',
-          equipment: workPackageData.equipment || '',
-          status: 'planned',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          uuid: `temp-wp-${Date.now()}`,
+          field_operation_uuid: workPackageData.field_operation_uuid || '',
+          package_name: workPackageData.package_name || null,
+          work_date: workPackageData.work_date || new Date().toISOString().split('T')[0],
+          shift: workPackageData.shift || 'day',
+          planned_area_hectares: workPackageData.planned_area_hectares || null,
+          actual_area_hectares: null,
+          planned_quantity: workPackageData.planned_quantity || null,
+          actual_quantity: null,
+          status: 'not-started',
+          start_time: null,
+          end_time: null,
+          duration_hours: null,
+          weather_conditions: null,
+          temperature_celsius: null,
+          humidity_percent: null,
+          wind_speed_kmh: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
         
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
@@ -299,7 +315,7 @@ export function useCreateWorkPackage(blocId: string) {
         queryClient.setQueryData<BlocData>(blocDataKeys.bloc(blocId), {
           ...currentData,
           workPackages: currentData.workPackages.map(wp =>
-            wp.id.startsWith('temp-wp-') ? newWorkPackage : wp
+            wp.uuid.startsWith('temp-wp-') ? newWorkPackage : wp
           ),
           lastUpdated: new Date().toISOString()
         })

@@ -242,11 +242,11 @@ export class MockApiService {
       workPackagesCount: workPackages.length
     })
 
-    const blocCropCycles = cropCycles.filter(c => c.blocId === blocId)
+    const blocCropCycles = cropCycles.filter(c => c.bloc_id === blocId)
     const activeCropCycle = blocCropCycles.find(c => c.status === 'active') || null
-    const blocFieldOperations = fieldOperations.filter(o => o.blocId === blocId)
+    const blocFieldOperations = fieldOperations.filter(o => o.crop_cycle_uuid === blocId)
     const blocWorkPackages = workPackages.filter(p =>
-      blocFieldOperations.some(o => o.id === p.fieldOperationId)
+      blocFieldOperations.some(o => o.uuid === p.field_operation_uuid)
     )
 
     const data: BlocData = {
@@ -421,16 +421,16 @@ export class MockApiService {
     const newBloc: Bloc = {
       id: `bloc-${Date.now()}`,
       uuid: `bloc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      localId: blocData.name,
+      // localId: blocData.name, // Property doesn't exist in Bloc schema
       name: blocData.name,
       farmId: blocData.farmId,
       area: blocData.area,
       coordinates: blocData.coordinates,
-      soilType: blocData.soilType || 'Clay',
-      elevation: blocData.elevation || 100,
-      slope: blocData.slope || 2,
-      drainageClass: blocData.drainageClass || 'Well drained',
-      irrigationMethod: blocData.irrigationMethod || 'Drip irrigation',
+      soil_type: blocData.soilType || 'Clay',
+      // elevation: blocData.elevation || 100, // Property not in Bloc schema
+      // slope: blocData.slope || 2, // Property not in Bloc schema
+      // drainageClass: blocData.drainageClass || 'Well drained', // Property not in Bloc schema
+      // irrigationMethod: blocData.irrigationMethod || 'Drip irrigation', // Property not in Bloc schema
       accessRoad: blocData.accessRoad ?? true,
       active: true,
       notes: blocData.notes || '',
@@ -508,21 +508,21 @@ export class MockApiService {
   static async getActiveCropCycle(blocId: string): Promise<ApiResponse<CropCycle | null>> {
     await this.initializeData()
     const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
-    const activeCycle = cropCycles.find(c => c.blocId === blocId && c.status === 'active') || null
+    const activeCycle = cropCycles.find(c => c.bloc_id === blocId && c.status === 'active') || null
     return this.simulateResponse(activeCycle)
   }
 
   static async getCropCycleHistory(blocId: string): Promise<ApiResponse<CropCycle[]>> {
     await this.initializeData()
     const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
-    const history = cropCycles.filter(c => c.blocId === blocId && c.status === 'closed')
+    const history = cropCycles.filter(c => c.bloc_id === blocId && c.status === 'closed')
     return this.simulateResponse(history)
   }
 
   static async getCropCyclesForBloc(blocId: string): Promise<ApiResponse<CropCycle[]>> {
     await this.initializeData()
     const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
-    const blocCycles = cropCycles.filter(c => c.blocId === blocId)
+    const blocCycles = cropCycles.filter(c => c.bloc_id === blocId)
     return this.simulateResponse(blocCycles)
   }
 
@@ -540,17 +540,17 @@ export class MockApiService {
     const summaries: Record<string, any> = {}
 
     for (const blocId of blocIds) {
-      const activeCycle = cropCycles.find(c => c.blocId === blocId && c.status === 'active')
+      const activeCycle = cropCycles.find(c => c.bloc_id === blocId && c.status === 'active')
       summaries[blocId] = {
         blocId,
         blocStatus: 'active',
         hasActiveCycle: !!activeCycle,
         cycleType: activeCycle?.type,
-        varietyName: activeCycle?.sugarcaneVarietyName,
-        cycleNumber: activeCycle?.cycleNumber,
-        plannedHarvestDate: activeCycle?.plannedHarvestDate,
-        growthStage: activeCycle?.growthStage,
-        daysSincePlanting: activeCycle?.daysSincePlanting || 0
+        varietyName: activeCycle?.sugarcane_variety_id,
+        cycleNumber: activeCycle?.cycle_number,
+        plannedHarvestDate: activeCycle?.planned_harvest_date,
+        growthStage: activeCycle?.growth_stage,
+        daysSincePlanting: activeCycle?.days_since_planting || 0
       }
     }
 
@@ -563,14 +563,14 @@ export class MockApiService {
     const cropCycles = DemoStorage.get<CropCycle[]>(STORAGE_KEYS.CROP_CYCLES) || []
     const newCycle: CropCycle = {
       id: `cycle-${Date.now()}`,
-      blocId: cycleData.blocId,
+      bloc_id: cycleData.bloc_id,
       type: cycleData.type || 'plantation',
-      cycleNumber: 1,
+      cycle_number: 1,
       status: 'active',
-      sugarcaneVarietyId: cycleData.sugarcaneVarietyId,
-      sugarcaneVarietyName: cycleData.sugarcaneVarietyName || 'Unknown Variety',
-      intercropVarietyId: cycleData.intercropVarietyId || null,
-      intercropVarietyName: cycleData.intercropVarietyName || null,
+      sugarcane_variety_id: cycleData.sugarcaneVarietyId,
+      // sugarcaneVarietyName: cycleData.sugarcaneVarietyName || 'Unknown Variety', // Property not in CropCycle schema
+      intercrop_variety_id: cycleData.intercropVarietyId || null,
+      // intercropVarietyName: cycleData.intercropVarietyName || null, // Property not in CropCycle schema
       plantingDate: cycleData.plantingDate || new Date().toISOString(),
       plannedHarvestDate: cycleData.plannedHarvestDate || new Date().toISOString(),
       expectedYield: cycleData.expectedYield || 0,
@@ -599,14 +599,14 @@ export class MockApiService {
 
     const fieldOperations = DemoStorage.get<FieldOperation[]>(STORAGE_KEYS.FIELD_OPERATIONS) || []
     const newOperation: FieldOperation = {
-      id: `operation-${Date.now()}`,
-      cropCycleId: operationData.cropCycleId,
-      blocId: operationData.blocId,
-      type: operationData.type || 'cultivation',
+      uuid: `operation-${Date.now()}`,
+      crop_cycle_uuid: operationData.crop_cycle_uuid,
+      // blocId: operationData.blocId, // Property not in FieldOperation schema
+      operation_type: operationData.type || 'cultivation',
       method: operationData.method || 'standard',
       status: 'planned',
-      plannedStartDate: operationData.plannedStartDate || new Date().toISOString(),
-      plannedEndDate: operationData.plannedEndDate || new Date().toISOString(),
+      planned_start_date: operationData.plannedStartDate || new Date().toISOString().split('T')[0],
+      planned_end_date: operationData.plannedEndDate || new Date().toISOString().split('T')[0],
       plannedArea: operationData.plannedArea || 0,
       progress: 0,
       estimatedCost: operationData.estimatedCost || 0,
@@ -629,15 +629,15 @@ export class MockApiService {
 
     const workPackages = DemoStorage.get<WorkPackage[]>(STORAGE_KEYS.WORK_PACKAGES) || []
     const newWorkPackage: WorkPackage = {
-      id: `work-package-${Date.now()}`,
-      fieldOperationId: workPackageData.fieldOperationId,
-      date: workPackageData.date || new Date().toISOString(),
-      area: workPackageData.area || 0,
-      hours: workPackageData.hours || 0,
+      uuid: `work-package-${Date.now()}`,
+      field_operation_uuid: workPackageData.fieldOperationId,
+      work_date: workPackageData.date || new Date().toISOString().split('T')[0],
+      planned_area_hectares: workPackageData.area || null,
+      duration_hours: workPackageData.hours || null,
       cost: workPackageData.cost || 0,
       crew: workPackageData.crew || '',
       equipment: workPackageData.equipment || '',
-      status: 'planned',
+      status: 'not-started',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

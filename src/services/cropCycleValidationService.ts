@@ -75,16 +75,16 @@ export class CropCycleValidationService {
       errors.push({
         type: 'missing_variety',
         message: 'Sugarcane variety must be selected',
-        field: 'sugarcaneVarietyId',
+        field: 'sugarcane_variety_id',
         severity: 'error'
       })
     }
-    
+
     if (!cycle.plannedHarvestDate) {
       errors.push({
         type: 'missing_harvest_date',
         message: 'Planned harvest date is required',
-        field: 'plannedHarvestDate',
+        field: 'planned_harvest_date',
         severity: 'error'
       })
     }

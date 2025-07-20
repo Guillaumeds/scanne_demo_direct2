@@ -144,7 +144,7 @@ export default function FileUploader({
       }
 
       newFiles.push(attachedFile)
-      setUploadingFiles(prev => new Set([...prev, fileId]))
+      setUploadingFiles(prev => new Set(Array.from(prev).concat([fileId])))
 
       // Start upload simulation
       try {

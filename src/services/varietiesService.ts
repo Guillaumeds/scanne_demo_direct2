@@ -116,7 +116,7 @@ export class VarietiesService {
       const results = await dataService.searchSugarcaneVarieties(searchTerm)
 
       console.log(`✅ Found ${results.length} matching varieties`)
-      return results
+      return results as any
 
     } catch (error) {
       console.error('VarietiesService.searchSugarcaneVarieties error:', error)

@@ -145,8 +145,8 @@ const operationSchema = z.object({
   operationType: z.string().min(1, 'Operation type is required'),
   method: z.string().min(1, 'Method is required'),
   description: z.string().optional(),
-  priority: z.enum(['normal', 'high', 'critical']).default('normal'),
-  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']).default('planned'),
+  priority: z.enum(['normal', 'high', 'critical']),
+  status: z.enum(['planned', 'in-progress', 'completed', 'cancelled']),
 
   // Timing
   plannedStartDate: z.string().min(1, 'Start date is required'),
@@ -155,9 +155,9 @@ const operationSchema = z.object({
   actualEndDate: z.string().optional(),
 
   // Products, Equipment, Labour
-  products: z.array(selectedProductSchema).default([]),
-  equipment: z.array(selectedEquipmentSchema).default([]),
-  labour: z.array(labourTableEntrySchema).default([]),
+  products: z.array(selectedProductSchema),
+  equipment: z.array(selectedEquipmentSchema),
+  labour: z.array(labourTableEntrySchema),
   // Financial
   estimatedTotalCost: z.number().min(0, 'Cost must be positive'),
   actualTotalCost: z.number().min(0).optional(),
@@ -173,7 +173,7 @@ const operationSchema = z.object({
 
   // Additional
   notes: z.string().optional(),
-  attachments: z.array(z.string()).default([])
+  attachments: z.array(z.string())
 }).refine((data) => {
   // Date validation
   if (data.plannedStartDate && data.plannedEndDate) {
@@ -199,7 +199,7 @@ export function OperationForm() {
   })
 
   const form = useForm<OperationFormData>({
-    resolver: zodResolver(operationSchema),
+    resolver: zodResolver(operationSchema) as any,
     defaultValues: {
       operationType: '',
       method: '',
@@ -209,9 +209,9 @@ export function OperationForm() {
       plannedStartDate: '',
       plannedEndDate: '',
 
-      products: [],
-      equipment: [],
-      labour: [],
+      products: [] as SelectedProduct[],
+      equipment: [] as SelectedEquipment[],
+      labour: [] as LabourTableEntry[],
       estimatedTotalCost: 0,
       actualTotalCost: undefined,
       actualRevenue: undefined,
@@ -220,7 +220,7 @@ export function OperationForm() {
       weatherConditions: undefined,
       qualityMetrics: undefined,
       notes: '',
-      attachments: []
+      attachments: [] as string[]
     }
   })
 
