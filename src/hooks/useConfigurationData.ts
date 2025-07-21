@@ -54,11 +54,25 @@ export function useEquipment() {
 }
 
 /**
- * @deprecated Use useLabour() instead
+ * Hook for fetching all resources (labour + equipment combined)
+ * @deprecated Use useDemoLabour and useDemoEquipment from useDemoData instead
  */
 export function useResources() {
-  return useLabour()
+  const { data: labour, isLoading: labourLoading, error: labourError } = useDemoLabour()
+  const { data: equipment, isLoading: equipmentLoading, error: equipmentError } = useDemoEquipment()
+
+  return {
+    data: {
+      labour: labour || [],
+      equipment: equipment || []
+    },
+    isLoading: labourLoading || equipmentLoading,
+    error: labourError || equipmentError,
+    success: !labourError && !equipmentError
+  }
 }
+
+
 
 /**
  * Hook for fetching sugarcane varieties only
