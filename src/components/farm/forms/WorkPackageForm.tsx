@@ -6,10 +6,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Save, X, Calendar, Clock, Users, Truck, Camera, MapPin,
+  Save, X, Calendar, Clock, Users, Truck, Camera,
   Thermometer, Wind, Droplets, Sun, Cloud, CloudRain,
   Star, AlertTriangle, CheckCircle, Upload, Trash2,
-  Navigation, Smartphone, Timer, Target, Activity
+  Timer, Target, Activity
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,21 +47,12 @@ import { ResponsiveContainer, useResponsive, TouchFriendly } from '../shared/Res
 import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { useBlocContext } from '../contexts/BlocContext'
 
-// GPS coordinates schema
-const gpsSchema = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-  accuracy: z.number().min(0).optional(),
-  timestamp: z.date().optional()
-})
-
 // Photo attachment schema
 const photoSchema = z.object({
   id: z.string(),
   file: z.any(), // File object
   url: z.string().optional(),
   caption: z.string().optional(),
-  gpsLocation: gpsSchema.optional(),
   timestamp: z.date().default(() => new Date())
 })
 
@@ -105,9 +96,8 @@ const workPackageSchema = z.object({
   startTime: z.string().min(1, 'Start time is required'),
   endTime: z.string().min(1, 'End time is required'),
 
-  // Location & Area
+  // Area
   actualArea: z.number().min(0.01, 'Area must be at least 0.01 hectares'),
-  gpsCoordinates: z.array(gpsSchema).default([]),
   fieldConditions: z.string().optional(),
 
   // Resources
@@ -172,12 +162,6 @@ const workPackageSchema = z.object({
 
 type WorkPackageFormData = z.infer<typeof workPackageSchema>
 
-interface GPSLocation {
-  latitude: number
-  longitude: number
-  accuracy?: number
-}
-
 export function WorkPackageForm() {
   const { bloc, setCurrentScreen, currentOperationId, currentWorkPackageId, fieldOperations } = useBlocContext()
   const { isMobile, isTablet } = useResponsive()
@@ -187,8 +171,6 @@ export function WorkPackageForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [photos, setPhotos] = useState<any[]>([])
-  const [currentLocation, setCurrentLocation] = useState<GPSLocation | null>(null)
-  const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [weatherData, setWeatherData] = useState<any>(null)
 
   // Refs
@@ -202,7 +184,6 @@ export function WorkPackageForm() {
       startTime: '08:00',
       endTime: '17:00',
       actualArea: 0,
-      gpsCoordinates: [],
       fieldConditions: '',
       resourceUsage: {
         crewMembers: [],
@@ -263,45 +244,7 @@ export function WorkPackageForm() {
     { value: 'windy', label: 'Windy', icon: Wind }
   ]
 
-  // GPS functionality
-  const getCurrentLocation = useCallback(async () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.')
-      return
-    }
 
-    setIsGettingLocation(true)
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        }
-        setCurrentLocation(location)
-
-        // Add to GPS coordinates array
-        const currentCoords = form.getValues('gpsCoordinates') || []
-        form.setValue('gpsCoordinates', [...currentCoords, {
-          ...location,
-          timestamp: new Date()
-        }])
-
-        setIsGettingLocation(false)
-      },
-      (error) => {
-        console.error('Error getting location:', error)
-        setIsGettingLocation(false)
-        alert('Unable to get your location. Please check your GPS settings.')
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    )
-  }, [form])
 
   // Photo functionality
   const handlePhotoCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -316,7 +259,6 @@ export function WorkPackageForm() {
           file,
           url: e.target?.result as string,
           caption: '',
-          gpsLocation: currentLocation || undefined,
           timestamp: new Date()
         }
 
@@ -343,7 +285,7 @@ export function WorkPackageForm() {
   // Auto-calculate costs based on resource usage - removed to prevent infinite loops
   // This will be handled manually when users update resource fields
 
-  // Get current location on component mount and simulate loading
+  // Initialize form with loading simulation
   useEffect(() => {
     const initializeForm = async () => {
       setIsLoading(true)
@@ -351,15 +293,11 @@ export function WorkPackageForm() {
       // Simulate form initialization
       await new Promise(resolve => setTimeout(resolve, 800))
 
-      if (navigator.geolocation) {
-        getCurrentLocation()
-      }
-
       setIsLoading(false)
     }
 
     initializeForm()
-  }, []) // Remove getCurrentLocation from dependencies to prevent infinite loop
+  }, [])
 
   const onSubmit = async (data: WorkPackageFormData) => {
     setIsSubmitting(true)
@@ -468,7 +406,7 @@ export function WorkPackageForm() {
               transition={{ delay: 0.3 }}
               className="text-muted-foreground"
             >
-              Setting up GPS, camera access, and field data...
+              Setting up camera access and field data...
             </motion.p>
           </div>
         </motion.div>
@@ -477,34 +415,36 @@ export function WorkPackageForm() {
   }
 
   return (
-    <ResponsiveContainer className="h-full overflow-auto bg-background">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="max-w-4xl mx-auto"
-      >
-        {/* Header */}
+    <div className="h-full overflow-auto bg-background">
+      <div className="max-w-6xl mx-auto p-6 relative">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50"
+          transition={{ duration: 0.3 }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Activity className="h-6 w-6 text-primary" />
-                {currentWorkPackageId ? 'Edit Work Package' : 'New Work Package'}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Record daily field work progress for {bloc.name || `Bloc ${bloc.localId}`}
-              </p>
+          {/* Header */}
+          <div className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <Activity className="h-6 w-6 text-primary" />
+                  {currentWorkPackageId ? 'Edit Work Package' : 'New Work Package'}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Record daily field work progress for {bloc.name || `Bloc ${bloc.localId}`}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                className="bg-white/80 backdrop-blur-sm border-border/50 hover:bg-white/90"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
             </div>
-
-
           </div>
-        </motion.div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -517,7 +457,7 @@ export function WorkPackageForm() {
                 <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-3'} bg-muted/80 bg-white/95`}>
                   {[
                     { value: 'basic', icon: Clock, label: 'Basic', fullLabel: 'Basic Info' },
-                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Products & Materials' },
+                    { value: 'resources', icon: Users, label: 'Resources', fullLabel: 'Products & Resources' },
                     { value: 'attachments', icon: Camera, label: 'Attachments', fullLabel: 'Attachments' }
                   ].map((tab, index) => {
                     const Icon = tab.icon
@@ -741,29 +681,90 @@ export function WorkPackageForm() {
 
 
 
-              {/* Products & Materials Tab */}
+              {/* Products & Resources Tab */}
               <TabsContent value="resources" className="space-y-6 mt-6">
-                {/* Products Section */}
-                <ProductSelectionManager
-                  selectedProducts={(form.watch('products') as SelectedProduct[]) || []}
-                  onProductsChange={handleProductsChange}
-                  blocArea={bloc.area}
-                  title="Products & Materials"
-                  subtitle="Select products for this work package"
-                  isLoading={productsLoading}
-                  error={productsError?.message || null}
-                />
+                {/* Products Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <div className="h-4 w-4 rounded bg-primary/20" />
+                      </div>
+                      Products & Materials
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-3 border-b">
+                        <div className="grid grid-cols-6 gap-4 text-sm font-semibold">
+                          <div>Product</div>
+                          <div className="text-center">Area (ha)</div>
+                          <div className="text-center">Rate</div>
+                          <div className="text-center">Quantity</div>
+                          <div className="text-center">Unit Cost</div>
+                          <div className="text-right">Actual Cost</div>
+                        </div>
+                      </div>
+                      <div className="p-4 text-center text-muted-foreground">
+                        Products table will be implemented here
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                {/* Equipment Section */}
-                <EquipmentSelectionManager
-                  selectedEquipment={(form.watch('equipment') as SelectedEquipment[]) || []}
-                  onEquipmentChange={handleEquipmentChange}
-                  title="Equipment & Machinery"
-                  subtitle="Select equipment for this work package"
-                  isLoading={resourcesLoading}
-                  error={resourcesError?.message || null}
-                  blocArea={bloc.area}
-                />
+                {/* Equipment Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Truck className="h-4 w-4" />
+                      </div>
+                      Equipment & Machinery
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-3 border-b">
+                        <div className="grid grid-cols-4 gap-4 text-sm font-semibold">
+                          <div>Equipment</div>
+                          <div className="text-center">Actual Duration (hrs)</div>
+                          <div className="text-center">Rate (Rs/hr)</div>
+                          <div className="text-right">Actual Total (Rs)</div>
+                        </div>
+                      </div>
+                      <div className="p-4 text-center text-muted-foreground">
+                        Equipment table will be implemented here
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Labour Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4" />
+                      </div>
+                      Labour & Human Resources
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-3 border-b">
+                        <div className="grid grid-cols-4 gap-4 text-sm font-semibold">
+                          <div>Labour</div>
+                          <div className="text-center">Actual Effort (hrs)</div>
+                          <div className="text-center">Rate (Rs/hr)</div>
+                          <div className="text-right">Actual Total (Rs)</div>
+                        </div>
+                      </div>
+                      <div className="p-4 text-center text-muted-foreground">
+                        Labour table will be implemented here
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Total Actual Cost Display */}
                 <Card>
@@ -966,25 +967,7 @@ export function WorkPackageForm() {
                                       </motion.div>
                                     </motion.div>
 
-                                    {/* GPS indicator */}
-                                    {photo.gpsLocation && (
-                                      <motion.div
-                                        className="absolute top-2 right-2"
-                                        initial={{ opacity: 0, scale: 0 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.3, type: "spring", bounce: 0.6 }}
-                                      >
-                                        <Badge variant="secondary" className="text-xs shadow-md">
-                                          <motion.div
-                                            animate={{ scale: [1, 1.2, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                          >
-                                            <MapPin className="h-3 w-3 mr-1" />
-                                          </motion.div>
-                                          GPS
-                                        </Badge>
-                                      </motion.div>
-                                    )}
+
 
                                     {/* Photo timestamp */}
                                     <motion.div
@@ -1137,28 +1120,10 @@ export function WorkPackageForm() {
                       <span>{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                     </motion.div>
                   )}
-                  {currentLocation && (
-                    <>
-                      {photos.length > 0 && <span>•</span>}
-                      <motion.div
-                        className="flex items-center gap-1"
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ type: "spring", bounce: 0.5, delay: 0.1 }}
-                      >
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <MapPin className="h-4 w-4 text-green-500" />
-                        </motion.div>
-                        <span>GPS tracked</span>
-                      </motion.div>
-                    </>
-                  )}
+
                   {(form.getValues('completionPercentage') || 0) > 0 && (
                     <>
-                      {(photos.length > 0 || currentLocation) && <span>•</span>}
+                      {photos.length > 0 && <span>•</span>}
                       <motion.div
                         className="flex items-center gap-1"
                         initial={{ opacity: 0, scale: 0 }}
@@ -1178,20 +1143,33 @@ export function WorkPackageForm() {
                 </div>
               </motion.div>
 
-              <div className="flex gap-3">
-                <Button type="submit" className="flex-1" size="lg">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Work Package
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCancel} size="lg" className="bg-background hover:bg-background">
+              {/* Form Actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.6 }}
+                className="flex justify-between items-center pt-6 border-t border-border/20"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-              </div>
+                <div className="flex gap-3">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSubmitting ? 'Saving...' : (currentWorkPackageId ? 'Update Work Package' : 'Save Work Package')}
+                  </Button>
+                </div>
+              </motion.div>
             </motion.div>
-          </form>
-        </Form>
-      </motion.div>
-    </ResponsiveContainer>
+            </form>
+          </Form>
+        </motion.div>
+      </div>
+    </div>
   )
 }

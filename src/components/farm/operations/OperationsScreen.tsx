@@ -67,6 +67,7 @@ export function OperationsScreen() {
           hours: wp.duration_hours || 8,
           cost: wp.actual_cost || wp.estimated_cost || 0,
           status: wp.status,
+          crew: wp.crew || 'Default Crew', // Add missing crew property
           // Resources data for work packages
           products: wp.products || [],
           equipment: wp.equipment || [],

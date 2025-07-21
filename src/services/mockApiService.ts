@@ -202,7 +202,7 @@ export class MockApiService {
 
         } catch (initError) {
           console.error('❌ Error during demo data initialization:', initError)
-          console.error('Stack trace:', initError.stack)
+          console.error('Stack trace:', (initError as Error).stack)
           throw initError
         }
       }
@@ -279,20 +279,22 @@ export class MockApiService {
     // Debug: Check first bloc coordinates when retrieved
     if (blocs.length > 0) {
       const firstBloc = blocs[0]
+      const coords = firstBloc.coordinates
+      const isArrayCoords = Array.isArray(coords)
       console.log('🔍 First bloc when retrieved from storage:', {
         name: firstBloc.name,
-        coordinatesCount: firstBloc.coordinates?.length || 0,
-        firstCoord: firstBloc.coordinates?.[0],
-        hasWKT: !!firstBloc.coordinates_wkt,
-        wktPreview: firstBloc.coordinates_wkt?.substring(0, 50) + '...',
-        isSquare: firstBloc.coordinates?.length === 5 &&
-                  firstBloc.coordinates[0] && firstBloc.coordinates[1] && firstBloc.coordinates[2] && firstBloc.coordinates[3] &&
-                  Math.abs(firstBloc.coordinates[0][0] - firstBloc.coordinates[3][0]) < 0.001 &&
-                  Math.abs(firstBloc.coordinates[1][1] - firstBloc.coordinates[2][1]) < 0.001
+        coordinatesCount: isArrayCoords ? coords.length : 1,
+        firstCoord: isArrayCoords ? coords[0] : coords,
+        hasWKT: false, // coordinates_wkt doesn't exist in Bloc type
+        wktPreview: 'N/A',
+        isSquare: isArrayCoords && coords.length === 5 &&
+                  coords[0] && coords[1] && coords[2] && coords[3] &&
+                  Math.abs(coords[0][0] - coords[3][0]) < 0.001 &&
+                  Math.abs(coords[1][1] - coords[2][1]) < 0.001
       })
     }
 
-    const activeBlocs = blocs.filter(b => b.status === 'active')
+    const activeBlocs = blocs // Remove status filter since Bloc type doesn't have status property
     console.log(`📍 Returning ${activeBlocs.length} active blocs`)
 
     return this.simulateResponse(activeBlocs)
@@ -321,7 +323,7 @@ export class MockApiService {
   static async getBlocsByFarm(farmId: string): Promise<ApiResponse<Bloc[]>> {
     await this.initializeData()
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
-    const farmBlocs = blocs.filter(b => b.farm_id === farmId && b.status === 'active')
+    const farmBlocs = blocs.filter(b => b.farmId === farmId) // Use farmId instead of farm_id, remove status filter
     return this.simulateResponse(farmBlocs)
   }
 
@@ -546,16 +548,23 @@ export class MockApiService {
     const blocs = DemoStorage.get<Bloc[]>(STORAGE_KEYS.BLOCS) || []
     const newBloc: Bloc = {
       id: `bloc-${Date.now()}`,
-      uuid: `bloc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      // localId: blocData.name, // Property doesn't exist in Bloc schema
+      field_id: `field-${Date.now()}`,
       name: blocData.name,
-      farmId: blocData.farmId,
       area: blocData.area,
-      coordinates: blocData.coordinates,
+      location: null,
       soil_type: blocData.soilType || 'Clay',
-      // elevation: blocData.elevation || 100, // Property not in Bloc schema
-      // slope: blocData.slope || 2, // Property not in Bloc schema
-      // drainageClass: blocData.drainageClass || 'Well drained', // Property not in Bloc schema
+      irrigation_type: null,
+      slope_percentage: null,
+      drainage_status: null,
+      last_soil_test_date: null,
+      ph_level: null,
+      organic_matter_percentage: null,
+      active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      coordinates: blocData.coordinates,
+      uuid: `bloc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      farmId: blocData.farmId,
       // irrigationMethod: blocData.irrigationMethod || 'Drip irrigation', // Property not in Bloc schema
       // accessRoad: blocData.accessRoad ?? true, // Property not in Bloc schema
       // active: true, // Property not in Bloc schema
@@ -708,24 +717,24 @@ export class MockApiService {
       cycle_number: 1,
       status: 'active',
       sugarcane_variety_id: cycleData.sugarcaneVarietyId,
-      // sugarcaneVarietyName: cycleData.sugarcaneVarietyName || 'Unknown Variety', // Property not in CropCycle schema
       intercrop_variety_id: cycleData.intercropVarietyId || null,
-      // intercropVarietyName: cycleData.intercropVarietyName || null, // Property not in CropCycle schema
       planting_date: cycleData.plantingDate || new Date().toISOString(),
-      plannedHarvestDate: cycleData.plannedHarvestDate || new Date().toISOString(),
-      expectedYield: cycleData.expectedYield || 0,
-      actualYield: undefined,
-      revenue: 0,
-      estimatedTotalCost: 0,
-      actualTotalCost: 0,
-      netProfit: 0,
-      profitPerHectare: 0,
-      profitMarginPercent: 0,
-      growthStage: 'planted',
-      growthStageUpdatedAt: new Date().toISOString(),
-      daysSincePlanting: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      planned_harvest_date: cycleData.plannedHarvestDate || new Date().toISOString(),
+      actual_harvest_date: null,
+      expected_yield_tons_ha: cycleData.expectedYield || 80,
+      actual_yield_tons_ha: null,
+      estimated_total_cost: 0,
+      actual_total_cost: null,
+      total_revenue: null,
+      sugarcane_revenue: null,
+      intercrop_revenue: null,
+      net_profit: null,
+      profit_per_hectare: null,
+      profit_margin_percent: null,
+      growth_stage: 'planted',
+      days_since_planting: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
 
     const updatedCycles = [...cropCycles, newCycle]
@@ -741,21 +750,29 @@ export class MockApiService {
     const newOperation: FieldOperation = {
       uuid: `operation-${Date.now()}`,
       crop_cycle_uuid: operationData.crop_cycle_uuid,
-      // blocId: operationData.blocId, // Property not in FieldOperation schema
+      operation_name: operationData.operationName || 'New Operation',
       operation_type: operationData.type || 'cultivation',
       method: operationData.method || 'standard',
-      status: 'planned',
+      priority: 'normal',
       planned_start_date: operationData.plannedStartDate || new Date().toISOString().split('T')[0],
       planned_end_date: operationData.plannedEndDate || new Date().toISOString().split('T')[0],
-      // plannedArea: operationData.plannedArea || 0, // Property not in FieldOperation schema
-      progress: 0,
-      estimatedCost: operationData.estimatedCost || 0,
-      actualCost: 0,
-      labourRequired: [],
-      equipmentRequired: [],
-      productsUsed: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      actual_start_date: null,
+      actual_end_date: null,
+      planned_area_hectares: null,
+      actual_area_hectares: null,
+      planned_quantity: null,
+      actual_quantity: null,
+      status: 'planned',
+      completion_percentage: 0,
+      estimated_total_cost: 0,
+      actual_total_cost: null,
+      // weather_conditions: null, // Property not in FieldOperation schema
+      // temperature_celsius: null, // Property not in FieldOperation schema
+      // humidity_percent: null, // Property not in FieldOperation schema
+      // wind_speed_kmh: null, // Property not in FieldOperation schema
+      // notes: null, // Property not in FieldOperation schema
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
     const updatedOperations = [...fieldOperations, newOperation]
@@ -771,15 +788,24 @@ export class MockApiService {
     const newWorkPackage: WorkPackage = {
       uuid: `work-package-${Date.now()}`,
       field_operation_uuid: workPackageData.fieldOperationId,
+      package_name: null,
       work_date: workPackageData.date || new Date().toISOString().split('T')[0],
+      shift: 'day',
       planned_area_hectares: workPackageData.area || null,
-      duration_hours: workPackageData.hours || null,
-      // cost: workPackageData.cost || 0, // Property not in WorkPackage schema
-      crew: workPackageData.crew || '',
-      equipment: workPackageData.equipment || '',
+      actual_area_hectares: null,
+      planned_quantity: null,
+      actual_quantity: null,
       status: 'not-started',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      start_time: null,
+      end_time: null,
+      duration_hours: workPackageData.hours || null,
+      weather_conditions: null,
+      temperature_celsius: null,
+      humidity_percent: null,
+      wind_speed_kmh: null,
+      notes: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
     const updatedWorkPackages = [...workPackages, newWorkPackage]

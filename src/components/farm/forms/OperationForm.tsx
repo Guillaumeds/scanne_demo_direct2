@@ -253,70 +253,20 @@ export function OperationForm() {
 
       if (existingOperation) {
         console.log('Loading existing operation data:', existingOperation)
-        console.log('Products array:', existingOperation.products)
-        console.log('Equipment array:', existingOperation.equipment)
-        console.log('Labour array:', existingOperation.labour)
+        // Note: products, equipment, labour are stored in separate join tables
+        // For now, we'll use empty arrays as the form will be populated separately
 
         // Transform demo data format to form format
-        const transformedProducts: SelectedProduct[] = (existingOperation.products || []).map((p: any) => ({
-          product: {
-            id: p.id || `product-${Date.now()}`,
-            product_id: p.id || `product-${Date.now()}`,
-            name: p.name || 'Unknown Product',
-            category: null,
-            subcategory: null,
-            description: null,
-            unit: p.unit || 'kg',
-            cost_per_unit: (p.planned_cost || 0) / (p.planned_quantity || 1),
-            active: true,
-            created_at: null,
-            updated_at: null
-          },
-          quantity: p.planned_quantity || 0,
-          rate: p.planned_quantity ? (p.planned_quantity / bloc.area) : 0,
-          estimatedCost: p.planned_cost || 0
-        }))
-
-        const transformedEquipment: SelectedEquipment[] = (existingOperation.equipment || []).map((e: any) => ({
-          equipment: {
-            equipment_id: e.id || `equipment-${Date.now()}`,
-            id: e.id || `equipment-${Date.now()}`,
-            name: e.name || 'Unknown Equipment',
-            category: null,
-            description: null,
-            hourly_rate: e.cost_per_hour || 0,
-            active: true,
-            created_at: null,
-            updated_at: null
-          },
-          estimatedDuration: e.planned_hours || 0,
-          costPerHour: e.cost_per_hour || 0,
-          totalEstimatedCost: e.planned_cost || 0
-        }))
-
-        const transformedLabour: LabourTableEntry[] = (existingOperation.labour || []).map((l: any) => ({
-          labour: {
-            id: l.id || `labour-${Date.now()}`,
-            labour_id: l.id || `labour-${Date.now()}`,
-            name: l.name || 'Unknown Labour',
-            category: null,
-            unit: 'hours',
-            cost_per_unit: l.rate_per_hour || 0,
-            description: null,
-            active: true,
-            created_at: '',
-            updated_at: ''
-          },
-          estimatedHours: l.planned_hours || 0,
-          ratePerHour: l.rate_per_hour || 0,
-          totalEstimatedCost: l.planned_cost || 0
-        }))
+        // Note: For now using empty arrays since products/equipment/labour are in separate tables
+        const transformedProducts: SelectedProduct[] = []
+        const transformedEquipment: SelectedEquipment[] = []
+        const transformedLabour: LabourTableEntry[] = []
 
         // Populate form with existing data
         const formData = {
           operationType: existingOperation.operation_type || '',
           method: existingOperation.method || '',
-          description: existingOperation.description || '',
+          description: '', // Description not stored in database
           priority: existingOperation.priority || 'normal',
           status: existingOperation.status || 'planned',
           plannedStartDate: existingOperation.planned_start_date || '',
@@ -326,13 +276,13 @@ export function OperationForm() {
           labour: transformedLabour,
           estimatedTotalCost: existingOperation.estimated_total_cost || 0,
           actualTotalCost: existingOperation.actual_total_cost,
-          actualRevenue: existingOperation.actual_revenue,
-          totalYield: existingOperation.total_yield,
-          yieldPerHectare: existingOperation.yield_per_hectare,
-          weatherConditions: existingOperation.weather_conditions,
-          qualityMetrics: existingOperation.quality_metrics,
-          notes: existingOperation.notes || '',
-          attachments: existingOperation.attachments || []
+          actualRevenue: 0, // Not stored in database
+          totalYield: 0, // Not stored in database
+          yieldPerHectare: 0, // Not stored in database
+          weatherConditions: '', // Not stored in database
+          qualityMetrics: '', // Not stored in database
+          notes: '', // Not stored in database
+          attachments: [] // Not stored in database
         }
 
         console.log('Form data to be set:', formData)
@@ -487,14 +437,25 @@ export function OperationForm() {
         >
           {/* Header */}
           <div className="mb-6 bg-white/95 backdrop-blur-sm rounded-lg p-4 border border-border/50">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Sprout className="h-6 w-6 text-primary" />
-                {currentOperationId ? 'Edit Field Operation' : 'New Field Operation'}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Plan and manage agricultural operations for {bloc.name || `Bloc ${bloc.localId}`}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <Sprout className="h-6 w-6 text-primary" />
+                  {currentOperationId ? 'Edit Field Operation' : 'New Field Operation'}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Plan and manage agricultural operations for {bloc.name || `Bloc ${bloc.localId}`}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                className="bg-white/80 backdrop-blur-sm border-border/50 hover:bg-white/90"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
             </div>
           </div>
 

@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useState } from 'react'
 import { Sprout, Shield, Menu } from 'lucide-react'
 import { useDynamicViewportHeight } from '@/hooks/useViewportHeight'
 import Image from 'next/image'
@@ -33,9 +34,26 @@ const FarmGISLayout = dynamic(() => import('@/components/FarmGISLayout'), {
   )
 })
 
+const FarmViewScreen = dynamic(() => import('@/components/farm/operations/FarmViewScreen').then(mod => ({ default: mod.FarmViewScreen })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-screen bg-gray-100">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading Farm Operations...</p>
+      </div>
+    </div>
+  )
+})
+
+type ViewMode = 'gis' | 'operations'
+
 export default function HomePage() {
   // Initialize dynamic viewport height for mobile compatibility
   useDynamicViewportHeight()
+
+  // View state management
+  const [currentView, setCurrentView] = useState<ViewMode>('gis')
 
   return (
     <main className="h-screen-dynamic flex flex-col">
@@ -118,6 +136,29 @@ export default function HomePage() {
                       </div>
                     </div>
 
+                    {/* Navigation Links */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Navigation</h4>
+                      <div className="space-y-2">
+                        <Button
+                          variant={currentView === 'gis' ? 'ghost' : 'default'}
+                          className="w-full justify-start gap-3 h-10"
+                          onClick={() => setCurrentView('gis')}
+                        >
+                          <Sprout className="h-4 w-4" />
+                          Farm GIS View
+                        </Button>
+                        <Button
+                          variant={currentView === 'operations' ? 'default' : 'ghost'}
+                          className="w-full justify-start gap-3 h-10"
+                          onClick={() => setCurrentView('operations')}
+                        >
+                          <Sprout className="h-4 w-4" />
+                          Farm Operations View
+                        </Button>
+                      </div>
+                    </div>
+
                     {/* Demo Information */}
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-slate-700 mb-3">Demo Information</h4>
@@ -141,7 +182,7 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <FarmGISLayout />
+        {currentView === 'gis' ? <FarmGISLayout /> : <FarmViewScreen />}
       </div>
     </main>
   )

@@ -88,7 +88,7 @@ interface OperationsTableProps {
 
 const columnHelper = createColumnHelper<Operation>()
 
-export function OperationsTable({ data, perspective, searchQuery }: OperationsTableProps) {
+export function OperationsTable({ data, perspective, searchQuery, footerTotals }: OperationsTableProps) {
   const { setCurrentScreen, setCurrentOperationId, setCurrentWorkPackageId } = useBlocContext()
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
@@ -200,7 +200,7 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
             if (isWorkPackage) {
               return (
                 <div className="text-sm pl-4 text-muted-foreground">
-                  Daily Work Package
+                  Work Package
                 </div>
               )
             }
@@ -213,59 +213,78 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
         }),
         columnHelper.display({
           id: 'method',
-          header: 'Method / Date',
+          header: 'Method',
           cell: ({ row }) => {
             const isWorkPackage = row.depth > 0
             if (isWorkPackage) {
               return (
-                <div className="text-sm pl-4">
-                  {(row.original as any).work_date || (row.original as any).date || 'N/A'}
+                <div className="text-sm pl-4 text-muted-foreground">
+                  -
                 </div>
               )
             }
             return (
               <div className="text-sm">
-                {(row.original as any).method || 'Manual'}
+                {(row.original as any).method || 'Not specified'}
               </div>
             )
           }
         }),
         columnHelper.display({
-          id: 'mainProduct',
-          header: 'Main Product / Area',
+          id: 'productName',
+          header: 'Product Name',
           cell: ({ row }) => {
             const isWorkPackage = row.depth > 0
             if (isWorkPackage) {
               return (
-                <div className="text-sm pl-4">
-                  {((row.original as any).area || 0).toFixed(1)} ha
+                <div className="text-sm pl-4 text-muted-foreground">
+                  -
                 </div>
               )
             }
             return (
               <div className="text-sm">
-                {(row.original as any).mainProduct || 'No Product'}
+                {(row.original as any).mainProduct || 'No product'}
+              </div>
+            )
+          }
+        }),
+        columnHelper.display({
+          id: 'dateRange',
+          header: 'Date Range',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  {(row.original as any).date || (row.original as any).work_date || 'No date'}
+                </div>
+              )
+            }
+            const startDate = (row.original as any).plannedStartDate
+            const endDate = (row.original as any).plannedEndDate
+            return (
+              <div className="text-sm">
+                {startDate && endDate ? `${startDate} - ${endDate}` : 'No dates'}
               </div>
             )
           }
         }),
         columnHelper.display({
           id: 'blocArea',
-          header: 'Bloc Area / Status',
+          header: 'Bloc Area',
           cell: ({ row }) => {
             const isWorkPackage = row.depth > 0
             if (isWorkPackage) {
               return (
                 <div className="text-sm pl-4">
-                  <Badge variant="outline" className={getStatusColor(row.original.status)}>
-                    {row.original.status}
-                  </Badge>
+                  {((row.original as any).area || 0).toFixed(2)} ha
                 </div>
               )
             }
             return (
               <div className="text-sm">
-                {((row.original as any).blocArea || 0).toFixed(1)} ha
+                {((row.original as any).blocArea || 0).toFixed(2)} ha
               </div>
             )
           }
@@ -278,31 +297,19 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
             if (isWorkPackage) {
               return <div className="text-sm pl-4">-</div>
             }
-            const progress = (row.original as any).progress || 0
-            return (
-              <div className="text-sm">
-                <div className="flex items-center gap-2">
-                  <Progress value={progress} className="w-16 h-2" />
-                  <span className="text-xs">{progress}%</span>
-                </div>
-              </div>
-            )
-          }
-        }),
-        columnHelper.accessor('progress', {
-          header: 'Progress (%)',
-          cell: ({ getValue, row }) => {
             // Calculate progress as % of work packages area completed vs bloc area
             const completedArea = row.original.workPackages
-              ?.filter(wp => wp.status === 'completed')
-              ?.reduce((sum, wp) => sum + (wp.area || 0), 0) || 0
-            const totalArea = row.original.area || 1
+              ?.filter((wp: any) => wp.status === 'completed')
+              ?.reduce((sum: number, wp: any) => sum + (wp.area || 0), 0) || 0
+            const totalArea = (row.original as any).blocArea || 1
             const progressPercent = Math.round((completedArea / totalArea) * 100)
 
             return (
-              <div className="w-20">
-                <Progress value={progressPercent} className="h-2" />
-                <div className="text-xs text-center mt-1">{progressPercent}%</div>
+              <div className="text-sm">
+                <div className="flex items-center gap-2">
+                  <Progress value={progressPercent} className="w-16 h-2" />
+                  <span className="text-xs">{progressPercent}%</span>
+                </div>
               </div>
             )
           }
