@@ -87,6 +87,9 @@ interface OperationsTableProps {
   // Configuration for reusability
   showBlocColumn?: boolean  // Show bloc name column
   groupByBloc?: boolean     // Group operations by bloc with headers
+  // Optional handlers for context-free usage
+  onEditOperation?: (operation: Operation) => void
+  onEditWorkPackage?: (workPackage: WorkPackage, operationId: string) => void
 }
 
 const columnHelper = createColumnHelper<Operation>()
@@ -97,9 +100,19 @@ export function OperationsTable({
   searchQuery,
   footerTotals,
   showBlocColumn = false,
-  groupByBloc = false
+  groupByBloc = false,
+  onEditOperation,
+  onEditWorkPackage
 }: OperationsTableProps) {
-  const { setCurrentScreen, setCurrentOperationId, setCurrentWorkPackageId } = useBlocContext()
+  // Try to use BlocContext, but don't crash if it's not available
+  let blocContext = null
+  try {
+    blocContext = useBlocContext()
+  } catch (error) {
+    // Context not available - that's okay for farm view
+    blocContext = null
+  }
+
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
   const getStatusColor = (status: string) => {
@@ -124,14 +137,26 @@ export function OperationsTable({
   }
 
   const handleEditOperation = (operation: Operation) => {
-    setCurrentOperationId(operation.id)
-    setCurrentScreen('operation-form')
+    if (onEditOperation) {
+      // Farm view: use prop handler
+      onEditOperation(operation)
+    } else if (blocContext) {
+      // Bloc view: use context
+      blocContext.setCurrentOperationId(operation.id)
+      blocContext.setCurrentScreen('operation-form')
+    }
   }
 
   const handleEditWorkPackage = (workPackage: WorkPackage, operationId: string) => {
-    setCurrentOperationId(operationId)
-    setCurrentWorkPackageId(workPackage.id)
-    setCurrentScreen('work-package-form')
+    if (onEditWorkPackage) {
+      // Farm view: use prop handler
+      onEditWorkPackage(workPackage, operationId)
+    } else if (blocContext) {
+      // Bloc view: use context
+      blocContext.setCurrentOperationId(operationId)
+      blocContext.setCurrentWorkPackageId(workPackage.id)
+      blocContext.setCurrentScreen('work-package-form')
+    }
   }
 
   // Define columns based on perspective

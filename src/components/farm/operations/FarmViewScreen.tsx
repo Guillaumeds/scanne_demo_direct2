@@ -27,6 +27,31 @@ export function FarmViewScreen() {
   const [showFilters, setShowFilters] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
 
+  // Handlers for farm-level operations (context-free)
+  const handleEditOperation = (operation: any) => {
+    // TODO: Navigate to bloc view and edit operation
+    // For now, just log the action
+    console.log('Edit operation in farm view:', {
+      operationId: operation.id,
+      blocId: operation.blocId,
+      blocName: operation.blocName,
+      operationType: operation.operationType
+    })
+    // Future: router.push(`/bloc/${operation.blocId}/operations/${operation.id}/edit`)
+  }
+
+  const handleEditWorkPackage = (workPackage: any, operationId: string) => {
+    // TODO: Navigate to bloc view and edit work package
+    // For now, just log the action
+    console.log('Edit work package in farm view:', {
+      workPackageId: workPackage.id,
+      operationId,
+      workDate: workPackage.work_date,
+      status: workPackage.status
+    })
+    // Future: router.push(`/bloc/${operation.blocId}/work-packages/${workPackage.id}/edit`)
+  }
+
   // Handle view/perspective changes with transition
   const handleViewChange = (newView: ViewMode) => {
     setIsTransitioning(true)
@@ -86,9 +111,10 @@ export function FarmViewScreen() {
           estimatedProductCost: 0,
           estimatedEquipmentCost: 0,
           estimatedLabourCost: 0,
-          products: [],
-          equipment: [],
-          labour: [],
+          // Preserve existing linked data from demo generator
+          products: operation.products || [],
+          equipment: operation.equipment || [],
+          labour: operation.labour || [],
           // Add bloc information to each operation
           blocId: bloc.uuid,
           blocName: bloc.name,
@@ -100,9 +126,10 @@ export function FarmViewScreen() {
             hours: wp.hours || 0,
             cost: wp.cost || 0,
             status: wp.status,
-            products: [],
-            equipment: [],
-            labour: [],
+            // Preserve existing linked data from demo generator
+            products: wp.products || [],
+            equipment: wp.equipment || [],
+            labour: wp.labour || [],
             productActualCost: 0,
             equipmentActualCost: 0,
             labourActualCost: 0,
@@ -241,6 +268,8 @@ export function FarmViewScreen() {
                     searchQuery={searchQuery}
                     showBlocColumn={true}
                     groupByBloc={false}
+                    onEditOperation={handleEditOperation}
+                    onEditWorkPackage={handleEditWorkPackage}
                   />
                 </CardContent>
               </Card>
