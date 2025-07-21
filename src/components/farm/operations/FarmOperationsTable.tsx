@@ -142,7 +142,11 @@ export function FarmOperationsTable({ data, perspective, searchQuery }: FarmOper
         header: '',
         size: 50,
         cell: ({ row }) => {
-          if (!row.getCanExpand()) return null
+          // Always show expand button for bloc rows (depth 0), even if no operations
+          // Show expand button for operation rows (depth 1) only if they have work packages
+          const shouldShowExpander = row.depth === 0 || (row.depth === 1 && row.getCanExpand())
+
+          if (!shouldShowExpander) return null
 
           return (
             <Button
@@ -391,10 +395,12 @@ export function FarmOperationsTable({ data, perspective, searchQuery }: FarmOper
     onExpandedChange: setExpanded,
     getSubRows: (row) => {
       if (isBlocData(row)) {
-        return row.operations.map(op => ({ ...op, subRows: op.workPackages })) as TableRow[]
+        // Always return an array for blocs, even if operations is empty
+        // This ensures blocs are always considered expandable
+        return (row.operations || []).map(op => ({ ...op, subRows: op.workPackages || [] })) as TableRow[]
       }
       if (isOperation(row)) {
-        return row.workPackages as TableRow[]
+        return (row.workPackages || []) as TableRow[]
       }
       return undefined
     },

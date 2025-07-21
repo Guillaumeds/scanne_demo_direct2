@@ -241,26 +241,54 @@ export function OperationForm() {
 
   // Load existing operation data when editing
   useEffect(() => {
-    console.log('OperationForm useEffect triggered')
-    console.log('currentOperationId:', currentOperationId)
-    console.log('fieldOperations.data:', fieldOperations.data)
-    console.log('loadedOperationRef.current:', loadedOperationRef.current)
-
     if (currentOperationId && fieldOperations.data && loadedOperationRef.current !== currentOperationId) {
-      console.log('Looking for operation with ID:', currentOperationId)
       const existingOperation = fieldOperations.data.find(op => op.uuid === currentOperationId)
-      console.log('Found operation:', existingOperation)
 
       if (existingOperation) {
-        console.log('Loading existing operation data:', existingOperation)
         // Note: products, equipment, labour are stored in separate join tables
         // For now, we'll use empty arrays as the form will be populated separately
 
         // Transform demo data format to form format
-        // Note: For now using empty arrays since products/equipment/labour are in separate tables
-        const transformedProducts: SelectedProduct[] = []
-        const transformedEquipment: SelectedEquipment[] = []
-        const transformedLabour: LabourTableEntry[] = []
+        // Extract products, equipment, and labour from the operation data
+        const transformedProducts: SelectedProduct[] = (existingOperation as any).products?.map((product: any) => ({
+          product: {
+            id: product.id,
+            name: product.name,
+            unit: product.unit,
+            cost: product.planned_cost / (product.planned_quantity || 1),
+            cost_per_unit: product.planned_cost / (product.planned_quantity || 1),
+            category: product.category || 'fertilizer',
+            active: true
+          },
+          quantity: product.planned_quantity || 0,
+          rate: product.planned_quantity / bloc.area || 0,
+          estimatedCost: product.planned_cost || 0
+        })) || []
+
+        const transformedEquipment: SelectedEquipment[] = (existingOperation as any).equipment?.map((equipment: any) => ({
+          equipment: {
+            id: equipment.id,
+            name: equipment.name,
+            category: equipment.category || 'tractor',
+            cost_per_hour: equipment.cost_per_hour || 0,
+            active: true
+          },
+          hours: equipment.planned_hours || 0,
+          totalEstimatedCost: equipment.planned_cost || 0
+        })) || []
+
+        const transformedLabour: LabourTableEntry[] = (existingOperation as any).labour?.map((labour: any) => ({
+          labour: {
+            id: labour.id,
+            name: labour.name,
+            category: labour.category || 'field-worker',
+            cost_per_unit: labour.cost_per_hour || 0,
+            unit: 'hour',
+            active: true
+          },
+          quantity: labour.planned_hours || 0,
+          totalEstimatedCost: labour.planned_cost || 0
+        })) || []
 
         // Populate form with existing data
         const formData = {
@@ -316,17 +344,6 @@ export function OperationForm() {
 
         // Force form to re-render by triggering validation
         form.trigger()
-
-        // Check form values after setting
-        setTimeout(() => {
-          console.log('Form values after setValue:', form.getValues())
-          console.log('Individual field values:')
-          console.log('- operationType:', form.getValues('operationType'))
-          console.log('- method:', form.getValues('method'))
-          console.log('- status:', form.getValues('status'))
-        }, 100)
-      } else {
-        console.log('Operation not found with ID:', currentOperationId)
       }
     } else {
       console.log('Missing currentOperationId or fieldOperations.data or already loaded')
@@ -385,11 +402,9 @@ export function OperationForm() {
       // Save directly to demo data - no validation, no error handling
       await createFieldOperationMutation.mutateAsync(operationRequest)
 
-      console.log('✅ Operation saved successfully for demo')
       setCurrentScreen('operations')
     } catch (error) {
-      // For demo - just log and continue
-      console.log('Demo save completed (ignoring any errors):', error)
+      // For demo - just continue
       setCurrentScreen('operations')
     }
   }
