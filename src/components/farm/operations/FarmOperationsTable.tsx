@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -97,6 +97,8 @@ const columnHelper = createColumnHelper<TableRow>()
 export function FarmOperationsTable({ data, perspective, searchQuery }: FarmOperationsTableProps) {
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
+
+
   const handleEditOperation = (operation: any) => {
     console.log('Edit operation:', operation)
   }
@@ -111,15 +113,16 @@ export function FarmOperationsTable({ data, perspective, searchQuery }: FarmOper
     }
   }
 
-  // Transform data to hierarchical structure for TanStack Table
+  // Transform data to flat structure - let getSubRows handle the hierarchy
   const hierarchicalData = useMemo(() => {
-    return data.map(bloc => ({
+    const result = data.map(bloc => ({
       ...bloc,
-      subRows: bloc.operations.map(operation => ({
-        ...operation,
-        subRows: operation.workPackages
-      }))
+      // Don't set subRows here - let getSubRows handle it
     })) as TableRow[]
+
+
+
+    return result
   }, [data])
 
   // Type guard functions
@@ -395,12 +398,12 @@ export function FarmOperationsTable({ data, perspective, searchQuery }: FarmOper
     onExpandedChange: setExpanded,
     getSubRows: (row) => {
       if (isBlocData(row)) {
-        // Always return an array for blocs, even if operations is empty
-        // This ensures blocs are always considered expandable
-        return (row.operations || []).map(op => ({ ...op, subRows: op.workPackages || [] })) as TableRow[]
+        // Return operations as sub-rows for blocs
+        return row.operations || []
       }
       if (isOperation(row)) {
-        return (row.workPackages || []) as TableRow[]
+        // Return work packages as sub-rows for operations
+        return row.workPackages || []
       }
       return undefined
     },

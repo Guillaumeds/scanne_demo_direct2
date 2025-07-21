@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { ViewSwitcher } from './ViewSwitcher'
 import { PerspectiveSwitcher } from './PerspectiveSwitcher'
-import { FarmOperationsTable } from './FarmOperationsTable'
+import { OperationsTable } from './OperationsTable'
 import { OperationsFilters } from './OperationsFilters'
 import { LoadingSpinner, SkeletonTable } from '../shared/LoadingSpinner'
 import { useFarmGISData } from '@/hooks/useDemoData'
@@ -44,24 +44,27 @@ export function FarmViewScreen() {
     }, 150)
   }
 
-  // Transform data to farm-level structure (Blocs -> Operations -> Work Packages)
+  // Transform data to flat operations list with bloc information (for reusable OperationsTable)
   const farmData = useMemo(() => {
     if (!blocs.data || !fieldOperations.data || !workPackages.data) return []
 
-    return blocs.data.map((bloc: any) => {
+    // Create a flat list of operations from all blocs, with bloc info embedded
+    const allOperations: any[] = []
+
+    blocs.data.forEach((bloc: any) => {
       // Get operations for this bloc
-      const blocOperations = fieldOperations.data.filter((op: any) => 
-        op.crop_cycle_uuid && 
+      const blocOperations = fieldOperations.data.filter((op: any) =>
+        op.crop_cycle_uuid &&
         bloc.crop_cycles?.some((cc: any) => cc.uuid === op.crop_cycle_uuid)
       )
 
-      // Transform operations with their work packages
-      const operations = blocOperations.map((operation: any) => {
-        const operationWorkPackages = workPackages.data.filter((wp: any) => 
+      // Transform operations with their work packages and bloc info
+      blocOperations.forEach((operation: any) => {
+        const operationWorkPackages = workPackages.data.filter((wp: any) =>
           wp.field_operation_uuid === operation.uuid
         )
 
-        return {
+        allOperations.push({
           id: operation.uuid,
           type: operation.operation_name,
           operationType: operation.operation_type,
@@ -86,6 +89,9 @@ export function FarmViewScreen() {
           products: [],
           equipment: [],
           labour: [],
+          // Add bloc information to each operation
+          blocId: bloc.uuid,
+          blocName: bloc.name,
           workPackages: operationWorkPackages.map((wp: any) => ({
             id: wp.uuid,
             work_date: wp.work_date,
@@ -103,22 +109,11 @@ export function FarmViewScreen() {
             equipmentEffort: 0,
             labourEffort: 0
           }))
-        }
+        })
       })
-
-      return {
-        id: bloc.uuid,
-        name: bloc.name,
-        area: bloc.area || 0,
-        operations: operations,
-        completedOperations: operations.filter((op: any) => op.status === 'completed').length,
-        totalOperations: operations.length,
-        completedWorkPackages: operations.reduce((sum: number, op: any) =>
-          sum + op.workPackages.filter((wp: any) => wp.status === 'completed').length, 0
-        ),
-        totalWorkPackages: operations.reduce((sum: number, op: any) => sum + op.workPackages.length, 0)
-      }
     })
+
+    return allOperations
   }, [blocs.data, fieldOperations.data, workPackages.data])
 
   // Filter data based on search query
@@ -240,10 +235,12 @@ export function FarmViewScreen() {
             >
               <Card className="h-full m-4 shadow-sm">
                 <CardContent className="p-0 h-full">
-                  <FarmOperationsTable
+                  <OperationsTable
                     data={filteredData}
                     perspective={perspective}
                     searchQuery={searchQuery}
+                    showBlocColumn={true}
+                    groupByBloc={false}
                   />
                 </CardContent>
               </Card>

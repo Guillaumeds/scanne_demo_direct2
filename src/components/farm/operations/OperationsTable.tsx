@@ -84,11 +84,21 @@ interface OperationsTableProps {
     totalActualRevenue: number
     profitPercent: number
   }
+  // Configuration for reusability
+  showBlocColumn?: boolean  // Show bloc name column
+  groupByBloc?: boolean     // Group operations by bloc with headers
 }
 
 const columnHelper = createColumnHelper<Operation>()
 
-export function OperationsTable({ data, perspective, searchQuery, footerTotals }: OperationsTableProps) {
+export function OperationsTable({
+  data,
+  perspective,
+  searchQuery,
+  footerTotals,
+  showBlocColumn = false,
+  groupByBloc = false
+}: OperationsTableProps) {
   const { setCurrentScreen, setCurrentOperationId, setCurrentWorkPackageId } = useBlocContext()
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
@@ -146,6 +156,24 @@ export function OperationsTable({ data, perspective, searchQuery, footerTotals }
         ),
         size: 40
       }),
+      // Conditionally add bloc column
+      ...(showBlocColumn ? [
+        columnHelper.display({
+          id: 'bloc',
+          header: 'Bloc',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return <div className="text-sm text-muted-foreground pl-4">-</div>
+            }
+            return (
+              <div className="text-sm font-medium">
+                {(row.original as any).blocName || 'Unknown Bloc'}
+              </div>
+            )
+          }
+        })
+      ] : []),
       columnHelper.accessor('type', {
         header: 'Operation',
         cell: ({ row }) => {
