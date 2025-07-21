@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Storage Detective - Find Demo Data</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        button { padding: 10px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🕵️ Storage Detective - Find Demo Data</h1>
+    
+    <button onclick="investigateStorage()">🔍 Investigate All Storage</button>
+    <button onclick="checkMainApp()">🌐 Check Main App</button>
+    <button onclick="clearResults()">🧹 Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results')
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : ''
+            resultsDiv.innerHTML += `<div class="${className}">${message}</div>`
+            console.log(message)
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+        }
+        
+        function investigateStorage() {
+            clearResults()
+            log('🕵️ Starting comprehensive storage investigation...')
+            
+            // 1. Check localStorage
+            log('\n=== 1. LOCALSTORAGE ===')
+            const localKeys = Object.keys(localStorage)
+            log(`localStorage keys: ${localKeys.length}`)
+            if (localKeys.length > 0) {
+                localKeys.forEach(key => {
+                    const data = localStorage.getItem(key)
+                    const size = data ? data.length : 0
+                    log(`  📦 ${key} (${size} chars)`, 'success')
+                })
+            } else {
+                log('❌ localStorage is empty', 'error')
+            }
+            
+            // 2. Check sessionStorage
+            log('\n=== 2. SESSIONSTORAGE ===')
+            const sessionKeys = Object.keys(sessionStorage)
+            log(`sessionStorage keys: ${sessionKeys.length}`)
+            if (sessionKeys.length > 0) {
+                sessionKeys.forEach(key => {
+                    const data = sessionStorage.getItem(key)
+                    const size = data ? data.length : 0
+                    log(`  📦 ${key} (${size} chars)`, 'success')
+                })
+            } else {
+                log('❌ sessionStorage is empty', 'error')
+            }
+            
+            // 3. Check IndexedDB
+            log('\n=== 3. INDEXEDDB ===')
+            if ('indexedDB' in window) {
+                log('✅ IndexedDB is available', 'success')
+                // List databases (if supported)
+                if (indexedDB.databases) {
+                    indexedDB.databases().then(databases => {
+                        log(`IndexedDB databases: ${databases.length}`)
+                        databases.forEach(db => {
+                            log(`  🗄️ ${db.name} (version ${db.version})`, 'info')
+                        })
+                    }).catch(err => {
+                        log(`❌ Error listing IndexedDB: ${err.message}`, 'error')
+                    })
+                } else {
+                    log('⚠️ IndexedDB.databases() not supported', 'warning')
+                }
+            } else {
+                log('❌ IndexedDB not available', 'error')
+            }
+            
+            // 4. Check for global variables
+            log('\n=== 4. GLOBAL VARIABLES ===')
+            const globalVars = [
+                'demoData',
+                'farmData', 
+                'blocData',
+                'operationsData',
+                'mockData',
+                'cacheData'
+            ]
+            
+            globalVars.forEach(varName => {
+                if (window[varName]) {
+                    log(`✅ Found global: window.${varName}`, 'success')
+                    log(`  Type: ${typeof window[varName]}`)
+                    if (typeof window[varName] === 'object' && window[varName] !== null) {
+                        log(`  Keys: ${Object.keys(window[varName]).join(', ')}`)
+                    }
+                } else {
+                    log(`❌ No global: window.${varName}`, 'error')
+                }
+            })
+            
+            // 5. Check for demo functions
+            log('\n=== 5. DEMO FUNCTIONS ===')
+            const demoFunctions = [
+                'refreshDemoData',
+                'resetDemo',
+                'exportDemo',
+                'clearDemoCache'
+            ]
+            
+            demoFunctions.forEach(funcName => {
+                if (window[funcName]) {
+                    log(`✅ Found function: window.${funcName}`, 'success')
+                } else {
+                    log(`❌ No function: window.${funcName}`, 'error')
+                }
+            })
+            
+            // 6. Check React Query cache (if available)
+            log('\n=== 6. REACT QUERY CACHE ===')
+            if (window.__REACT_QUERY_DEVTOOLS_GLOBAL_HOOK__) {
+                log('✅ React Query DevTools detected', 'success')
+            } else {
+                log('❌ React Query DevTools not found', 'error')
+            }
+            
+            // 7. Check for service workers
+            log('\n=== 7. SERVICE WORKERS ===')
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    log(`Service workers: ${registrations.length}`)
+                    registrations.forEach(reg => {
+                        log(`  🔧 ${reg.scope}`, 'info')
+                    })
+                })
+            } else {
+                log('❌ Service Workers not supported', 'error')
+            }
+        }
+        
+        function checkMainApp() {
+            log('\n🌐 Checking main app at http://localhost:3000...')
+            
+            // Try to access the main app's localStorage
+            try {
+                // Open main app in new tab and check its storage
+                const mainApp = window.open('http://localhost:3000', '_blank')
+                
+                setTimeout(() => {
+                    try {
+                        if (mainApp && !mainApp.closed) {
+                            const mainLocalStorage = mainApp.localStorage
+                            const mainKeys = Object.keys(mainLocalStorage)
+                            
+                            log(`Main app localStorage keys: ${mainKeys.length}`, 'info')
+                            mainKeys.forEach(key => {
+                                const data = mainLocalStorage.getItem(key)
+                                const size = data ? data.length : 0
+                                log(`  📦 ${key} (${size} chars)`, 'success')
+                            })
+                            
+                            mainApp.close()
+                        } else {
+                            log('❌ Could not access main app window', 'error')
+                        }
+                    } catch (error) {
+                        log(`❌ Cross-origin error: ${error.message}`, 'error')
+                        log('ℹ️ This is normal - try manually checking localhost:3000', 'info')
+                        if (mainApp) mainApp.close()
+                    }
+                }, 2000)
+                
+            } catch (error) {
+                log(`❌ Error opening main app: ${error.message}`, 'error')
+            }
+        }
+        
+        // Auto-investigate on load
+        investigateStorage()
+    </script>
+</body>
+</html>

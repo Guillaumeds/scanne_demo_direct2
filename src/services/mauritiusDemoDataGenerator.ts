@@ -360,7 +360,7 @@ function generateFieldOperations(cropCycle: any, blocArea: number) {
     const estimatedCost = Math.floor(productCost + labourCost + equipmentCost)
     const actualCost = status === 'completed' ? Math.floor(estimatedCost * (0.9 + Math.random() * 0.2)) : null
 
-    operations.push({
+    const newOperation = {
       uuid: `op-${cropCycle.id}-${index}`,
       crop_cycle_uuid: cropCycle.id,
       operation_name: operationType.name,
@@ -415,7 +415,10 @@ function generateFieldOperations(cropCycle: any, blocArea: number) {
       })),
       created_at: formatDate(operationDate),
       updated_at: new Date().toISOString()
-    })
+    }
+
+    console.log(`Generated operation ${operationType.name} with ${operationType.products.length} products, ${operationType.equipment.length} equipment, ${operationType.labour.length} labour`)
+    operations.push(newOperation)
   })
 
   return operations
@@ -428,14 +431,58 @@ function generateWorkPackages(operation: any) {
   const endDate = new Date(operation.planned_end_date)
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
 
+  // Calculate which days are completed
+  const completedDays: boolean[] = []
+  let totalCompletedDays = 0
+  for (let day = 0; day < daysDiff; day++) {
+    const isCompleted = operation.status === 'completed' ||
+                       (operation.status === 'in-progress' && day < daysDiff * 0.6)
+    completedDays.push(isCompleted)
+    if (isCompleted) totalCompletedDays++
+  }
+
+  // Pre-calculate actual areas to ensure they sum to total operation area
+  // This ensures that when all work packages are completed, their areas total exactly to the operation/bloc area
+  const actualAreas: (number | null)[] = []
+  if (totalCompletedDays > 0) {
+    // Generate random variations for each completed day
+    const variations: number[] = []
+    let totalVariation = 0
+    for (let day = 0; day < daysDiff; day++) {
+      if (completedDays[day]) {
+        const variation = 0.9 + Math.random() * 0.2 // Same range as before
+        variations.push(variation)
+        totalVariation += variation
+      } else {
+        variations.push(0)
+      }
+    }
+
+    // Normalize variations so they sum to the total operation area
+    let variationIndex = 0
+    for (let day = 0; day < daysDiff; day++) {
+      if (completedDays[day]) {
+        const normalizedArea = (variations[variationIndex] / totalVariation) * operation.planned_area_hectares
+        actualAreas.push(normalizedArea)
+        variationIndex++
+      } else {
+        actualAreas.push(null)
+      }
+    }
+  } else {
+    // No completed days
+    for (let day = 0; day < daysDiff; day++) {
+      actualAreas.push(null)
+    }
+  }
+
   // Create daily work packages
   for (let day = 0; day < daysDiff; day++) {
     const workDate = addDays(startDate, day)
-    const isCompleted = operation.status === 'completed' ||
-                       (operation.status === 'in-progress' && day < daysDiff * 0.6)
+    const isCompleted = completedDays[day]
 
     const plannedArea = operation.planned_area_hectares / daysDiff
-    const actualArea = isCompleted ? plannedArea * (0.9 + Math.random() * 0.2) : null
+    const actualArea = actualAreas[day]
 
     const estimatedCost = operation.estimated_total_cost / daysDiff
     const actualCost = isCompleted ? estimatedCost * (0.9 + Math.random() * 0.2) : null

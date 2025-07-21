@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -188,8 +188,9 @@ const operationSchema = z.object({
 type OperationFormData = z.infer<typeof operationSchema>
 
 export function OperationForm() {
-  const { bloc, setCurrentScreen, currentOperationId, cropCycles } = useBlocContext()
+  const { bloc, setCurrentScreen, currentOperationId, cropCycles, fieldOperations } = useBlocContext()
   const [activeTab, setActiveTab] = useState('basic')
+  const loadedOperationRef = useRef<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     products: false,
     equipment: false,
@@ -237,6 +238,150 @@ export function OperationForm() {
   // Watch operation type for conditional rendering
   const operationType = form.watch('operationType')
   const isHarvestOperation = operationType === 'Harvest'
+
+  // Load existing operation data when editing
+  useEffect(() => {
+    console.log('OperationForm useEffect triggered')
+    console.log('currentOperationId:', currentOperationId)
+    console.log('fieldOperations.data:', fieldOperations.data)
+    console.log('loadedOperationRef.current:', loadedOperationRef.current)
+
+    if (currentOperationId && fieldOperations.data && loadedOperationRef.current !== currentOperationId) {
+      console.log('Looking for operation with ID:', currentOperationId)
+      const existingOperation = fieldOperations.data.find(op => op.uuid === currentOperationId)
+      console.log('Found operation:', existingOperation)
+
+      if (existingOperation) {
+        console.log('Loading existing operation data:', existingOperation)
+        console.log('Products array:', existingOperation.products)
+        console.log('Equipment array:', existingOperation.equipment)
+        console.log('Labour array:', existingOperation.labour)
+
+        // Transform demo data format to form format
+        const transformedProducts: SelectedProduct[] = (existingOperation.products || []).map((p: any) => ({
+          product: {
+            id: p.id || `product-${Date.now()}`,
+            product_id: p.id || `product-${Date.now()}`,
+            name: p.name || 'Unknown Product',
+            category: null,
+            subcategory: null,
+            description: null,
+            unit: p.unit || 'kg',
+            cost_per_unit: (p.planned_cost || 0) / (p.planned_quantity || 1),
+            active: true,
+            created_at: null,
+            updated_at: null
+          },
+          quantity: p.planned_quantity || 0,
+          rate: p.planned_quantity ? (p.planned_quantity / bloc.area) : 0,
+          estimatedCost: p.planned_cost || 0
+        }))
+
+        const transformedEquipment: SelectedEquipment[] = (existingOperation.equipment || []).map((e: any) => ({
+          equipment: {
+            equipment_id: e.id || `equipment-${Date.now()}`,
+            id: e.id || `equipment-${Date.now()}`,
+            name: e.name || 'Unknown Equipment',
+            category: null,
+            description: null,
+            hourly_rate: e.cost_per_hour || 0,
+            active: true,
+            created_at: null,
+            updated_at: null
+          },
+          estimatedDuration: e.planned_hours || 0,
+          costPerHour: e.cost_per_hour || 0,
+          totalEstimatedCost: e.planned_cost || 0
+        }))
+
+        const transformedLabour: LabourTableEntry[] = (existingOperation.labour || []).map((l: any) => ({
+          labour: {
+            id: l.id || `labour-${Date.now()}`,
+            labour_id: l.id || `labour-${Date.now()}`,
+            name: l.name || 'Unknown Labour',
+            category: null,
+            unit: 'hours',
+            cost_per_unit: l.rate_per_hour || 0,
+            description: null,
+            active: true,
+            created_at: '',
+            updated_at: ''
+          },
+          estimatedHours: l.planned_hours || 0,
+          ratePerHour: l.rate_per_hour || 0,
+          totalEstimatedCost: l.planned_cost || 0
+        }))
+
+        // Populate form with existing data
+        const formData = {
+          operationType: existingOperation.operation_type || '',
+          method: existingOperation.method || '',
+          description: existingOperation.description || '',
+          priority: existingOperation.priority || 'normal',
+          status: existingOperation.status || 'planned',
+          plannedStartDate: existingOperation.planned_start_date || '',
+          plannedEndDate: existingOperation.planned_end_date || '',
+          products: transformedProducts,
+          equipment: transformedEquipment,
+          labour: transformedLabour,
+          estimatedTotalCost: existingOperation.estimated_total_cost || 0,
+          actualTotalCost: existingOperation.actual_total_cost,
+          actualRevenue: existingOperation.actual_revenue,
+          totalYield: existingOperation.total_yield,
+          yieldPerHectare: existingOperation.yield_per_hectare,
+          weatherConditions: existingOperation.weather_conditions,
+          qualityMetrics: existingOperation.quality_metrics,
+          notes: existingOperation.notes || '',
+          attachments: existingOperation.attachments || []
+        }
+
+        console.log('Form data to be set:', formData)
+        console.log('Operation Type value:', formData.operationType)
+        console.log('Method value:', formData.method)
+        console.log('Status value:', formData.status)
+        console.log('Transformed products:', transformedProducts)
+        console.log('Transformed equipment:', transformedEquipment)
+        console.log('Transformed labour:', transformedLabour)
+
+        // Set form values individually for better control
+        console.log('Setting operationType to:', formData.operationType)
+        form.setValue('operationType', formData.operationType)
+        console.log('Setting method to:', formData.method)
+        form.setValue('method', formData.method)
+        console.log('Setting description to:', formData.description)
+        form.setValue('description', formData.description)
+        console.log('Setting status to:', formData.status)
+        form.setValue('status', formData.status)
+        console.log('Setting plannedStartDate to:', formData.plannedStartDate)
+        form.setValue('plannedStartDate', formData.plannedStartDate)
+        console.log('Setting plannedEndDate to:', formData.plannedEndDate)
+        form.setValue('plannedEndDate', formData.plannedEndDate)
+        form.setValue('products', formData.products)
+        form.setValue('equipment', formData.equipment)
+        form.setValue('labour', formData.labour)
+        form.setValue('estimatedTotalCost', formData.estimatedTotalCost)
+        form.setValue('notes', formData.notes)
+
+        loadedOperationRef.current = currentOperationId
+
+        // Force form to re-render by triggering validation
+        form.trigger()
+
+        // Check form values after setting
+        setTimeout(() => {
+          console.log('Form values after setValue:', form.getValues())
+          console.log('Individual field values:')
+          console.log('- operationType:', form.getValues('operationType'))
+          console.log('- method:', form.getValues('method'))
+          console.log('- status:', form.getValues('status'))
+        }, 100)
+      } else {
+        console.log('Operation not found with ID:', currentOperationId)
+      }
+    } else {
+      console.log('Missing currentOperationId or fieldOperations.data or already loaded')
+    }
+  }, [currentOperationId, fieldOperations.data, form, bloc.area])
 
   // Transform database operation types for dropdown
   const operationTypes = dbOperationTypes.map(type => ({
@@ -406,7 +551,12 @@ export function OperationForm() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Operation Type *</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select
+                                      key={`operationType-${field.value || 'empty'}`}
+                                      onValueChange={field.onChange}
+                                      value={field.value}
+                                      defaultValue={field.value}
+                                    >
                                       <FormControl>
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select operation type" />
@@ -415,7 +565,7 @@ export function OperationForm() {
                                       <SelectContent>
                                         <SelectItem value="land_preparation">Land Preparation</SelectItem>
                                         <SelectItem value="planting">Planting</SelectItem>
-                                        <SelectItem value="fertilizing">Fertilizing</SelectItem>
+                                        <SelectItem value="fertilization">Fertilization</SelectItem>
                                         <SelectItem value="irrigation">Irrigation</SelectItem>
                                         <SelectItem value="pest_control">Pest Control</SelectItem>
                                         <SelectItem value="weed_control">Weed Control</SelectItem>
@@ -435,7 +585,12 @@ export function OperationForm() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Operation Method *</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select
+                                      key={`method-${field.value || 'empty'}`}
+                                      onValueChange={field.onChange}
+                                      value={field.value}
+                                      defaultValue={field.value}
+                                    >
                                       <FormControl>
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select method" />
@@ -460,47 +615,29 @@ export function OperationForm() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Progress Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select
+                                      key={`status-${field.value || 'empty'}`}
+                                      onValueChange={field.onChange}
+                                      value={field.value}
+                                      defaultValue={field.value}
+                                    >
                                       <FormControl>
                                         <SelectTrigger>
                                           <SelectValue />
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        <SelectItem value="not_started">Not Started</SelectItem>
-                                        <SelectItem value="in_progress">In Progress</SelectItem>
+                                        <SelectItem value="planned">Planned</SelectItem>
+                                        <SelectItem value="in-progress">In Progress</SelectItem>
                                         <SelectItem value="completed">Completed</SelectItem>
-                                        <SelectItem value="on_hold">On Hold</SelectItem>
+                                        <SelectItem value="on-hold">On Hold</SelectItem>
                                       </SelectContent>
                                     </Select>
-                                    <FormMessage />
                                   </FormItem>
                                 )}
                               />
 
-                              <FormField
-                                control={form.control}
-                                name="priority"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Priority</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <FormControl>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="low">Low</SelectItem>
-                                        <SelectItem value="medium">Medium</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                        <SelectItem value="urgent">Urgent</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+
 
                               <FormField
                                 control={form.control}

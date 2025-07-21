@@ -42,6 +42,13 @@ interface OperationsCardsProps {
   data: Operation[]
   perspective: Perspective
   searchQuery: string
+  footerTotals?: {
+    totalEstimatedCost: number
+    totalActualCost: number
+    totalEstimatedRevenue: number
+    totalActualRevenue: number
+    profitPercent: number
+  }
 }
 
 export function OperationsCards({ data, perspective, searchQuery }: OperationsCardsProps) {

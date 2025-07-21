@@ -30,33 +30,60 @@ type Perspective = 'operations' | 'resources' | 'financial'
 interface Operation {
   id: string
   type: string
+  operationType: string
+  method: string
+  mainProduct: string
   status: string
   plannedStartDate: string
   plannedEndDate: string
   actualStartDate: string | null
   actualEndDate: string | null
   area: number
+  blocArea: number
   estimatedCost: number
   actualCost: number
   progress: number
+  equipmentNames: string
+  equipmentEffort: number
+  labourEffort: number
+  estimatedProductCost: number
+  estimatedEquipmentCost: number
+  estimatedLabourCost: number
+  products: any[]
+  equipment: any[]
+  labour: any[]
   workPackages: WorkPackage[]
 }
 
 interface WorkPackage {
   id: string
+  work_date: string
   date: string
   area: number
   hours: number
   cost: number
-  crew: string
-  equipment: string
   status: string
+  products: any[]
+  equipment: any[]
+  labour: any[]
+  productActualCost: number
+  equipmentActualCost: number
+  labourActualCost: number
+  equipmentEffort: number
+  labourEffort: number
 }
 
 interface OperationsTableProps {
   data: Operation[]
   perspective: Perspective
   searchQuery: string
+  footerTotals?: {
+    totalEstimatedCost: number
+    totalActualCost: number
+    totalEstimatedRevenue: number
+    totalActualRevenue: number
+    profitPercent: number
+  }
 }
 
 const columnHelper = createColumnHelper<Operation>()
@@ -135,6 +162,14 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
                     {row.original.status}
                   </Badge>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditWorkPackage(row.original as any, (row.getParentRow()?.original as any)?.id)}
+                  className="h-6 w-6 p-0 ml-2"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
               </div>
             )
           }
@@ -158,6 +193,25 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
       return [
         ...baseColumns,
         columnHelper.display({
+          id: 'operationType',
+          header: 'Operation Type',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4 text-muted-foreground">
+                  Daily Work Package
+                </div>
+              )
+            }
+            return (
+              <div className="text-sm font-medium">
+                {(row.original as any).operationType?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Unknown'}
+              </div>
+            )
+          }
+        }),
+        columnHelper.display({
           id: 'method',
           header: 'Method / Date',
           cell: ({ row }) => {
@@ -165,7 +219,7 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
             if (isWorkPackage) {
               return (
                 <div className="text-sm pl-4">
-                  {(row.original as any).work_date || (row.original as any).workDate || 'N/A'}
+                  {(row.original as any).work_date || (row.original as any).date || 'N/A'}
                 </div>
               )
             }
@@ -184,20 +238,21 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
             if (isWorkPackage) {
               return (
                 <div className="text-sm pl-4">
-                  {((row.original as any).area || (row.original as any).actual_area_hectares || 0).toFixed(1)} ha
+                  {((row.original as any).area || 0).toFixed(1)} ha
                 </div>
               )
             }
             return (
               <div className="text-sm">
-                {row.original.workPackages?.[0]?.equipment || 'NPK Fertilizer'}
+                {(row.original as any).mainProduct || 'No Product'}
               </div>
             )
           }
         }),
-        columnHelper.accessor('area', {
+        columnHelper.display({
+          id: 'blocArea',
           header: 'Bloc Area / Status',
-          cell: ({ getValue, row }) => {
+          cell: ({ row }) => {
             const isWorkPackage = row.depth > 0
             if (isWorkPackage) {
               return (
@@ -208,7 +263,30 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
                 </div>
               )
             }
-            return getValue().toFixed(1)
+            return (
+              <div className="text-sm">
+                {((row.original as any).blocArea || 0).toFixed(1)} ha
+              </div>
+            )
+          }
+        }),
+        columnHelper.display({
+          id: 'progress',
+          header: 'Progress',
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return <div className="text-sm pl-4">-</div>
+            }
+            const progress = (row.original as any).progress || 0
+            return (
+              <div className="text-sm">
+                <div className="flex items-center gap-2">
+                  <Progress value={progress} className="w-16 h-2" />
+                  <span className="text-xs">{progress}%</span>
+                </div>
+              </div>
+            )
           }
         }),
         columnHelper.accessor('progress', {
@@ -251,33 +329,63 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
         columnHelper.display({
           id: 'equipment',
           header: 'Equipment',
-          cell: ({ row }) => (
-            <div className="text-sm">
-              {row.original.workPackages?.map(wp => wp.equipment).filter(Boolean).join(', ') ||
-               'Tractor, Planter, Spreader'}
-            </div>
-          )
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              const equipmentNames = (row.original as any).equipment?.map((e: any) => e.name).join(', ') || 'No Equipment'
+              return (
+                <div className="text-sm pl-4">
+                  {equipmentNames}
+                </div>
+              )
+            }
+            return (
+              <div className="text-sm">
+                {(row.original as any).equipmentNames || 'No Equipment'}
+              </div>
+            )
+          }
         }),
         columnHelper.display({
           id: 'equipmentEffort',
           header: 'Equipment Effort',
-          cell: ({ row }) => (
-            <div className="text-sm">
-              {row.original.workPackages?.reduce((acc, wp) => acc + (wp.hours || 8), 0) || 24}h
-            </div>
-          )
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  {((row.original as any).equipmentEffort || 0).toFixed(1)}h
+                </div>
+              )
+            }
+            return (
+              <div className="text-sm">
+                {((row.original as any).equipmentEffort || 0).toFixed(1)}h
+              </div>
+            )
+          }
         }),
         columnHelper.display({
           id: 'labourEffort',
           header: 'Labour Effort (Total Est.)',
-          cell: ({ row }) => (
-            <div className="text-sm">
-              {row.original.workPackages?.reduce((acc, wp) => acc + (wp.hours || 8), 0) || 32}h
-              <div className="text-xs text-muted-foreground">
-                Rs {((row.original.estimatedCost || 0) * 0.3).toLocaleString()}
+          cell: ({ row }) => {
+            const isWorkPackage = row.depth > 0
+            if (isWorkPackage) {
+              return (
+                <div className="text-sm pl-4">
+                  {((row.original as any).labourEffort || 0).toFixed(1)}h
+                </div>
+              )
+            }
+            return (
+              <div className="text-sm">
+                {((row.original as any).labourEffort || 0).toFixed(1)}h
+                <div className="text-xs text-muted-foreground">
+                  Rs {((row.original as any).estimatedLabourCost || 0).toLocaleString()}
+                </div>
               </div>
-            </div>
-          )
+            )
+          }
         }),
         columnHelper.display({
           id: 'actions',
@@ -300,26 +408,59 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
       ...baseColumns,
       columnHelper.display({
         id: 'estimateProductCost',
-        header: 'Est. Product Cost',
+        header: 'Est. Product Cost / Product Act Cost',
         cell: ({ row }) => {
-          const productCost = (row.original.estimatedCost || 0) * 0.4 // 40% for products
-          return `Rs ${productCost.toLocaleString()}`
+          const isWorkPackage = row.depth > 0
+          if (isWorkPackage) {
+            return (
+              <div className="text-sm pl-4">
+                Rs {((row.original as any).productActualCost || 0).toLocaleString()}
+              </div>
+            )
+          }
+          return (
+            <div className="text-sm">
+              Rs {((row.original as any).estimatedProductCost || 0).toLocaleString()}
+            </div>
+          )
         }
       }),
       columnHelper.display({
         id: 'estEquipmentCost',
-        header: 'Est. Equipment Cost',
+        header: 'Est. Equipment Cost / Equipment Act Cost',
         cell: ({ row }) => {
-          const equipmentCost = (row.original.estimatedCost || 0) * 0.35 // 35% for equipment
-          return `Rs ${equipmentCost.toLocaleString()}`
+          const isWorkPackage = row.depth > 0
+          if (isWorkPackage) {
+            return (
+              <div className="text-sm pl-4">
+                Rs {((row.original as any).equipmentActualCost || 0).toLocaleString()}
+              </div>
+            )
+          }
+          return (
+            <div className="text-sm">
+              Rs {((row.original as any).estimatedEquipmentCost || 0).toLocaleString()}
+            </div>
+          )
         }
       }),
       columnHelper.display({
         id: 'estLabourCost',
-        header: 'Est. Labour Cost',
+        header: 'Est. Labour Cost / Labour Act Cost',
         cell: ({ row }) => {
-          const labourCost = (row.original.estimatedCost || 0) * 0.25 // 25% for labour
-          return `Rs ${labourCost.toLocaleString()}`
+          const isWorkPackage = row.depth > 0
+          if (isWorkPackage) {
+            return (
+              <div className="text-sm pl-4">
+                Rs {((row.original as any).labourActualCost || 0).toLocaleString()}
+              </div>
+            )
+          }
+          return (
+            <div className="text-sm">
+              Rs {((row.original as any).estimatedLabourCost || 0).toLocaleString()}
+            </div>
+          )
         }
       }),
       columnHelper.display({
@@ -388,6 +529,40 @@ export function OperationsTable({ data, perspective, searchQuery }: OperationsTa
             </TableRow>
           ))}
         </TableBody>
+        {footerTotals && (
+          <tfoot>
+            <tr className="border-t-2 border-primary bg-muted/30">
+              <td colSpan={table.getHeaderGroups()[0]?.headers.length || 6} className="p-4">
+                <div className="flex justify-between items-center text-sm font-medium">
+                  <div className="flex gap-6">
+                    <div>
+                      <span className="text-muted-foreground">Total Est. Cost: </span>
+                      <span className="text-foreground">Rs {footerTotals.totalEstimatedCost.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Act. Cost: </span>
+                      <span className="text-foreground">Rs {footerTotals.totalActualCost.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Est. Revenue: </span>
+                      <span className="text-green-600">Rs {footerTotals.totalEstimatedRevenue.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Act. Revenue: </span>
+                      <span className="text-green-600">Rs {footerTotals.totalActualRevenue.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-muted-foreground">Profit %: </span>
+                    <span className={`font-bold ${footerTotals.profitPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {footerTotals.profitPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </Table>
     </div>
   )

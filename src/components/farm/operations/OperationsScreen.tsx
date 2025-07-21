@@ -19,7 +19,7 @@ type ViewMode = 'table' | 'cards' | 'rows'
 type Perspective = 'operations' | 'resources' | 'financial'
 
 export function OperationsScreen() {
-  const { bloc, fieldOperations, workPackages, isLoadingBlocData, setCurrentScreen } = useBlocContext()
+  const { bloc, fieldOperations, workPackages, cropCycles, isLoadingBlocData, setCurrentScreen } = useBlocContext()
   const [viewMode, setViewMode] = useState<ViewMode>('rows')
   const [perspective, setPerspective] = useState<Perspective>('operations')
   const [searchQuery, setSearchQuery] = useState('')
@@ -53,42 +53,129 @@ export function OperationsScreen() {
       return []
     }
 
+
+
     return fieldOperations.data.map((operation: any) => {
       // Find work packages for this operation
       const operationWorkPackages = workPackages.data
         .filter((wp: any) => wp.field_operation_uuid === operation.uuid)
         .map((wp: any) => ({
-          id: wp.id,
-          date: wp.planned_date,
-          area: wp.actual_area || bloc.area,
-          hours: 8, // Default hours - could be calculated from work package data
-          cost: wp.total_cost || 0,
-          crew: 'Team A', // Default crew - could come from work package data
-          equipment: 'Equipment', // Default equipment - could come from work package data
-          status: wp.status
+          id: wp.uuid || wp.id,
+          work_date: wp.work_date || wp.planned_date,
+          date: wp.work_date || wp.planned_date,
+          area: wp.actual_area_hectares || wp.planned_area_hectares || 0,
+          hours: wp.duration_hours || 8,
+          cost: wp.actual_cost || wp.estimated_cost || 0,
+          status: wp.status,
+          // Resources data for work packages
+          products: wp.products || [],
+          equipment: wp.equipment || [],
+          labour: wp.labour || [],
+          // Calculated costs for work packages
+          productActualCost: wp.products ? wp.products.reduce((sum: number, p: any) => sum + (p.actual_cost || 0), 0) : 0,
+          equipmentActualCost: wp.equipment ? wp.equipment.reduce((sum: number, e: any) => sum + (e.actual_cost || 0), 0) : 0,
+          labourActualCost: wp.labour ? wp.labour.reduce((sum: number, l: any) => sum + (l.actual_cost || 0), 0) : 0,
+          equipmentEffort: wp.equipment ? wp.equipment.reduce((sum: number, e: any) => sum + (e.actual_hours || e.planned_hours || 0), 0) : 0,
+          labourEffort: wp.labour ? wp.labour.reduce((sum: number, l: any) => sum + (l.actual_hours || l.planned_hours || 0), 0) : 0
         }))
 
-      // Calculate progress based on work package statuses
-      const completedPackages = operationWorkPackages.filter((wp: any) => wp.status === 'completed').length
-      const totalPackages = operationWorkPackages.length
-      const progress = totalPackages > 0 ? Math.round((completedPackages / totalPackages) * 100) : 0
+      // Calculate progress based on completed work package areas vs total operation area
+      const completedArea = operationWorkPackages
+        .filter((wp: any) => wp.status === 'completed')
+        .reduce((sum: number, wp: any) => sum + wp.area, 0)
+      const totalOperationArea = operation.planned_area_hectares || bloc.area
+      const progress = totalOperationArea > 0 ? Math.round((completedArea / totalOperationArea) * 100) : 0
+
+      // Extract main product (first product)
+      const mainProduct = operation.products && operation.products.length > 0 ? operation.products[0].name : 'No Product'
+
+      // Debug logging
+      if (operation.products && operation.products.length > 0) {
+        console.log(`Operation ${operation.operation_name} has ${operation.products.length} products:`, operation.products)
+      }
+
+      // Calculate equipment and labour efforts for operation
+      const equipmentNames = operation.equipment ? operation.equipment.map((e: any) => e.name).join(', ') : 'No Equipment'
+      const equipmentEffort = operation.equipment ? operation.equipment.reduce((sum: number, e: any) => sum + (e.planned_hours || 0), 0) : 0
+      const labourEffort = operation.labour ? operation.labour.reduce((sum: number, l: any) => sum + (l.planned_hours || 0), 0) : 0
+
+      // Calculate estimated costs by category
+      const estimatedProductCost = operation.products ? operation.products.reduce((sum: number, p: any) => sum + (p.planned_cost || 0), 0) : 0
+      const estimatedEquipmentCost = operation.equipment ? operation.equipment.reduce((sum: number, e: any) => sum + (e.planned_cost || 0), 0) : 0
+      const estimatedLabourCost = operation.labour ? operation.labour.reduce((sum: number, l: any) => sum + (l.planned_cost || 0), 0) : 0
 
       return {
         id: operation.uuid,
-        type: operation.operation_type || 'Unknown Operation',
+        type: operation.operation_name || operation.operation_type || 'Unknown Operation',
+        operationType: operation.operation_type,
+        method: operation.method || 'Manual',
+        mainProduct,
         status: operation.status || 'planned',
         plannedStartDate: operation.planned_start_date,
         plannedEndDate: operation.planned_end_date,
         actualStartDate: operation.actual_start_date || null,
         actualEndDate: operation.actual_end_date || null,
-        area: bloc.area, // Use bloc area as default
+        area: totalOperationArea,
+        blocArea: bloc.area,
         estimatedCost: operation.estimated_total_cost || 0,
         actualCost: operation.actual_total_cost || 0,
         progress,
+        // Resource details for operations
+        equipmentNames,
+        equipmentEffort,
+        labourEffort,
+        estimatedProductCost,
+        estimatedEquipmentCost,
+        estimatedLabourCost,
+        products: operation.products || [],
+        equipment: operation.equipment || [],
+        labour: operation.labour || [],
         workPackages: operationWorkPackages
       }
     })
   }, [fieldOperations.data, workPackages.data, bloc.area])
+
+  // Get active crop cycle for revenue calculations
+  const activeCropCycle = useMemo(() => {
+    return cropCycles.data?.find((cycle: any) => cycle.status === 'active') || null
+  }, [cropCycles.data])
+
+  // Calculate footer totals
+  const footerTotals = useMemo(() => {
+    if (!operationsData.length) return {
+      totalEstimatedCost: 0,
+      totalActualCost: 0,
+      totalEstimatedRevenue: 0,
+      totalActualRevenue: 0,
+      profitPercent: 0
+    }
+
+    const totalEstimatedCost = operationsData.reduce((sum, op) => sum + op.estimatedCost, 0)
+    const totalActualCost = operationsData.reduce((sum, op) => sum + (op.actualCost || 0), 0)
+
+    // Calculate revenue based on crop cycle expected yield
+    const expectedYieldTonsHa = activeCropCycle?.expected_yield_tons_ha || 80 // Default sugarcane yield
+    const sugarcanePricePerTon = 2500 // MUR per ton (estimated)
+    const totalEstimatedRevenue = expectedYieldTonsHa * sugarcanePricePerTon * bloc.area
+
+    // Actual revenue (if cycle is completed)
+    const actualYieldTonsHa = activeCropCycle?.actual_yield_tons_ha || 0
+    const totalActualRevenue = actualYieldTonsHa > 0 ? actualYieldTonsHa * sugarcanePricePerTon * bloc.area : 0
+
+    // Calculate profit percentage
+    const relevantRevenue = totalActualRevenue > 0 ? totalActualRevenue : totalEstimatedRevenue
+    const relevantCost = totalActualCost > 0 ? totalActualCost : totalEstimatedCost
+    const profit = relevantRevenue - relevantCost
+    const profitPercent = relevantRevenue > 0 ? (profit / relevantRevenue) * 100 : 0
+
+    return {
+      totalEstimatedCost,
+      totalActualCost,
+      totalEstimatedRevenue,
+      totalActualRevenue,
+      profitPercent
+    }
+  }, [operationsData, activeCropCycle, bloc.area])
 
   const renderView = () => {
     // Show empty state if no operations exist
@@ -137,7 +224,8 @@ export function OperationsScreen() {
     const commonProps = {
       data: operationsData,
       perspective,
-      searchQuery
+      searchQuery,
+      footerTotals
     }
 
     switch (viewMode) {
