@@ -165,3 +165,9 @@ export function useBlocContext() {
   }
   return context
 }
+
+// Safe version that doesn't throw an error if context is not available
+export function useBlocContextSafe() {
+  const context = useContext(BlocContext)
+  return context
+}

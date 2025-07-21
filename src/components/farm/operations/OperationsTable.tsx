@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useBlocContext } from '../contexts/BlocContext'
+import { useBlocContextSafe } from '../contexts/BlocContext'
 
 type Perspective = 'operations' | 'resources' | 'financial'
 
@@ -104,14 +104,8 @@ export function OperationsTable({
   onEditOperation,
   onEditWorkPackage
 }: OperationsTableProps) {
-  // Try to use BlocContext, but don't crash if it's not available
-  let blocContext = null
-  try {
-    blocContext = useBlocContext()
-  } catch (error) {
-    // Context not available - that's okay for farm view
-    blocContext = null
-  }
+  // Use the safe version of the context hook that doesn't throw errors
+  const blocContext = useBlocContextSafe()
 
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
